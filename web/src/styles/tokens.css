@@ -1,0 +1,95 @@
+/*
+ * Design tokens — source of truth: docs/design.md §3–§6.
+ * Three-layer theme mechanism: :root defaults → prefers-color-scheme → [data-theme] (toggle wins).
+ * Components consume tokens only; no raw hex outside this file.
+ */
+
+:root {
+  /* Core palette — light */
+  --bg: #f3f4ef;
+  --surface: #ffffff;
+  --surface-2: #eaebe3;
+  --paper: #fffef8; /* documents & receipt cart — identical in both themes */
+  --ink: #1c1b16; /* text on --paper — always ink on paper */
+  --text: #181a15;
+  --text-muted: #5b5f53;
+  --border: #dbdcd1;
+  --jade: #0e8f68;
+  --jade-2: #0b6e51;
+  --copper: #b5711e;
+  --copper-2: #8f5a16;
+  --alert: #c1421a;
+
+  /* Stamp ink never changes with theme (design.md §3) */
+  --stamp-paid: #0e8f68;
+  --stamp-pending: #b5711e;
+  --stamp-void: #c1421a;
+
+  --shadow: 0 10px 30px -12px rgba(20, 20, 10, 0.18);
+  --radius-card: 14px;
+  --radius-control: 10px;
+  --radius-doc: 4px;
+
+  /* Density: touch (default) — see design.md §6 */
+  --control-h: 48px;
+  --control-h-lg: 56px;
+  --font-base: 15px;
+  --row-pad: 14px;
+  --grid-gap: 16px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #15110d;
+    --surface: #1e1911;
+    --surface-2: #241e15;
+    --text: #f2efe6;
+    --text-muted: #a79e8a;
+    --border: #332b1f;
+    --jade: #2bc792;
+    --jade-2: #3fe0aa;
+    --copper: #e0a44c;
+    --copper-2: #f0be73;
+    --alert: #ff7a4d;
+    --shadow: 0 14px 34px -12px rgba(0, 0, 0, 0.55);
+  }
+}
+
+:root[data-theme='light'] {
+  --bg: #f3f4ef;
+  --surface: #ffffff;
+  --surface-2: #eaebe3;
+  --text: #181a15;
+  --text-muted: #5b5f53;
+  --border: #dbdcd1;
+  --jade: #0e8f68;
+  --jade-2: #0b6e51;
+  --copper: #b5711e;
+  --copper-2: #8f5a16;
+  --alert: #c1421a;
+  --shadow: 0 10px 30px -12px rgba(20, 20, 10, 0.18);
+}
+
+:root[data-theme='dark'] {
+  --bg: #15110d;
+  --surface: #1e1911;
+  --surface-2: #241e15;
+  --text: #f2efe6;
+  --text-muted: #a79e8a;
+  --border: #332b1f;
+  --jade: #2bc792;
+  --jade-2: #3fe0aa;
+  --copper: #e0a44c;
+  --copper-2: #f0be73;
+  --alert: #ff7a4d;
+  --shadow: 0 14px 34px -12px rgba(0, 0, 0, 0.55);
+}
+
+/* Compact density for back-office tables & reports (design.md §6) */
+[data-density='compact'] {
+  --control-h: 36px;
+  --control-h-lg: 36px;
+  --font-base: 13.5px;
+  --row-pad: 8px;
+  --grid-gap: 10px;
+}

@@ -11,7 +11,10 @@ build/
 # Database & backups (runtime data, never committed)
 *.db
 *.db-journal
+*.db-wal
+*.db-shm
 *.sqlite
+server/data/
 backups/
 
 # Local machine settings

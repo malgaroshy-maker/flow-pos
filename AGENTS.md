@@ -4,7 +4,7 @@ Guidance for AI coding agents (Antigravity, Claude Code, etc.) working in this r
 
 ## Project Status
 
-**Spec-only — no code has been written yet.** This repository contains the product requirements and planning documents for a POS (sales & inventory) system. When scaffolding begins, update this file with real build/test/run commands.
+**Phase 1 (MVP) in progress.** The monorepo is scaffolded (slice 1 done); slices 2–8 of the MVP build order in `docs/plan.md` §3 are next.
 
 ## What This Project Is
 
@@ -51,6 +51,22 @@ Two launch roles — **Manager** (everything) and **Sales** (sell, shifts, view 
 
 Scope discipline matters: 19 approved features across 4 phases is the top project risk. Do not pull later-phase features forward.
 
+## Architecture
+
+npm workspaces monorepo:
+
+- `server/` — Fastify 5 + better-sqlite3 + Drizzle ORM (TypeScript, ESM, NodeNext). SQLite lives at `server/data/pos.db` (WAL + `synchronous=FULL`; gitignored). Migrations in `server/drizzle/` are generated from `server/src/db/schema.ts`. The entrypoint runs migrations + seed on boot and serves the built SPA from `web/dist` when it exists.
+- `web/` — React 19 + Vite + Tailwind v4, Arabic RTL. Design tokens (`web/src/styles/tokens.css`) implement docs/design.md; components consume tokens/Tailwind theme names only — never raw hex. Fonts are bundled from Fontsource packages (never CDN). Dev server proxies `/api` to `localhost:3001`.
+- **Money is integer milli-LYD** (`server/src/lib/money.ts` — value × 1000). All money math goes through that module.
+
 ## Commands
 
-None yet — no toolchain exists. When the project is scaffolded (see docs/plan.md for the proposed stack), record here: install, dev server, build, lint, test (including single-test invocation), and database migration commands.
+Run from the repo root:
+
+- `npm install` — install all workspaces
+- `npm run dev` — server (tsx watch, :3001) + web (Vite, :5173) in parallel
+- `npm test` — server Vitest suite; single test: `npx vitest run src/lib/money.test.ts` from `server/`
+- `npm run build` — compile server (tsc) + typecheck & bundle web
+- `npm run typecheck` / `npm run format` — tsc --noEmit both workspaces / Prettier
+- `npm run db:generate` — regenerate migrations after editing `schema.ts`
+- `npm run db:migrate` / `npm run db:seed` — apply migrations / seed defaults (also run automatically on server boot)

@@ -1,0 +1,78 @@
+@import 'tailwindcss';
+@import './tokens.css';
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-paper: var(--paper);
+  --color-ink: var(--ink);
+  --color-fg: var(--text);
+  --color-muted: var(--text-muted);
+  --color-line: var(--border);
+  --color-jade: var(--jade);
+  --color-jade-2: var(--jade-2);
+  --color-copper: var(--copper);
+  --color-copper-2: var(--copper-2);
+  --color-alert: var(--alert);
+  --font-display: 'Cairo', sans-serif;
+  --font-body: 'Tajawal', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+  --radius-card: var(--radius-card);
+  --radius-control: var(--radius-control);
+  --shadow-card: var(--shadow);
+}
+
+@layer base {
+  html {
+    font-size: 16px;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Tajawal', sans-serif;
+    font-size: var(--font-base);
+    line-height: 1.7;
+    transition:
+      background-color 0.35s ease,
+      color 0.35s ease;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: 'Cairo', sans-serif;
+    line-height: 1.35;
+    text-wrap: balance;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--jade);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  ::selection {
+    background: var(--jade);
+    color: #fff;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      transition: none !important;
+      animation: none !important;
+    }
+  }
+}
+
+@utility mono {
+  /* Every numeric fragment: mono, LTR-isolated, tabular (design.md §4) */
+  font-family: 'JetBrains Mono', monospace;
+  direction: ltr;
+  unicode-bidi: isolate;
+  font-variant-numeric: tabular-nums;
+}
