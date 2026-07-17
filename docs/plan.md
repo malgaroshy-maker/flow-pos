@@ -13,6 +13,10 @@
 | Tax | Engine built in Phase 2 but **disabled by default**; enabled via Settings when a rate is known |
 | Cloud backup target | **Deferred** — daily local backups in V1; cloud target chosen in a later phase |
 | Data migration | **None — fresh start**; products and customers entered manually |
+| Shift model | **One shared drawer shift** per physical cash drawer; all devices feed it, every action still attributed to its employee |
+| Insufficient stock | **Block the sale; manager PIN can override** — overrides logged and flagged in reports |
+| Discounts | **Sales role capped at a configurable % per invoice; larger needs manager PIN; manager unlimited** — all discounts logged with actor |
+| Cost method | **Weighted average** — each purchase updates the product's average cost; profit reports use it |
 
 ## 1. Tech Stack
 
@@ -54,6 +58,16 @@ Design rules that fall out of the PRD:
 - **Documents are immutable after confirmation** — cancel/refund creates reversing entries, never edits.
 - Role checks live in API middleware keyed by a permission table (so adding Storekeeper later is data, not code).
 - Every mutating endpoint writes `AuditLog`.
+- **Customer sale returns** (after the day of sale, full or partial): reversing document that restores stock and takes cash from the *current* shift's drawer; requires manager permission. Never edits the original invoice.
+
+### Hardening & environment realities
+
+- **Power outages are expected** (Libya): SQLite in WAL mode with `synchronous=FULL` for money paths; the ops guide mandates a UPS on the server PC; the app must recover cleanly from hard power loss mid-sale (transaction either fully committed or absent).
+- **Camera scanning requires HTTPS**: browsers block `getUserMedia` on plain `http://` LAN origins. The server ships with a locally-generated CA + cert and a one-time install step on each phone/tablet (documented in the ops guide). Solved in slice 1, not discovered in slice 5.
+- **Invoice numbers are sequential and gap-free**, generated server-side inside the sale transaction (scheme: `INV-YYYY-NNNNN`; quotations `QUO-`, purchases `PUR-`, returns `RET-`). Cancelled invoices keep their number with a cancelled status — numbers are never reused.
+- **Server clock is the only clock.** Clients never supply timestamps. Ops guide covers setting the server timezone (Africa/Tripoli) and correcting drift.
+- **Arabic-normalized search**: product/customer search matches across hamza forms (أ/إ/آ/ا), ة/ه, ى/ي, and ignores diacritics and tatweel. Implemented as a normalized shadow column, indexed.
+- **Silent thermal printing**: cashier stations run the browser in kiosk-print mode so receipts print without a dialog; A4 invoices may show the normal print preview.
 
 ## 3. Build Order (Phase 1 / MVP in vertical slices)
 

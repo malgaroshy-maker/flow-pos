@@ -30,6 +30,12 @@ If code and docs ever disagree, raise it — do not silently pick one.
 - **Quotations never touch stock**; converting a quotation to a sale applies all normal sale side-effects.
 - **Multi-unit products**: stock is always tracked in the base unit; packaging units (carton = 20 packs = 1000 cups) convert via `conversion_factor` and carry their own prices. Multi-unit is opt-in per product.
 - **Pricing precedence**: customer special price → customer tier (wholesale/retail) → product default.
+- **One shared drawer shift**: a single shift per physical cash drawer; all devices feed it; each action still records its employee.
+- **Insufficient stock blocks the sale**; a manager PIN override is allowed, logged, and flagged in reports.
+- **Discounts are capped** for the sales role (configurable % per invoice); larger discounts need manager PIN; all discounts are logged with the actor.
+- **Product cost is weighted average**, recalculated on every purchase; profit reports use it.
+- **Invoice numbers are sequential and gap-free** (`INV-YYYY-NNNNN`), generated server-side inside the sale transaction; cancelled invoices keep their number.
+- **Server clock only** — clients never supply timestamps.
 
 ## Roles
 
