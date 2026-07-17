@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تقرير مميزات منظومة المبيعات والمخزون</title>
+    <!-- خط القاهرة والتاجوال لعرض نصوص عربية متميزة -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;800;900&family=Tajawal:wght@400;500;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg: #15110d;
+            --surface: #1e1911;
+            --surface-2: #241e15;
+            --text: #f2efe6;
+            --text-muted: #a79e8a;
+            --border: #332b1f;
+            --jade: #2bc792;
+            --jade-2: #3fe0aa;
+            --copper: #e0a44c;
+            --alert: #ff7a4d;
+            --shadow: 0 14px 34px -12px rgba(0, 0, 0, 0.55);
+            --radius-card: 16px;
+            --radius-control: 10px;
+        }
+
+        [data-theme="light"] {
+            --bg: #f3f4ef;
+            --surface: #ffffff;
+            --surface-2: #eaebe3;
+            --text: #181a15;
+            --text-muted: #5b5f53;
+            --border: #dbdcd1;
+            --jade: #0e8f68;
+            --jade-2: #0b6e51;
+            --copper: #b5711e;
+            --alert: #c1421a;
+            --shadow: 0 10px 30px -12px rgba(20, 20, 10, 0.18);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: 'Tajawal', sans-serif;
+            font-size: 15px;
+            line-height: 1.7;
+            padding: 40px 20px;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .container {
+            max-width: 960px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 50px;
+            position: relative;
+        }
+
+        .theme-toggle {
+            position: absolute;
+            top: 0;
+            left: 0;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-family: 'Cairo', sans-serif;
+            font-size: 12px;
+            font-weight: bold;
+            box-shadow: var(--shadow);
+            transition: all 0.2s;
+        }
+
+        .theme-toggle:hover {
+            background: var(--surface-2);
+        }
+
+        .logo {
+            width: 70px;
+            height: 70px;
+            background: var(--jade);
+            color: white;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 24px;
+            font-weight: bold;
+            border-radius: 18px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+        }
+
+        h1 {
+            font-family: 'Cairo', sans-serif;
+            font-size: 32px;
+            font-weight: 900;
+            margin-bottom: 8px;
+        }
+
+        .subtitle {
+            color: var(--copper);
+            font-family: 'Cairo', sans-serif;
+            font-weight: 700;
+            font-size: 14px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        /* Cards Layout */
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-card);
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: var(--shadow);
+        }
+
+        h2 {
+            font-family: 'Cairo', sans-serif;
+            font-size: 20px;
+            font-weight: 800;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: var(--jade);
+        }
+
+        /* Features List Grid */
+        .features-grid {
+            display: grid;
+            grid-template-cols: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .feature-item {
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-control);
+            padding: 20px;
+            transition: transform 0.2s, border-color 0.2s;
+        }
+
+        .feature-item:hover {
+            transform: translateY(-4px);
+            border-color: var(--jade);
+        }
+
+        .feature-icon {
+            font-size: 24px;
+            margin-bottom: 12px;
+            display: inline-block;
+        }
+
+        .feature-title {
+            font-family: 'Cairo', sans-serif;
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .feature-desc {
+            color: var(--text-muted);
+            font-size: 13px;
+        }
+
+        /* Comparison Table */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            font-size: 14px;
+            text-align: right;
+        }
+
+        th {
+            background: var(--surface-2);
+            font-family: 'Cairo', sans-serif;
+            font-weight: 700;
+            padding: 12px;
+            border-bottom: 2px solid var(--border);
+        }
+
+        td {
+            padding: 12px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        tr:hover td {
+            background: var(--surface-2);
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+
+        .badge-equipment {
+            background: rgba(139, 92, 246, 0.15);
+            color: #a78bfa;
+        }
+
+        .badge-consumable {
+            background: rgba(59, 130, 246, 0.15);
+            color: #60a5fa;
+        }
+
+        /* Callout Box */
+        .callout {
+            background: rgba(43, 199, 146, 0.1);
+            border-right: 4px solid var(--jade);
+            padding: 20px;
+            border-radius: 4px;
+            margin-top: 20px;
+        }
+
+        .callout-title {
+            font-family: 'Cairo', sans-serif;
+            font-weight: bold;
+            font-size: 14px;
+            color: var(--jade);
+            margin-bottom: 5px;
+        }
+
+        .callout-desc {
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+
+        /* Cycle Diagram Container */
+        .diagram-container {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .diagram-step {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            background: var(--surface-2);
+            padding: 15px;
+            border-radius: var(--radius-control);
+            border: 1px solid var(--border);
+        }
+
+        .step-num {
+            width: 32px;
+            height: 32px;
+            background: var(--jade);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: bold;
+        }
+
+        .step-content {
+            flex: 1;
+        }
+
+        .step-title {
+            font-family: 'Cairo', sans-serif;
+            font-weight: 700;
+            font-size: 14px;
+        }
+
+        .step-desc {
+            color: var(--text-muted);
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        
+        <header>
+            <button class="theme-toggle" onclick="toggleTheme()">تبديل الوضع (نهاري / ليلي)</button>
+            <div class="logo">POS</div>
+            <h1>منظومة مبيعات ومخزون المقاهي والمطاعم</h1>
+            <div class="subtitle">تقرير تفاعلي شامل للمميزات والفوائد الاستثمارية</div>
+        </header>
+
+        <!-- Card 1: Core Value -->
+        <div class="card">
+            <h2>
+                <span>🔌</span>
+                <span>فلسفة العمل دون اتصال بالإنترنت (Offline-First)</span>
+            </h2>
+            <p>تعتمد المنظومة بالكامل على خادم محلي مستقر يعمل داخل صالة المبيعات. لا تحتاج المنظومة لإنترنت مستمر لتشغيل نقاط البيع أو إصدار الفواتير أو تتبع جرد المخازن.</p>
+            
+            <div class="features-grid">
+                <div class="feature-item">
+                    <span class="feature-icon">⚡</span>
+                    <div class="feature-title">استقرارية مبيعات لا متناهية</div>
+                    <div class="feature-desc">تجنب توقف الكاشير أو تعطل طوابير الزبائن عند انقطاع شبكة الإنترنت المحلية أو تذبذبها.</div>
+                </div>
+                <div class="feature-item">
+                    <span class="feature-icon">🔒</span>
+                    <div class="feature-title">سرية تامة وأمان محلي</div>
+                    <div class="feature-desc">قاعدة بيانات SQLite مشفرة ومحفوظة بالكامل داخل جهازك الشخصي بالمحل دون تسريب للبيانات.</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Card 2: Product Types -->
+        <div class="card">
+            <h2>
+                <span>📦</span>
+                <span>إدارة متقدمة للمخزون (معدات 🆚 مستهلكات)</span>
+            </h2>
+            <p>تتعامل المنظومة بمرونة تامة مع نوعين مختلفين من المنتجات لملائمة طبيعة مستلزمات المطاعم والمقاهي:</p>
+            
+            <table>
+                <thead>
+                    <tr>
+                        <th>الخاصية</th>
+                        <th>المعدات والأجهزة الآلية</th>
+                        <th>المواد الخام والاستهلاكية</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>مثال</strong></td>
+                        <td>مكائن إسبريسو، طاحنات البن، الخلاطات</td>
+                        <td>حبوب البن، الأكواب الورقية، النكهات</td>
+                    </tr>
+                    <tr>
+                        <td><strong>الرمز المميّز</strong></td>
+                        <td>رقم تسلسلي فريد لكل جهاز (Serial No)</td>
+                        <td>رقم دفعة وتاريخ انتهاء (Batch & Expiry)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>الصيانة والضمان</strong></td>
+                        <td>تسجيل عدد أشهر الضمان وتنبيهات انتهاء الصيانة</td>
+                        <td>تنبيهات تاريخ الصلاحية لتجنب انتهاء الصلاحية وتلف المخزون</td>
+                    </tr>
+                    <tr>
+                        <td><strong>البيع والتسوية</strong></td>
+                        <td>تخضع للبيع الفردي الدقيق</td>
+                        <td>تخضع لنظام "حد إعادة الطلب" لتوليد نواقص المخزن</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Card 3: Daily Session Cycle -->
+        <div class="card">
+            <h2>
+                <span>⏳</span>
+                <span>دورة الرقابة النقدية اليومية (شاشات الورديات)</span>
+            </h2>
+            <p>تضمن المنظومة غلق كافة ثغرات الفساد المالي أو فقدان الكاش بفضل دورة عمل صارمة تمتد طوال اليوم:</p>
+            
+            <div class="diagram-container">
+                <div class="diagram-step">
+                    <div class="step-num">1</div>
+                    <div class="step-content">
+                        <div class="step-title">فتح الوردية Shift Open</div>
+                        <div class="step-desc">يقوم الكاشير بفتح الخزينة وتسجيل المبلغ الابتدائي للدرج النقدية لبدء المبيعات.</div>
+                    </div>
+                </div>
+                <div class="diagram-step">
+                    <div class="step-num">2</div>
+                    <div class="step-content">
+                        <div class="step-title">العمليات والتوثيق</div>
+                        <div class="step-desc">يتم تسجيل كل فاتورة بيع وتصنيفها نقدًا (كاش) أو شباك (بطاقة)، مع تسجيل فوري للمصروفات.</div>
+                    </div>
+                </div>
+                <div class="diagram-step">
+                    <div class="step-num">3</div>
+                    <div class="step-content">
+                        <div class="step-title">إغلاق وجرد الوردية Shift Close</div>
+                        <div class="step-desc">يقوم المسؤول بجرد الكاش الفعلي، ويقوم النظام باحتساب الفارق المالي وعرض العجز أو الفائض بدقة.</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="callout">
+                <div class="callout-title">الحساب المالي الدقيق (Milli-LYD)</div>
+                <div class="callout-desc">يتم حفظ المبالغ المالية بقيم صحيحة مضروبة في 1000 بالدينار الليبي لمنع حدوث أي فروق تقريب حسابية شائعة في المنظومات العادية.</div>
+            </div>
+        </div>
+
+        <!-- Card 4: Security and Control -->
+        <div class="card">
+            <h2>
+                <span>🛡️</span>
+                <span>موافقات المدير والأمان (PIN Overrides)</span>
+            </h2>
+            <div class="features-grid">
+                <div class="feature-item">
+                    <span class="feature-icon">🛡️</span>
+                    <div class="feature-title">رمز PIN للموافقات السريعة</div>
+                    <div class="feature-desc">عند تجاوز نسبة الخصم المسموح للبائع (10%) أو محاولة البيع لمنتج نافذ الكمية، يطلب النظام إدخال رمز موافقة المدير للاستمرار.</div>
+                </div>
+                <div class="feature-item">
+                    <span class="feature-icon">📝</span>
+                    <div class="feature-title">سجل العمليات الإدارية (Audit Logs)</div>
+                    <div class="feature-desc">يتم تسجيل كافة الاستثناءات والموافقات التي تمت برمز موافقة المدير باسمه ووقتها وتفاصيلها لمراجعتها بالتقارير.</div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // تفعيل وحفظ تفضيل الوضع الداكن واللايت
+        function getTheme() {
+            const saved = localStorage.getItem('pos-report-theme');
+            if (saved) return saved;
+            return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        }
+
+        function setTheme(theme) {
+            document.documentElement.setAttribute('data-theme', theme);
+            localStorage.setItem('pos-report-theme', theme);
+        }
+
+        function toggleTheme() {
+            const current = document.documentElement.getAttribute('data-theme') || getTheme();
+            const next = current === 'dark' ? 'light' : 'dark';
+            setTheme(next);
+        }
+
+        // تهيئة عند الفتح
+        setTheme(getTheme());
+    </script>
+</body>
+</html>

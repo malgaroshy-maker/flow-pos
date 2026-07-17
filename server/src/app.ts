@@ -6,6 +6,11 @@ import { fileURLToPath } from 'node:url';
 import type Database from 'better-sqlite3';
 import { createDb, type Db } from './db/index.js';
 import { settingsRoutes } from './routes/settings.js';
+import { authRoutes } from './routes/auth.js';
+import { productRoutes } from './routes/products.js';
+import { shiftRoutes } from './routes/shifts.js';
+import { saleRoutes } from './routes/sales.js';
+import { backupRoutes } from './routes/backup.js';
 
 declare module 'fastify' {
   interface FastifyInstance {
@@ -32,6 +37,11 @@ export function buildApp(sqlite: Database.Database) {
   }));
 
   app.register(settingsRoutes, { prefix: '/api' });
+  app.register(authRoutes, { prefix: '/api' });
+  app.register(productRoutes, { prefix: '/api' });
+  app.register(shiftRoutes, { prefix: '/api' });
+  app.register(saleRoutes, { prefix: '/api' });
+  app.register(backupRoutes, { prefix: '/api' });
 
   // In production the server serves the built SPA; in dev, Vite serves it with a proxy.
   const webDist = join(here, '..', '..', 'web', 'dist');

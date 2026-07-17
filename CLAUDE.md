@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Status
 
-**Phase 1 (MVP) in progress.** The monorepo is scaffolded (slice 1 done); slices 2–8 of the MVP build order in `docs/plan.md` §3 are next.
+**Phase 1 (MVP) is fully completed.** All slices (1–8) of the MVP build order are implemented, verified, typechecked, and built for production. Next is Phase 2 (Full business cycle: purchases, receivables, pricing).
 
 ## What This Project Is
 

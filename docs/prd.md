@@ -38,33 +38,35 @@ The business sells two fundamentally different product kinds — **high-value eq
 
 ## 3. Users & Roles
 
-| Permission | Manager | Sales | Storekeeper (later) |
-|---|---|---|---|
-| View products & stock | ✓ | ✓ | ✓ |
-| Add/edit product (images, barcode) | ✓ | — | ✓ |
-| Record sale & A4 invoice | ✓ | ✓ | — |
-| Open/close shift & drawer + expenses | ✓ | ✓ | — |
-| Record purchase / supplier return | ✓ | — | ✓ |
-| Manual stock adjustment / stocktake | ✓ | — | ✓ |
-| Manage customers, suppliers, receivables | ✓ | view + payments | view only |
-| Quotations | ✓ | ✓ | — |
-| Special prices & credit limits | ✓ | — | — |
-| Manage users & permissions | ✓ | — | — |
-| Financial reports & charts | ✓ | own sales only | stock only |
+| Permission                               | Manager | Sales           | Storekeeper (later) |
+| ---------------------------------------- | ------- | --------------- | ------------------- |
+| View products & stock                    | ✓       | ✓               | ✓                   |
+| Add/edit product (images, barcode)       | ✓       | —               | ✓                   |
+| Record sale & A4 invoice                 | ✓       | ✓               | —                   |
+| Open/close shift & drawer + expenses     | ✓       | ✓               | —                   |
+| Record purchase / supplier return        | ✓       | —               | ✓                   |
+| Manual stock adjustment / stocktake      | ✓       | —               | ✓                   |
+| Manage customers, suppliers, receivables | ✓       | view + payments | view only           |
+| Quotations                               | ✓       | ✓               | —                   |
+| Special prices & credit limits           | ✓       | —               | —                   |
+| Manage users & permissions               | ✓       | —               | —                   |
+| Financial reports & charts               | ✓       | own sales only  | stock only          |
 
 Operational note: fast **PIN login** per employee on the same shared device at shift change, without full logout.
 
 ## 4. Core Features (with acceptance criteria where defined)
 
 ### Phase 1
-- **Products & stock** — image + barcode per product; equipment fields (serial, warranty, model); consumable fields (batch, expiry, reorder point); full per-product movement ledger. *Acceptance: every confirmed sale deducts quantity immediately and logs the movement with the acting user — no manual step.*
-- **A4 invoices + QR** — branded A4 template; QR carries invoice reference; cash and credit on the same template; cancel/refund restores stock automatically. *Acceptance: prints on A4 with correct RTL alignment on the first try on any office printer.*
-- **Employees, shifts & cash drawer** — open shift with opening cash; every sale/payment/expense recorded against the active shift; close compares actual vs. expected cash. *Acceptance: closing any shift shows the variance automatically and saves it to an immutable log.*
+
+- **Products & stock** — image + barcode per product; equipment fields (serial, warranty, model); consumable fields (batch, expiry, reorder point); full per-product movement ledger. _Acceptance: every confirmed sale deducts quantity immediately and logs the movement with the acting user — no manual step._
+- **A4 invoices + QR** — branded A4 template; QR carries invoice reference; cash and credit on the same template; cancel/refund restores stock automatically. _Acceptance: prints on A4 with correct RTL alignment on the first try on any office printer._
+- **Employees, shifts & cash drawer** — open shift with opening cash; every sale/payment/expense recorded against the active shift; close compares actual vs. expected cash. _Acceptance: closing any shift shows the variance automatically and saves it to an immutable log._
 - **Users & permissions** — manager/sales roles (+storekeeper later); hashed password + optional quick PIN; every operation stamped with actor and time.
-- **Offline & security** — local server + encrypted local DB; cloud backup/sync only when internet exists; light/dark theme throughout. *Acceptance: a full week with internet physically disconnected blocks no function.*
+- **Offline & security** — local server + encrypted local DB; cloud backup/sync only when internet exists; light/dark theme throughout. _Acceptance: a full week with internet physically disconnected blocks no function._
 - **Daily cash expenses** — expense voucher (amount, reason, category) tied to the shift; feeds expected-cash calculation; monthly expense report by category.
 
 ### Phase 2
+
 - **Purchases & suppliers** — supplier registry with price history; purchase invoice adds stock automatically; supplier payables mirror customer receivables.
 - **Customers & receivables** — optional credit limit; live statement (credit invoices, payments, balance); alert near/over limit; printable A4 statement.
 - **Tax & payment** — enable/disable tax, rate set in settings; optional per-product exemption; cash or card (manual recording).
@@ -76,23 +78,25 @@ Operational note: fast **PIN login** per employee on the same shared device at s
 - **Setup bundles** — composite product of several items at a bundle price; selling deducts all components.
 
 ### Phase 3
+
 - **Smart stocktaking** — count sessions via barcode (camera or USB scanner); priority ordering by value/turnover; automatic variance detection + report; one-click conversion of variances to adjustments.
 - **Comprehensive reports** — sales, profits, stock, receivables with charts; Excel/HTML/PDF export; period comparison; slow-moving stock report; daily dashboard.
 - **Notification center** — low stock, coffee nearing expiry, overdue customer debts, expiring warranties, expiring quotations.
 - **Warranty & after-sales** — warranty record per sold equipment (auto-starts at invoice date); service tickets (fault, parts, cost, in/out of warranty); full history per serial number.
 
 ### Phase 4 (future)
+
 Cloud sync, attendance/payroll, multi-branch, payment gateway, barcode label printing, WhatsApp sharing (invoice/statement/quote PDF), installments (if approved: down payment + schedule + due-date alerts, no interest math).
 
 ## 5. Key Workflows
 
-**Sale:** scan/select products → availability check → payment type (cash/card/credit) → if credit, link customer → confirm → *(auto: stock deduction + cash entry + movement log)* → print A4 with QR.
+**Sale:** scan/select products → availability check → payment type (cash/card/credit) → if credit, link customer → confirm → _(auto: stock deduction + cash entry + movement log)_ → print A4 with QR.
 
-**Shift:** PIN login → open shift with opening cash → *(auto: every sale/payment/expense recorded to shift)* → count cash at close → *(auto: variance computed and stored)*.
+**Shift:** PIN login → open shift with opening cash → _(auto: every sale/payment/expense recorded to shift)_ → count cash at close → _(auto: variance computed and stored)_.
 
-**Stocktake:** start session (full or by category) → physical count via barcode → *(auto: live comparison with book balance)* → review variances → approve adjustments (manager permission) → *(auto: PDF/Excel report)*.
+**Stocktake:** start session (full or by category) → physical count via barcode → _(auto: live comparison with book balance)_ → review variances → approve adjustments (manager permission) → _(auto: PDF/Excel report)_.
 
-**Quotation → invoice:** create quote (no stock deduction) → print/send → customer accepts → one-click convert → *(auto: stock deduction + all normal sale entries)*.
+**Quotation → invoice:** create quote (no stock deduction) → print/send → customer accepts → one-click convert → _(auto: stock deduction + all normal sale entries)_.
 
 ## 6. Screen Map
 
@@ -117,15 +121,15 @@ One **local server** (PC/mini-PC in the shop) = single source of truth: encrypte
 
 ## 9. Non-Functional Requirements
 
-| Area | Requirement |
-|---|---|
-| Language/UI | Full Arabic RTL, light + dark themes, responsive (mobile/tablet/desktop) |
-| Currency | LYD with 3 decimal places everywhere |
-| Performance | Sub-second responses on LAN; POS screen opens in seconds |
-| Security | Hashed passwords, encrypted DB, strict permissions, full audit log, idle session lock |
-| Reliability | Full offline operation is non-negotiable; cloud is backup only |
-| Backup | Automatic daily local backup + cloud copy when online + one-step restore |
-| Scalability | Architecture allows future branches/roles without a rebuild |
+| Area        | Requirement                                                                           |
+| ----------- | ------------------------------------------------------------------------------------- |
+| Language/UI | Full Arabic RTL, light + dark themes, responsive (mobile/tablet/desktop)              |
+| Currency    | LYD with 3 decimal places everywhere                                                  |
+| Performance | Sub-second responses on LAN; POS screen opens in seconds                              |
+| Security    | Hashed passwords, encrypted DB, strict permissions, full audit log, idle session lock |
+| Reliability | Full offline operation is non-negotiable; cloud is backup only                        |
+| Backup      | Automatic daily local backup + cloud copy when online + one-step restore              |
+| Scalability | Architecture allows future branches/roles without a rebuild                           |
 
 ## 10. Success Metrics
 
@@ -135,13 +139,13 @@ One **local server** (PC/mini-PC in the shop) = single source of truth: encrypte
 
 ## 11. Assumptions & Risks
 
-| Type | Description | Mitigation |
-|---|---|---|
-| Assumption | Single site currently | V1 targets one site, one local server |
-| Risk | Scope creep: 19 approved features over 4 phases | Strict phase discipline; MVP first |
-| Risk | Complexity of smart stocktaking & advanced reports | Start with simple manual stocktake, add smarts later |
-| Risk | LAN setup (static IP for server) | Simple ops guide at delivery |
-| Risk | Data growth (invoices, shifts, movements) | Choose a DB that supports growth |
+| Type       | Description                                        | Mitigation                                           |
+| ---------- | -------------------------------------------------- | ---------------------------------------------------- |
+| Assumption | Single site currently                              | V1 targets one site, one local server                |
+| Risk       | Scope creep: 19 approved features over 4 phases    | Strict phase discipline; MVP first                   |
+| Risk       | Complexity of smart stocktaking & advanced reports | Start with simple manual stocktake, add smarts later |
+| Risk       | LAN setup (static IP for server)                   | Simple ops guide at delivery                         |
+| Risk       | Data growth (invoices, shifts, movements)          | Choose a DB that supports growth                     |
 
 ## 12. Open Questions (pre-build checklist)
 
@@ -149,12 +153,12 @@ Answered 2026-07-17 (recorded in `docs/plan.md` §0):
 
 1. ~~What is the current tracking tool/method?~~ → **Fresh start, no data migration.**
 2. ~~Is cloud storage for backups available?~~ → **Deferred; local backups only in V1.**
-5. ~~Is the tax rate known now?~~ → **Configured later; tax engine ships disabled.**
-6. ~~How many concurrent POS devices?~~ → **2–3.**
+3. ~~Is the tax rate known now?~~ → **Configured later; tax engine ships disabled.**
+4. ~~How many concurrent POS devices?~~ → **2–3.**
 
 Still open:
 
 3. Is a credit limit mandatory for every credit customer, or fully optional? (decide in Phase 2)
 4. What logo/identity should the official A4 invoice template use? (needed before invoice slice; Settings-configurable)
-7. Which products actually need multi-unit selling? (opt-in per product, Phase 2)
-8. Installments: adopt in the future or is open credit enough? (deferred — Installments entity is ready)
+5. Which products actually need multi-unit selling? (opt-in per product, Phase 2)
+6. Installments: adopt in the future or is open credit enough? (deferred — Installments entity is ready)

@@ -11,7 +11,7 @@
 2. **Speed over spectacle.** A full cash sale in under 60 seconds; every interaction optimizes for the next tap.
 3. **Money and stock are monospaced.** Every quantity, price, balance, and document number renders in the mono face with tabular digits.
 4. **State reads at a glance** — shape + words + color, never color alone.
-5. **Documents are always paper.** Invoices, receipts, quotes, and statements render on light paper in *both* themes — a receipt is white even at night.
+5. **Documents are always paper.** Invoices, receipts, quotes, and statements render on light paper in _both_ themes — a receipt is white even at night.
 
 ## 2. Signature Elements
 
@@ -25,11 +25,11 @@ The POS cart **is a thermal receipt being written**. A paper-white column (`--pa
 
 Document status renders as an **angled ink stamp**: Cairo 800 text inside a 2.5px border, rotated 8°, at 85% opacity.
 
-| Stamp | Color | Where |
-|---|---|---|
-| مدفوعة / مكتملة | jade | Paid invoices, closed balanced shifts |
+| Stamp                       | Color  | Where                                    |
+| --------------------------- | ------ | ---------------------------------------- |
+| مدفوعة / مكتملة             | jade   | Paid invoices, closed balanced shifts    |
 | مسودة / معلّقة / دفعة جزئية | copper | Drafts, pending quotes, partial payments |
-| ملغاة / متأخرة | alert | Cancelled documents, overdue receivables |
+| ملغاة / متأخرة              | alert  | Cancelled documents, overdue receivables |
 
 Placement: top-start corner of document previews and A4 prints (prints use the same stamp in grayscale-safe black outline when not color-printed). **The confirmation moment:** when a sale is confirmed, the مدفوعة stamp presses onto the receipt — scale 1.2→1 with a 200ms settle, once. This is the app's single orchestrated animation. Stamps never appear in tables or lists — those use badges (§7).
 
@@ -43,27 +43,27 @@ Tokens are CSS custom properties on `:root`; dark values are redefined under `@m
 
 ### Core palette
 
-| Token | Light | Dark | Role |
-|---|---|---|---|
-| `--bg` | `#F3F4EF` | `#15110D` | App background (olive-tinted paper / coffee-black) |
-| `--surface` | `#FFFFFF` | `#1E1911` | Cards, panels, tables |
-| `--surface-2` | `#EAEBE3` | `#241E15` | Nested fills: table headers, KPI tiles, input wells |
-| `--paper` | `#FFFEF8` | `#FFFEF8` | **Documents & receipt cart — identical in both themes** |
-| `--ink` | `#1C1B16` | `#1C1B16` | Text on `--paper` — documents are ink on paper, always |
-| `--text` | `#181A15` | `#F2EFE6` | Primary text |
-| `--text-muted` | `#5B5F53` | `#A79E8A` | Secondary text, labels, captions |
-| `--border` | `#DBDCD1` | `#332B1F` | Hairlines, card borders, dividers |
-| `--jade` | `#0E8F68` | `#2BC792` | Primary: confirm, money-in, success, active nav |
-| `--jade-2` | `#0B6E51` | `#3FE0AA` | Jade hover/pressed |
-| `--copper` | `#B5711E` | `#E0A44C` | Secondary: warnings, low stock, credit/debt, eyebrows |
-| `--copper-2` | `#8F5A16` | `#F0BE73` | Copper hover/pressed |
-| `--alert` | `#C1421A` | `#FF7A4D` | Destructive, stock-out, shortage, overdue |
+| Token          | Light     | Dark      | Role                                                    |
+| -------------- | --------- | --------- | ------------------------------------------------------- |
+| `--bg`         | `#F3F4EF` | `#15110D` | App background (olive-tinted paper / coffee-black)      |
+| `--surface`    | `#FFFFFF` | `#1E1911` | Cards, panels, tables                                   |
+| `--surface-2`  | `#EAEBE3` | `#241E15` | Nested fills: table headers, KPI tiles, input wells     |
+| `--paper`      | `#FFFEF8` | `#FFFEF8` | **Documents & receipt cart — identical in both themes** |
+| `--ink`        | `#1C1B16` | `#1C1B16` | Text on `--paper` — documents are ink on paper, always  |
+| `--text`       | `#181A15` | `#F2EFE6` | Primary text                                            |
+| `--text-muted` | `#5B5F53` | `#A79E8A` | Secondary text, labels, captions                        |
+| `--border`     | `#DBDCD1` | `#332B1F` | Hairlines, card borders, dividers                       |
+| `--jade`       | `#0E8F68` | `#2BC792` | Primary: confirm, money-in, success, active nav         |
+| `--jade-2`     | `#0B6E51` | `#3FE0AA` | Jade hover/pressed                                      |
+| `--copper`     | `#B5711E` | `#E0A44C` | Secondary: warnings, low stock, credit/debt, eyebrows   |
+| `--copper-2`   | `#8F5A16` | `#F0BE73` | Copper hover/pressed                                    |
+| `--alert`      | `#C1421A` | `#FF7A4D` | Destructive, stock-out, shortage, overdue               |
 
 ### Semantic mapping (do not invent new colors)
 
 - **Success / money-in / in-stock** → jade · **Warning / low stock / pending / credit** → copper · **Danger / stock-out / delete / overdue** → alert · **Neutral info** → muted on `--surface-2`.
 - Cash **variance**: surplus = copper (investigate), shortage = alert, balanced = jade.
-- Stamps on `--paper` use the *light-theme* ink values (`#0E8F68` / `#B5711E` / `#C1421A`) in both themes — ink doesn't glow.
+- Stamps on `--paper` use the _light-theme_ ink values (`#0E8F68` / `#B5711E` / `#C1421A`) in both themes — ink doesn't glow.
 
 ### Usage rules
 
@@ -76,26 +76,26 @@ Tokens are CSS custom properties on `:root`; dark values are redefined under `@m
 
 All fonts **bundled locally as woff2** (`/public/fonts/`) via `@font-face` — the offline rule forbids CDN fonts. Verify zero network font requests; silent fallback to system Arabic fonts is a bug.
 
-| Role | Face | Weights | Usage |
-|---|---|---|---|
-| Display | **Cairo** | 600–900 | Screen titles, card headings, stamps, money-confirm buttons |
-| Body | **Tajawal** | 300–700 | Everything readable: body, forms, tables, nav |
-| Data | **JetBrains Mono** | 400–700 | Numbers, prices, quantities, barcodes, refs, receipt lines |
+| Role    | Face               | Weights | Usage                                                       |
+| ------- | ------------------ | ------- | ----------------------------------------------------------- |
+| Display | **Cairo**          | 600–900 | Screen titles, card headings, stamps, money-confirm buttons |
+| Body    | **Tajawal**        | 300–700 | Everything readable: body, forms, tables, nav               |
+| Data    | **JetBrains Mono** | 400–700 | Numbers, prices, quantities, barcodes, refs, receipt lines  |
 
 ### Type scale (rem, base 16px)
 
-| Token | Size | Face/weight | Use |
-|---|---|---|---|
-| `display` | clamp 1.75–2.25 | Cairo 800 | Screen title (one per screen) |
-| `h2` | 1.25 | Cairo 800 | Section/card group |
-| `h3` | 1 | Cairo 700 | Card title |
-| `body` | 0.9375 | Tajawal 400 | Default |
-| `label` | 0.8125 | Tajawal 500 | Form labels, table headers |
-| `caption` | 0.75 | Tajawal 400 muted | Help text, timestamps |
-| `eyebrow` | 0.75 | Mono 500, `letter-spacing:.08em`, copper | Section markers, doc metadata |
-| `money-lg` | 1.5 | Mono 700 jade | Cart total, KPI values |
-| `money` | 0.875 | Mono 500 | Prices in lists/tables |
-| `stamp` | 1.125 | Cairo 800, `letter-spacing:.04em` | Stamp text only |
+| Token      | Size            | Face/weight                              | Use                           |
+| ---------- | --------------- | ---------------------------------------- | ----------------------------- |
+| `display`  | clamp 1.75–2.25 | Cairo 800                                | Screen title (one per screen) |
+| `h2`       | 1.25            | Cairo 800                                | Section/card group            |
+| `h3`       | 1               | Cairo 700                                | Card title                    |
+| `body`     | 0.9375          | Tajawal 400                              | Default                       |
+| `label`    | 0.8125          | Tajawal 500                              | Form labels, table headers    |
+| `caption`  | 0.75            | Tajawal 400 muted                        | Help text, timestamps         |
+| `eyebrow`  | 0.75            | Mono 500, `letter-spacing:.08em`, copper | Section markers, doc metadata |
+| `money-lg` | 1.5             | Mono 700 jade                            | Cart total, KPI values        |
+| `money`    | 0.875           | Mono 500                                 | Prices in lists/tables        |
+| `stamp`    | 1.125           | Cairo 800, `letter-spacing:.04em`        | Stamp text only               |
 
 ### Rules
 
@@ -115,12 +115,12 @@ All fonts **bundled locally as woff2** (`/public/fonts/`) via `@font-face` — t
 
 Two density contexts, set once via `data-density` on the screen container — components read tokens, never hardcode sizes:
 
-| Token | `touch` (POS, shifts, PIN, stocktake counting) | `compact` (back-office tables, reports, settings) |
-|---|---|---|
-| Control height | 48px (payment/confirm 56px) | 36px |
-| Base font | 15px | 13.5px |
-| Table row padding | 14px | 8px |
-| Grid gap | 16px | 10px |
+| Token             | `touch` (POS, shifts, PIN, stocktake counting) | `compact` (back-office tables, reports, settings) |
+| ----------------- | ---------------------------------------------- | ------------------------------------------------- |
+| Control height    | 48px (payment/confirm 56px)                    | 36px                                              |
+| Base font         | 15px                                           | 13.5px                                            |
+| Table row padding | 14px                                           | 8px                                               |
+| Grid gap          | 16px                                           | 10px                                              |
 
 - **Desktop (≥900px):** fixed neutral sidebar 272px at the RTL start; content max `980px` for forms/reports; POS uses full width.
 - **Tablet/mobile (<900px):** fixed topbar (58px, blurred surface) + drawer nav; safe-area insets respected. On POS, the receipt cart becomes a bottom sheet with a persistent total bar (mono total + item count always visible).

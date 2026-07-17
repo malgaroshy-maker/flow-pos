@@ -3,7 +3,7 @@
 > Four phases as approved in PRD v3.1. Scope discipline is the project's #1 risk mitigation:
 > a phase ships complete before the next begins, and later-phase features are not pulled forward.
 
-## Phase 1 — MVP: complete offline operational core
+## Phase 1 — MVP: complete offline operational core [COMPLETED - 2026-07-17]
 
 **Goal:** the shop can run its daily cash business entirely on the system, with zero internet, from day one.
 
@@ -18,6 +18,7 @@
 - Daily local backup + one-step restore
 
 **Exit criteria (from PRD acceptance):**
+
 - Confirmed sale deducts stock immediately and logs actor — no manual step
 - A4 invoice prints with correct RTL alignment first try on any office printer
 - Shift close shows variance automatically, saved immutably
