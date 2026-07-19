@@ -67,7 +67,17 @@ Phase 1 leftovers discovered in review (closed 2026-07-19):
 
 All seven steps are done except the last, which gates Phase 3:
 
-7. **Refactor `web/src/App.tsx`** (single component, now 7,000+ lines) into per-screen components with a shared API client **before starting Phase 3** — Phase 3's screens (stocktaking, charts, notifications, tickets) do not fit in the monolith.
+7. **Refactor `web/src/App.tsx`** (single component, 7,665 lines → 486 lines) into per-screen components with a shared API client **before starting Phase 3** — Phase 3's screens (stocktaking, charts, notifications, tickets) do not fit in the monolith. **Status: COMPLETED (V1.2.9, 2026-07-20).**
+   - A1. Extract shared infrastructure (types, API client, AuthContext, ToastContext, DataContext)
+   - A2. Extract print system (InvoiceA4, ThermalReceipt, QuotationA4, StatementA4, PrintRoot)
+   - A3. Extract screens (Home, Dashboard, Login, Quotations, Purchases, Customers, Shifts, Products, Reports, Settings, Pos)
+   - A4. Extract shared components (Modal, PinOverrideModal, Icons, StatusPill, MoneyInput)
+   - Acceptance: `App.tsx` ≤ ~300 lines, zero behavior change, release as **V1.2.9**
+
+> **The detailed, agent-executable plan for the refactor and all of Phase 3 lives in
+> [`docs/next-steps.md`](next-steps.md)** — milestones A (refactor gate) and B1–B4
+> (stocktaking, reports & exports, notifications, warranty tickets), each with schema,
+> endpoints, UI scope, tests, and acceptance criteria.
 
 ## Phase 3 — Intelligence: stocktaking, reports, alerts, after-sales
 

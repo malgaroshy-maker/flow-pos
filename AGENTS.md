@@ -33,6 +33,7 @@ An **offline-first, Arabic (RTL) sales & inventory management system** ("منظ�
 - `docs/prd.md` — English distillation of the PRD.
 - `docs/plan.md` — confirmed decisions and tech stack.
 - `docs/roadmap.md` — the 4 delivery phases and current status.
+- `docs/next-steps.md` — **the execution plan for what to build next** (App.tsx refactor gate, then Phase 3 milestones). Start there when asked to "continue" or "do the next steps".
 - `docs/design.md` — design system (tokens, type, components, print templates). All UI work follows it; extend it before deviating.
 - `سجل-التغييرات.md` — official Arabic changelog, one summarized section per version, newest first.
 - `تقرير-مميزات-المنظومة.html` — customer-facing features report (Arabic); update it when major features ship.

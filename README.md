@@ -77,6 +77,7 @@ npm run db:migrate / npm run db:seed
 | [`docs/prd.md`](docs/prd.md)                                                   | English distillation of the PRD                                        |
 | [`docs/plan.md`](docs/plan.md)                                                 | Confirmed decisions & tech stack                                       |
 | [`docs/roadmap.md`](docs/roadmap.md)                                           | The 4 delivery phases, current status, and the Phase 2 completion plan |
+| [`docs/next-steps.md`](docs/next-steps.md)                                     | Agent-executable plan: App.tsx refactor gate + Phase 3 milestones      |
 | [`docs/design.md`](docs/design.md)                                             | Design system: tokens, typography, components, print templates         |
 | [`سجل-التغييرات.md`](سجل-التغييرات.md)                                         | Official Arabic changelog — one summarized section per version         |
 | [`تقرير-مميزات-المنظومة.html`](تقرير-مميزات-المنظومة.html)                     | Customer-facing features report (Arabic, printable)                    |

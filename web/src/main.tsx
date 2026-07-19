@@ -22,10 +22,19 @@ import '@fontsource/jetbrains-mono/latin-500.css';
 import '@fontsource/jetbrains-mono/latin-700.css';
 
 import './styles/app.css';
+import { AuthProvider } from './context/AuthContext';
+import { ToastProvider } from './context/ToastContext';
+import { DataProvider } from './context/DataContext';
 import { App } from './App';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <App />
-  </StrictMode>,
+    <AuthProvider>
+      <ToastProvider>
+        <DataProvider>
+          <App />
+        </DataProvider>
+      </ToastProvider>
+    </AuthProvider>
+  </StrictMode>
 );
