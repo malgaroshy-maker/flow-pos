@@ -133,7 +133,7 @@ export async function authRoutes(app: FastifyInstance) {
   });
 
   // Get active users for switching
-  app.get('/users', async (req, reply) => {
+  app.get('/users', { preHandler: authenticateRequest }, async (req, reply) => {
     const allUsers = app.db
       .select({ id: users.id, username: users.username, role: users.role, active: users.active })
       .from(users)
@@ -142,7 +142,7 @@ export async function authRoutes(app: FastifyInstance) {
   });
 
   // Create new user (manager only)
-  app.post('/users', async (req, reply) => {
+  app.post('/users', { preHandler: authenticateRequest }, async (req, reply) => {
     const currentUser = req.user;
     if (!currentUser || currentUser.role !== 'manager') {
       return reply.code(403).send({ error: 'forbidden', message: 'هذا الإجراء متاح للمدراء فقط' });
@@ -192,7 +192,7 @@ export async function authRoutes(app: FastifyInstance) {
   });
 
   // Update user details (password, pin, role, active status) - manager only
-  app.put('/users/:id', async (req, reply) => {
+  app.put('/users/:id', { preHandler: authenticateRequest }, async (req, reply) => {
     const currentUser = req.user;
     if (!currentUser || currentUser.role !== 'manager') {
       return reply.code(403).send({ error: 'forbidden', message: 'هذا الإجراء متاح للمدراء فقط' });
@@ -228,13 +228,11 @@ export async function authRoutes(app: FastifyInstance) {
       const trimmedPin = pin.trim() === '' ? null : pin.trim();
       if (trimmedPin) {
         // Check uniqueness of PIN (excluding targetUser itself)
-        const pinInUse = app.db
-          .select()
-          .from(users)
-          .where(eq(users.pin, trimmedPin))
-          .get();
+        const pinInUse = app.db.select().from(users).where(eq(users.pin, trimmedPin)).get();
         if (pinInUse && pinInUse.id !== targetUser.id) {
-          return reply.code(400).send({ error: 'pin_taken', message: 'رمز PIN مستخدم بالفعل لمستخدم آخر' });
+          return reply
+            .code(400)
+            .send({ error: 'pin_taken', message: 'رمز PIN مستخدم بالفعل لمستخدم آخر' });
         }
       }
       updates.pin = trimmedPin;
@@ -247,7 +245,9 @@ export async function authRoutes(app: FastifyInstance) {
     if (active !== undefined) {
       // Prevent manager from deactivating themselves
       if (targetUser.id === currentUser.userId && !active) {
-        return reply.code(400).send({ error: 'cannot_deactivate_self', message: 'لا يمكنك إلغاء تنشيط حسابك الخاص' });
+        return reply
+          .code(400)
+          .send({ error: 'cannot_deactivate_self', message: 'لا يمكنك إلغاء تنشيط حسابك الخاص' });
       }
       updates.active = active;
     }

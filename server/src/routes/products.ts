@@ -69,12 +69,10 @@ export async function productRoutes(app: FastifyInstance) {
     } = body;
 
     if (!name || !type || !category || !baseUnit) {
-      return reply
-        .code(400)
-        .send({
-          error: 'missing_fields',
-          message: 'الاسم، النوع، التصنيف، والوحدة الأساسية حقول مطلوبة',
-        });
+      return reply.code(400).send({
+        error: 'missing_fields',
+        message: 'الاسم، النوع، التصنيف، والوحدة الأساسية حقول مطلوبة',
+      });
     }
 
     // Insert product

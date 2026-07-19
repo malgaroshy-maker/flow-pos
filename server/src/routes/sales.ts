@@ -65,10 +65,15 @@ export async function saleRoutes(app: FastifyInstance) {
   // Create a new cash/credit sale
   app.post('/sales', async (req, reply) => {
     const body = req.body as {
-      items: Array<{ productId: number; quantity: number; unitPrice: number; serialNumber?: string }>;
+      items: Array<{
+        productId: number;
+        quantity: number;
+        unitPrice: number;
+        serialNumber?: string;
+      }>;
       discount: number; // in milli-LYD
       paymentType: 'cash' | 'credit';
-      paymentMethod: 'cash' | 'card';
+      paymentMethod: 'cash' | 'card' | 'transfer';
       overridePin?: string;
     };
 
@@ -89,7 +94,7 @@ export async function saleRoutes(app: FastifyInstance) {
     if (!activeShift) {
       return reply
         .code(400)
-        .send({ error: 'no_active_shift', message: 'لا توجد وردية مفتوحة لتسجيل المبيعات' });
+        .send({ error: 'no_active_shift', message: 'لا توجد توكة مفتوحة لتسجيل المبيعات' });
     }
 
     // Load active settings for tax calculation
@@ -270,12 +275,10 @@ export async function saleRoutes(app: FastifyInstance) {
     } catch (err: any) {
       const msg = err.message || '';
       if (msg.startsWith('product_not_found:')) {
-        return reply
-          .code(400)
-          .send({
-            error: 'product_not_found',
-            message: 'أحد المنتجات في السلة غير موجود في قاعدة البيانات',
-          });
+        return reply.code(400).send({
+          error: 'product_not_found',
+          message: 'أحد المنتجات في السلة غير موجود في قاعدة البيانات',
+        });
       }
       if (msg.startsWith('insufficient_stock:')) {
         const [, name, qty] = msg.split(':');
@@ -305,12 +308,10 @@ export async function saleRoutes(app: FastifyInstance) {
     }
 
     if (req.user!.role !== 'manager' && !overrideUser) {
-      return reply
-        .code(403)
-        .send({
-          error: 'forbidden',
-          message: 'إلغاء الفواتير يتطلب صلاحية مدير أو إدخال رمز PIN للمدير',
-        });
+      return reply.code(403).send({
+        error: 'forbidden',
+        message: 'إلغاء الفواتير يتطلب صلاحية مدير أو إدخال رمز PIN للمدير',
+      });
     }
 
     const activeShift = app.db
@@ -323,7 +324,7 @@ export async function saleRoutes(app: FastifyInstance) {
     if (!activeShift) {
       return reply
         .code(400)
-        .send({ error: 'no_active_shift', message: 'يجب فتح وردية أولاً لإجراء عملية الإرجاع' });
+        .send({ error: 'no_active_shift', message: 'يجب فتح توكة أولاً لإجراء عملية الإرجاع' });
     }
 
     try {

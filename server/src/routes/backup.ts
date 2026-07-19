@@ -13,12 +13,10 @@ export async function backupRoutes(app: FastifyInstance) {
   app.post('/backup', async (req, reply) => {
     const dbPath = resolveDbPath();
     if (dbPath === ':memory:') {
-      return reply
-        .code(400)
-        .send({
-          error: 'in_memory_db',
-          message: 'لا يمكن عمل نسخة احتياطية لقاعدة بيانات في الذاكرة',
-        });
+      return reply.code(400).send({
+        error: 'in_memory_db',
+        message: 'لا يمكن عمل نسخة احتياطية لقاعدة بيانات في الذاكرة',
+      });
     }
 
     const backupDir = join(dirname(dbPath), 'backups');

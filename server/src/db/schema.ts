@@ -114,9 +114,33 @@ export const expenses = sqliteTable('expenses', {
   createdAt: text('created_at').notNull(),
 });
 
+// ── Phase 2 tables (customers, suppliers, purchases) ──────────────────────────
+
+export const customers = sqliteTable('customers', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  name: text('name').notNull(),
+  phone: text('phone'),
+  address: text('address'),
+  creditBalance: integer('credit_balance').notNull().default(0), // milli-LYD owed to us
+  notes: text('notes'),
+  createdAt: text('created_at').notNull(),
+});
+
+export const suppliers = sqliteTable('suppliers', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  name: text('name').notNull(),
+  phone: text('phone'),
+  address: text('address'),
+  debtBalance: integer('debt_balance').notNull().default(0), // milli-LYD we owe them
+  notes: text('notes'),
+  createdAt: text('created_at').notNull(),
+});
+
 export const sales = sqliteTable('sales', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   invoiceNumber: text('invoice_number').notNull().unique(), // INV-YYYY-NNNNN
+  customerId: integer('customer_id').references(() => customers.id),
+  customerName: text('customer_name'), // snapshot
   userId: integer('user_id')
     .notNull()
     .references(() => users.id),
@@ -126,7 +150,7 @@ export const sales = sqliteTable('sales', {
   paymentType: text('payment_type', { enum: ['cash', 'credit'] })
     .notNull()
     .default('cash'),
-  paymentMethod: text('payment_method', { enum: ['cash', 'card'] })
+  paymentMethod: text('payment_method', { enum: ['cash', 'card', 'transfer'] })
     .notNull()
     .default('cash'),
   taxAmount: integer('tax_amount').notNull().default(0),
@@ -151,6 +175,37 @@ export const saleItems = sqliteTable('sale_items', {
   unitPrice: integer('unit_price').notNull(), // milli-LYD
   total: integer('total').notNull(), // milli-LYD
   serialNumber: text('serial_number'),
+});
+
+export const purchases = sqliteTable('purchases', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  invoiceNumber: text('invoice_number').notNull().unique(), // PUR-YYYY-NNNNN
+  supplierId: integer('supplier_id').references(() => suppliers.id),
+  supplierName: text('supplier_name'), // snapshot
+  total: integer('total').notNull().default(0), // milli-LYD
+  paid: integer('paid').notNull().default(0), // milli-LYD
+  status: text('status', { enum: ['pending', 'partial', 'paid'] })
+    .notNull()
+    .default('pending'),
+  notes: text('notes'),
+  userId: integer('user_id')
+    .notNull()
+    .references(() => users.id),
+  createdAt: text('created_at').notNull(),
+});
+
+export const purchaseItems = sqliteTable('purchase_items', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  purchaseId: integer('purchase_id')
+    .notNull()
+    .references(() => purchases.id),
+  productId: integer('product_id')
+    .notNull()
+    .references(() => products.id),
+  productName: text('product_name').notNull(), // snapshot
+  quantity: integer('quantity').notNull(),
+  unitCost: integer('unit_cost').notNull(), // milli-LYD
+  total: integer('total').notNull(), // milli-LYD
 });
 
 export const auditLogs = sqliteTable('audit_logs', {

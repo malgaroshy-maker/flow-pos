@@ -47,12 +47,10 @@ export async function shiftRoutes(app: FastifyInstance) {
     const existing = app.db.select().from(shifts).where(eq(shifts.status, 'open')).limit(1).get();
 
     if (existing) {
-      return reply
-        .code(400)
-        .send({
-          error: 'shift_already_open',
-          message: 'هناك وردية مفتوحة بالفعل. يرجى إغلاقها أولاً',
-        });
+      return reply.code(400).send({
+        error: 'shift_already_open',
+        message: 'هناك توكة مفتوحة بالفعل. يرجى إغلاقها أولاً',
+      });
     }
 
     const now = new Date().toISOString();
@@ -87,7 +85,7 @@ export async function shiftRoutes(app: FastifyInstance) {
       .values({
         userId: req.user!.userId,
         action: 'open_shift',
-        details: `فتح وردية جديدة (معرف: ${newShiftId}) برصيد افتتاحي: ${openingCash}`,
+        details: `فتح توكة جديدة (معرف: ${newShiftId}) برصيد افتتاحي: ${openingCash}`,
         createdAt: now,
       })
       .run();
@@ -108,7 +106,7 @@ export async function shiftRoutes(app: FastifyInstance) {
     if (!active) {
       return reply
         .code(400)
-        .send({ error: 'no_active_shift', message: 'لا توجد وردية مفتوحة لإغلاقها' });
+        .send({ error: 'no_active_shift', message: 'لا توجد توكة مفتوحة لإغلاقها' });
     }
 
     // Execute inside transaction for strict calculation and locking
@@ -150,7 +148,7 @@ export async function shiftRoutes(app: FastifyInstance) {
         .values({
           userId: req.user!.userId,
           action: 'close_shift',
-          details: `إغلاق الوردية ${active.id}: المتوقع ${expected}، الفعلي ${actualCash}، الفارق ${variance}`,
+          details: `إغلاق التوكة ${active.id}: المتوقع ${expected}، الفعلي ${actualCash}، الفارق ${variance}`,
           createdAt: now,
         })
         .run();
@@ -186,7 +184,7 @@ export async function shiftRoutes(app: FastifyInstance) {
           .values({
             userId: req.user!.userId,
             action: 'backup_database',
-            details: `نسخ احتياطي تلقائي عند إغلاق الوردية ${active.id} إلى ${backupFile}`,
+            details: `نسخ احتياطي تلقائي عند إغلاق التوكة ${active.id} إلى ${backupFile}`,
             createdAt: new Date().toISOString(),
           })
           .run();
@@ -248,7 +246,7 @@ export async function shiftRoutes(app: FastifyInstance) {
     if (!active) {
       return reply
         .code(400)
-        .send({ error: 'no_active_shift', message: 'لا يمكن تسجيل مصروفات بدون وردية مفتوحة' });
+        .send({ error: 'no_active_shift', message: 'لا يمكن تسجيل مصروفات بدون توكة مفتوحة' });
     }
 
     const now = new Date().toISOString();
@@ -288,7 +286,7 @@ export async function shiftRoutes(app: FastifyInstance) {
         .values({
           userId: req.user!.userId,
           action: 'create_expense',
-          details: `تسجيل مصروف بقيمة ${amount} د.ل في الوردية ${active.id}. السبب: ${reason} (التصنيف: ${category})`,
+          details: `تسجيل مصروف بقيمة ${amount} د.ل في التوكة ${active.id}. السبب: ${reason} (التصنيف: ${category})`,
           createdAt: now,
         })
         .run();
