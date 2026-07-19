@@ -389,13 +389,22 @@
             line-height: 1.8;
         }
 
-        /* Print Media Styles for PDF */
+        /* Print Media Styles for PDF & A4 Printing (Horizontal Landscape Default) */
         @media print {
-            body {
+            @page {
+                size: A4 landscape;
+                margin: 8mm 10mm;
+            }
+
+            html, body {
                 background-color: #ffffff !important;
                 color: #000000 !important;
                 padding: 0 !important;
-                font-size: 11pt !important;
+                margin: 0 !important;
+                font-size: 9.5pt !important;
+                line-height: 1.45 !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
             }
 
             .actions-bar {
@@ -404,68 +413,182 @@
 
             .container {
                 max-width: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
             }
 
             header {
                 background: #f8f9fa !important;
-                border: 1px solid #ccc !important;
+                border: 1px solid #cccccc !important;
                 box-shadow: none !important;
-                padding: 24px !important;
-                margin-bottom: 25px !important;
+                padding: 14px 18px !important;
+                margin-bottom: 14px !important;
+                border-radius: 10px !important;
             }
 
             header::before {
-                display: none;
+                display: none !important;
+            }
+
+            .brand-badge {
+                background: #eef2f5 !important;
+                color: #111111 !important;
+                border-color: #cccccc !important;
+                padding: 3px 12px !important;
+                margin-bottom: 8px !important;
+                font-size: 10pt !important;
             }
 
             h1 {
                 color: #000000 !important;
                 -webkit-text-fill-color: initial !important;
-                font-size: 22pt !important;
+                font-size: 18pt !important;
+                margin-bottom: 8px !important;
+                line-height: 1.3 !important;
             }
 
             .subtitle {
-                color: #444444 !important;
+                color: #333333 !important;
+                font-size: 10.5pt !important;
+                margin-bottom: 12px !important;
+                line-height: 1.5 !important;
+            }
+
+            .hero-highlights {
+                gap: 6px !important;
+            }
+
+            .tag-pill {
+                background: #f1f5f9 !important;
+                border: 1px solid #cbd5e1 !important;
+                color: #111111 !important;
+                padding: 4px 10px !important;
+                font-size: 9pt !important;
             }
 
             .card {
                 background: #ffffff !important;
-                border: 1px solid #ddd !important;
+                border: 1px solid #e2e8f0 !important;
                 box-shadow: none !important;
-                padding: 22px !important;
-                margin-bottom: 22px !important;
-                page-break-inside: avoid;
+                padding: 14px 16px !important;
+                margin-bottom: 14px !important;
+                border-radius: 10px !important;
+                /* Allow card to break across pages cleanly without huge whitespace gaps */
+                page-break-inside: auto !important;
+                break-inside: auto !important;
+            }
+
+            .card-header {
+                margin-bottom: 10px !important;
+                padding-bottom: 10px !important;
+                gap: 10px !important;
+            }
+
+            .icon-box {
+                width: 38px !important;
+                height: 38px !important;
+                font-size: 18px !important;
+                border-radius: 8px !important;
+            }
+
+            h2 {
+                font-size: 14pt !important;
+                color: #000000 !important;
+            }
+
+            .section-desc {
+                color: #444444 !important;
+                font-size: 9.5pt !important;
+                margin-bottom: 12px !important;
+                line-height: 1.5 !important;
+            }
+
+            .features-grid {
+                gap: 10px !important;
+                grid-template-cols: repeat(3, 1fr) !important;
+                margin-top: 8px !important;
             }
 
             .feature-box {
-                background: #f9f9f9 !important;
-                border: 1px solid #eee !important;
+                background: #f8fafc !important;
+                border: 1px solid #e2e8f0 !important;
                 box-shadow: none !important;
+                padding: 10px 12px !important;
+                border-radius: 8px !important;
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
             }
 
-            .feature-title, h2, .callout-title, th {
-                color: #111111 !important;
+            .feature-title {
+                color: #0f172a !important;
+                font-size: 10.5pt !important;
+                margin-bottom: 6px !important;
             }
 
-            .feature-desc, .section-desc, .callout-desc {
-                color: #333333 !important;
+            .feature-desc {
+                color: #334155 !important;
+                font-size: 9pt !important;
+                line-height: 1.45 !important;
             }
 
-            .callout {
-                background: #f4f6f8 !important;
-                border-right-color: #333 !important;
+            .table-responsive {
+                margin-top: 10px !important;
+                border: 1px solid #cbd5e1 !important;
+            }
+
+            table {
+                font-size: 8.5pt !important;
             }
 
             th {
-                background: #eee !important;
+                background: #f1f5f9 !important;
+                color: #0f172a !important;
+                padding: 8px 10px !important;
+                border-bottom: 2px solid #cbd5e1 !important;
+            }
+
+            td {
+                padding: 7px 10px !important;
+                border-bottom: 1px solid #e2e8f0 !important;
+            }
+
+            tr {
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+            }
+
+            .callout {
+                background: #f8fafc !important;
+                border-right: 4px solid #0f172a !important;
+                padding: 12px 16px !important;
+                margin-top: 14px !important;
+                border-radius: 8px !important;
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+            }
+
+            .callout-title {
+                color: #0f172a !important;
+                font-size: 11pt !important;
+                margin-bottom: 4px !important;
+            }
+
+            .callout-desc {
+                color: #334155 !important;
+                font-size: 9.5pt !important;
+                line-height: 1.5 !important;
             }
 
             .badge-check {
-                color: #15803d !important;
+                color: #16a34a !important;
             }
 
             .badge-cross {
-                color: #b91c1c !important;
+                color: #dc2626 !important;
+            }
+
+            .badge-partial {
+                color: #d97706 !important;
             }
         }
     </style>
@@ -479,9 +602,10 @@
             <div style="font-family: 'Readex Pro', sans-serif; font-weight: 800; font-size: 14.5px; color: var(--gold); display: flex; align-items: center; gap: 8px;">
                 ✨ <span>منظومة Flow لمستلزمات المقاهي والمطاعم — التقرير الفني والتنافسي الشامل</span>
             </div>
-            <div style="display: flex; gap: 12px;">
-                <button class="btn" onclick="toggleTheme()"><ctrl42> تغيير النمط (ليلي/نهاري)</button>
-                <button class="btn btn-primary" onclick="window.print()">🖨️ طباعة التقرير / حفظ PDF</button>
+            <div style="display: flex; gap: 10px;">
+                <button class="btn" onclick="toggleTheme()">🌓 النمط (ليلي/نهاري)</button>
+                <button class="btn btn-primary" onclick="printLandscape()">🖼️ طباعة أفقية (Landscape)</button>
+                <button class="btn" onclick="printPortrait()">📄 طباعة عمودية (Portrait)</button>
             </div>
         </div>
 
@@ -996,6 +1120,30 @@
             const current = document.documentElement.getAttribute('data-theme') || getTheme();
             const next = current === 'dark' ? 'light' : 'dark';
             setTheme(next);
+        }
+
+        // Print in Landscape orientation
+        function printLandscape() {
+            let style = document.getElementById('print-mode-style');
+            if (!style) {
+                style = document.createElement('style');
+                style.id = 'print-mode-style';
+                document.head.appendChild(style);
+            }
+            style.innerHTML = `@media print { @page { size: A4 landscape; margin: 8mm 10mm; } .features-grid { grid-template-cols: repeat(3, 1fr) !important; } }`;
+            window.print();
+        }
+
+        // Print in Portrait orientation
+        function printPortrait() {
+            let style = document.getElementById('print-mode-style');
+            if (!style) {
+                style = document.createElement('style');
+                style.id = 'print-mode-style';
+                document.head.appendChild(style);
+            }
+            style.innerHTML = `@media print { @page { size: A4 portrait; margin: 10mm 12mm; } .features-grid { grid-template-cols: repeat(2, 1fr) !important; } }`;
+            window.print();
         }
 
         // Initialize on page load
