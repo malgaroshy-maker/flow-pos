@@ -3,11 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>التقرير الشامل والدليل التنفيذي لمميزات منظومة Flow للمبيعات والمخزون</title>
-    <!-- خطوط عربية فائقة الجودة -->
+    <title>دليل مميزات منظومة Flow للمبيعات والمخزون</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     
     <style>
         :root {
@@ -19,16 +18,14 @@
             --text-muted: #b3a896;
             --border: #3d3023;
             --gold: #d4af37;
-            --gold-bright: #f39c12;
-            --amber: #e67e22;
-            --jade: #1b8a4c;
-            --jade-bright: #2ecc71;
+            --gold-dim: rgba(212, 175, 55, 0.15);
+            --jade: #2ecc71;
             --blue: #3498db;
-            --purple: #9b59b6;
+            --amber: #e67e22;
             --alert: #e74c3c;
-            --shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.85);
-            --radius-card: 20px;
-            --radius-control: 14px;
+            --shadow: 0 16px 36px -12px rgba(0, 0, 0, 0.75);
+            --radius: 16px;
+            --radius-sm: 12px;
         }
 
         [data-theme="light"] {
@@ -40,14 +37,12 @@
             --text-muted: #4b5563;
             --border: #cbd5e1;
             --gold: #b78103;
-            --gold-bright: #d97706;
-            --amber: #d97706;
-            --jade: #15803d;
-            --jade-bright: #16a34a;
+            --gold-dim: rgba(183, 129, 3, 0.1);
+            --jade: #16a34a;
             --blue: #2563eb;
-            --purple: #7c3aed;
+            --amber: #d97706;
             --alert: #dc2626;
-            --shadow: 0 12px 32px -12px rgba(0, 0, 0, 0.12);
+            --shadow: 0 10px 28px -10px rgba(0, 0, 0, 0.1);
         }
 
         * {
@@ -57,78 +52,89 @@
         }
 
         body {
-            background-color: var(--bg);
+            background: var(--bg);
             color: var(--text);
             font-family: 'Readex Pro', sans-serif;
             font-size: 15px;
             line-height: 1.8;
-            padding: 40px 20px;
-            transition: background-color 0.3s, color 0.3s;
+            padding: 36px 20px;
+            transition: background 0.3s, color 0.3s;
         }
 
         .container {
-            max-width: 1120px;
+            max-width: 1080px;
             margin: 0 auto;
         }
 
-        /* Top Actions Bar */
+        /* ─── Actions Bar ─── */
         .actions-bar {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 35px;
+            margin-bottom: 32px;
             background: var(--surface);
             border: 1px solid var(--border);
-            padding: 14px 28px;
-            border-radius: 60px;
+            padding: 12px 24px;
+            border-radius: 50px;
             box-shadow: var(--shadow);
-            backdrop-filter: blur(10px);
+        }
+
+        .actions-bar .bar-title {
+            font-weight: 800;
+            font-size: 14px;
+            color: var(--gold);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .bar-buttons {
+            display: flex;
+            gap: 8px;
         }
 
         .btn {
             background: var(--surface-2);
             border: 1px solid var(--border);
             color: var(--text);
-            padding: 10px 22px;
-            border-radius: 35px;
+            padding: 9px 20px;
+            border-radius: 30px;
             cursor: pointer;
             font-family: 'Readex Pro', sans-serif;
-            font-size: 13.5px;
+            font-size: 13px;
             font-weight: 700;
             display: inline-flex;
             align-items: center;
-            gap: 10px;
-            transition: all 0.25s ease;
+            gap: 8px;
+            transition: all 0.2s ease;
         }
 
         .btn:hover {
             background: var(--gold);
             color: #0f0c08;
             border-color: var(--gold);
-            transform: translateY(-2px);
-            box-shadow: 0 6px 18px rgba(212, 175, 55, 0.3);
+            transform: translateY(-1px);
         }
 
         .btn-primary {
             background: linear-gradient(135deg, var(--gold), #b8860b);
             color: #0f0c08;
             border: none;
-            box-shadow: 0 4px 18px rgba(212, 175, 55, 0.35);
+            box-shadow: 0 4px 14px rgba(212, 175, 55, 0.3);
         }
 
         .btn-primary:hover {
             background: linear-gradient(135deg, #f1c40f, var(--gold));
-            box-shadow: 0 8px 24px rgba(212, 175, 55, 0.5);
         }
 
-        /* Header Presentation */
+        /* ─── Header ─── */
         header {
             text-align: center;
-            margin-bottom: 45px;
-            padding: 50px 30px;
+            margin-bottom: 40px;
+            padding: 44px 28px 36px;
             background: linear-gradient(180deg, var(--surface) 0%, var(--surface-2) 100%);
             border: 1px solid var(--border);
-            border-radius: var(--radius-card);
+            border-radius: var(--radius);
             box-shadow: var(--shadow);
             position: relative;
             overflow: hidden;
@@ -140,40 +146,38 @@
             top: 0;
             left: 0;
             right: 0;
-            height: 5px;
-            background: linear-gradient(90deg, var(--gold), var(--jade-bright), var(--blue), var(--purple));
+            height: 4px;
+            background: linear-gradient(90deg, var(--gold), var(--jade), var(--blue));
         }
 
         .brand-badge {
             display: inline-block;
-            background: rgba(212, 175, 55, 0.15);
+            background: var(--gold-dim);
             color: var(--gold);
-            border: 1px solid rgba(212, 175, 55, 0.35);
-            padding: 6px 20px;
+            border: 1px solid rgba(212, 175, 55, 0.3);
+            padding: 5px 18px;
             border-radius: 30px;
-            font-family: 'Readex Pro', sans-serif;
-            font-size: 13px;
+            font-size: 12.5px;
             font-weight: 800;
-            margin-bottom: 18px;
-            letter-spacing: 0.5px;
+            margin-bottom: 16px;
+            letter-spacing: 0.3px;
         }
 
         h1 {
-            font-family: 'Readex Pro', sans-serif;
-            font-size: 36px;
+            font-size: 32px;
             font-weight: 900;
-            margin-bottom: 16px;
-            background: linear-gradient(135deg, var(--text) 20%, var(--gold) 100%);
+            margin-bottom: 14px;
+            background: linear-gradient(135deg, var(--text) 30%, var(--gold) 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            line-height: 1.3;
+            line-height: 1.35;
         }
 
         .subtitle {
             color: var(--text-muted);
-            font-size: 16.5px;
-            max-width: 850px;
-            margin: 0 auto 30px;
+            font-size: 15.5px;
+            max-width: 780px;
+            margin: 0 auto 26px;
             line-height: 1.8;
         }
 
@@ -181,235 +185,197 @@
             display: flex;
             justify-content: center;
             flex-wrap: wrap;
-            gap: 12px;
+            gap: 10px;
         }
 
         .tag-pill {
             background: var(--surface-3);
             border: 1px solid var(--border);
-            padding: 8px 18px;
-            border-radius: 40px;
-            font-size: 13px;
+            padding: 7px 16px;
+            border-radius: 30px;
+            font-size: 12.5px;
             font-weight: 700;
             color: var(--text);
             display: flex;
             align-items: center;
-            gap: 8px;
-            transition: transform 0.2s ease;
+            gap: 6px;
         }
 
-        .tag-pill:hover {
-            transform: translateY(-2px);
-            border-color: var(--gold);
-        }
-
-        .tag-pill span {
-            color: var(--jade-bright);
+        .tag-pill .check {
+            color: var(--jade);
             font-weight: 900;
         }
 
-        /* Main Section Card */
+        /* ─── Section Cards ─── */
         .card {
             background: var(--surface);
             border: 1px solid var(--border);
-            border-radius: var(--radius-card);
-            padding: 36px;
-            margin-bottom: 35px;
+            border-radius: var(--radius);
+            padding: 32px;
+            margin-bottom: 28px;
             box-shadow: var(--shadow);
-            position: relative;
         }
 
         .card-header {
             display: flex;
             align-items: center;
-            gap: 16px;
-            margin-bottom: 24px;
-            border-bottom: 1px dashed var(--border);
-            padding-bottom: 18px;
+            gap: 14px;
+            margin-bottom: 18px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border);
         }
 
-        .icon-box {
-            width: 54px;
-            height: 54px;
-            background: linear-gradient(135deg, var(--surface-2), var(--surface-3));
-            border: 1px solid var(--border);
-            border-radius: 16px;
+        .section-num {
+            width: 48px;
+            height: 48px;
+            background: var(--gold-dim);
+            border: 1px solid rgba(212, 175, 55, 0.25);
+            border-radius: 14px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 26px;
+            font-size: 20px;
+            font-weight: 900;
             color: var(--gold);
             flex-shrink: 0;
-            box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.05);
         }
 
         h2 {
-            font-family: 'Readex Pro', sans-serif;
-            font-size: 22px;
+            font-size: 20px;
             font-weight: 800;
             color: var(--text);
+            line-height: 1.4;
         }
 
         .section-desc {
             color: var(--text-muted);
-            margin-bottom: 24px;
-            font-size: 14.5px;
-            line-height: 1.8;
+            margin-bottom: 20px;
+            font-size: 14px;
+            line-height: 1.85;
         }
 
-        /* Grid Layout for Features */
+        /* ─── Feature Grid ─── */
         .features-grid {
             display: grid;
-            grid-template-cols: repeat(auto-fit, minmax(310px, 1fr));
-            gap: 22px;
-            margin-top: 15px;
+            grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+            gap: 18px;
         }
 
         .feature-box {
             background: var(--surface-2);
             border: 1px solid var(--border);
-            border-radius: var(--radius-control);
-            padding: 24px;
-            transition: all 0.3s ease;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
+            border-radius: var(--radius-sm);
+            padding: 22px;
+            transition: all 0.25s ease;
         }
 
         .feature-box:hover {
             border-color: var(--gold);
-            transform: translateY(-4px);
-            box-shadow: 0 12px 28px -10px rgba(212, 175, 55, 0.25);
-            background: var(--surface-3);
+            transform: translateY(-3px);
+            box-shadow: 0 10px 24px -8px rgba(212, 175, 55, 0.2);
         }
 
         .feature-title {
-            font-family: 'Readex Pro', sans-serif;
-            font-size: 16.5px;
+            font-size: 15px;
             font-weight: 800;
-            margin-bottom: 12px;
+            margin-bottom: 10px;
             color: var(--gold);
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
         }
 
         .feature-desc {
             color: var(--text-muted);
-            font-size: 13.8px;
-            line-height: 1.75;
+            font-size: 13.5px;
+            line-height: 1.8;
         }
 
-        /* Comparison Table */
-        .table-responsive {
+        /* ─── Table ─── */
+        .table-wrap {
             overflow-x: auto;
-            margin-top: 25px;
-            border-radius: var(--radius-control);
+            margin-top: 20px;
+            border-radius: var(--radius-sm);
             border: 1px solid var(--border);
         }
 
         table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 13.8px;
+            font-size: 13.5px;
             text-align: right;
         }
 
         th {
             background: var(--surface-3);
             color: var(--gold);
-            font-family: 'Readex Pro', sans-serif;
             font-weight: 800;
-            padding: 16px 18px;
+            padding: 14px 16px;
             border-bottom: 2px solid var(--border);
             white-space: nowrap;
         }
 
         td {
-            padding: 16px 18px;
+            padding: 13px 16px;
             border-bottom: 1px solid var(--border);
             vertical-align: middle;
         }
 
-        tr:last-child td {
-            border-bottom: none;
-        }
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background: rgba(212, 175, 55, 0.03); }
 
-        tr:hover td {
-            background: rgba(212, 175, 55, 0.03);
-        }
+        .yes { color: var(--jade); font-weight: 800; }
+        .no  { color: var(--alert); font-weight: 700; }
+        .mid { color: var(--amber); font-weight: 700; }
 
-        .badge-check {
-            color: var(--jade-bright);
-            font-weight: 800;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .badge-cross {
-            color: var(--alert);
-            font-weight: 700;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .badge-partial {
-            color: var(--amber);
-            font-weight: 700;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        /* Highlight Callout Box */
+        /* ─── Callout ─── */
         .callout {
-            background: linear-gradient(135deg, rgba(212, 175, 55, 0.12), rgba(39, 174, 96, 0.1));
-            border-right: 5px solid var(--gold);
-            border-radius: var(--radius-control);
-            padding: 24px 28px;
-            margin-top: 30px;
+            background: linear-gradient(135deg, rgba(212, 175, 55, 0.08), rgba(39, 174, 96, 0.06));
+            border-right: 4px solid var(--gold);
+            border-radius: var(--radius-sm);
+            padding: 22px 24px;
+            margin-top: 26px;
         }
 
         .callout-title {
-            font-family: 'Readex Pro', sans-serif;
             font-weight: 800;
-            font-size: 17px;
+            font-size: 16px;
             color: var(--gold);
-            margin-bottom: 8px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
+            margin-bottom: 6px;
         }
 
-        .callout-desc {
-            font-size: 14px;
+        .callout-body {
+            font-size: 13.5px;
             color: var(--text-muted);
-            line-height: 1.8;
+            line-height: 1.85;
         }
 
-        /* Print Media Styles for PDF & A4 Printing (Horizontal Landscape Default) */
+        /* ─── Divider ─── */
+        .section-divider {
+            border: none;
+            border-top: 1px dashed var(--border);
+            margin: 0;
+        }
+
+        /* ─── Print Styles — A4 Portrait Default ─── */
         @media print {
             @page {
-                size: A4 landscape;
-                margin: 8mm 10mm;
+                size: A4 portrait;
+                margin: 0;
             }
 
             html, body {
-                background-color: #ffffff !important;
-                color: #000000 !important;
-                padding: 0 !important;
+                background: #ffffff !important;
+                color: #1a1a1a !important;
+                padding: 10mm 12mm !important;
                 margin: 0 !important;
-                font-size: 9.5pt !important;
+                font-size: 9pt !important;
                 line-height: 1.45 !important;
                 -webkit-print-color-adjust: exact !important;
                 print-color-adjust: exact !important;
             }
 
-            .actions-bar {
-                display: none !important;
-            }
+            .actions-bar { display: none !important; }
 
             .container {
                 max-width: 100% !important;
@@ -419,137 +385,145 @@
 
             header {
                 background: #f8f9fa !important;
-                border: 1px solid #cccccc !important;
+                border: 1px solid #d0d0d0 !important;
                 box-shadow: none !important;
-                padding: 14px 18px !important;
-                margin-bottom: 14px !important;
-                border-radius: 10px !important;
+                padding: 12px 16px !important;
+                margin-bottom: 10px !important;
+                border-radius: 6px !important;
             }
 
-            header::before {
-                display: none !important;
-            }
+            header::before { display: none !important; }
 
             .brand-badge {
                 background: #eef2f5 !important;
-                color: #111111 !important;
-                border-color: #cccccc !important;
-                padding: 3px 12px !important;
-                margin-bottom: 8px !important;
-                font-size: 10pt !important;
+                color: #333 !important;
+                border-color: #ccc !important;
+                padding: 2px 10px !important;
+                margin-bottom: 6px !important;
+                font-size: 8pt !important;
             }
 
             h1 {
-                color: #000000 !important;
+                color: #111 !important;
                 -webkit-text-fill-color: initial !important;
-                font-size: 18pt !important;
-                margin-bottom: 8px !important;
-                line-height: 1.3 !important;
+                font-size: 15pt !important;
+                margin-bottom: 5px !important;
             }
 
             .subtitle {
-                color: #333333 !important;
-                font-size: 10.5pt !important;
-                margin-bottom: 12px !important;
-                line-height: 1.5 !important;
+                color: #444 !important;
+                font-size: 9pt !important;
+                margin-bottom: 8px !important;
+                line-height: 1.4 !important;
             }
 
-            .hero-highlights {
-                gap: 6px !important;
-            }
+            .hero-highlights { gap: 4px !important; }
 
             .tag-pill {
                 background: #f1f5f9 !important;
-                border: 1px solid #cbd5e1 !important;
-                color: #111111 !important;
-                padding: 4px 10px !important;
-                font-size: 9pt !important;
+                border: 1px solid #ccc !important;
+                color: #222 !important;
+                padding: 2px 8px !important;
+                font-size: 8pt !important;
             }
 
+            .tag-pill .check { color: #16a34a !important; }
+
             .card {
-                background: #ffffff !important;
-                border: 1px solid #e2e8f0 !important;
+                background: #fff !important;
+                border: 1px solid #ddd !important;
                 box-shadow: none !important;
-                padding: 14px 16px !important;
-                margin-bottom: 14px !important;
-                border-radius: 10px !important;
-                /* Allow card to break across pages cleanly without huge whitespace gaps */
+                padding: 10px 14px !important;
+                margin-bottom: 10px !important;
+                border-radius: 6px !important;
                 page-break-inside: auto !important;
                 break-inside: auto !important;
             }
 
-            .card-header {
-                margin-bottom: 10px !important;
-                padding-bottom: 10px !important;
-                gap: 10px !important;
+            .print-page-break {
+                page-break-before: always !important;
+                break-before: page !important;
             }
 
-            .icon-box {
-                width: 38px !important;
-                height: 38px !important;
-                font-size: 18px !important;
-                border-radius: 8px !important;
+            .card-header {
+                margin-bottom: 8px !important;
+                padding-bottom: 8px !important;
+                gap: 8px !important;
+                border-color: #ddd !important;
+            }
+
+            .section-num {
+                width: 32px !important;
+                height: 32px !important;
+                font-size: 13px !important;
+                border-radius: 6px !important;
+                background: #f1f5f9 !important;
+                color: #333 !important;
+                border-color: #ccc !important;
             }
 
             h2 {
-                font-size: 14pt !important;
-                color: #000000 !important;
+                font-size: 12pt !important;
+                color: #111 !important;
             }
 
             .section-desc {
-                color: #444444 !important;
-                font-size: 9.5pt !important;
-                margin-bottom: 12px !important;
-                line-height: 1.5 !important;
+                color: #555 !important;
+                font-size: 8.5pt !important;
+                margin-bottom: 8px !important;
+                line-height: 1.4 !important;
             }
 
             .features-grid {
-                gap: 10px !important;
-                grid-template-cols: repeat(3, 1fr) !important;
-                margin-top: 8px !important;
+                gap: 8px !important;
+                grid-template-columns: repeat(2, 1fr) !important;
+                margin-top: 4px !important;
             }
 
             .feature-box {
                 background: #f8fafc !important;
-                border: 1px solid #e2e8f0 !important;
+                border: 1px solid #e0e0e0 !important;
                 box-shadow: none !important;
-                padding: 10px 12px !important;
-                border-radius: 8px !important;
+                padding: 8px 10px !important;
+                border-radius: 5px !important;
                 page-break-inside: avoid !important;
                 break-inside: avoid !important;
             }
 
+            .feature-box:hover {
+                transform: none !important;
+                box-shadow: none !important;
+            }
+
             .feature-title {
-                color: #0f172a !important;
-                font-size: 10.5pt !important;
-                margin-bottom: 6px !important;
+                color: #1a1a1a !important;
+                font-size: 9.5pt !important;
+                margin-bottom: 4px !important;
             }
 
             .feature-desc {
-                color: #334155 !important;
-                font-size: 9pt !important;
-                line-height: 1.45 !important;
+                color: #444 !important;
+                font-size: 8pt !important;
+                line-height: 1.4 !important;
             }
 
-            .table-responsive {
+            .table-wrap {
                 margin-top: 10px !important;
-                border: 1px solid #cbd5e1 !important;
+                border: 1px solid #ccc !important;
             }
 
-            table {
-                font-size: 8.5pt !important;
-            }
+            table { font-size: 8pt !important; }
 
             th {
                 background: #f1f5f9 !important;
-                color: #0f172a !important;
+                color: #111 !important;
                 padding: 8px 10px !important;
-                border-bottom: 2px solid #cbd5e1 !important;
+                border-bottom: 2px solid #ccc !important;
             }
 
             td {
                 padding: 7px 10px !important;
-                border-bottom: 1px solid #e2e8f0 !important;
+                border-bottom: 1px solid #e5e5e5 !important;
             }
 
             tr {
@@ -557,38 +531,116 @@
                 break-inside: avoid !important;
             }
 
+            .yes { color: #16a34a !important; }
+            .no  { color: #dc2626 !important; }
+            .mid { color: #d97706 !important; }
+
             .callout {
-                background: #f8fafc !important;
-                border-right: 4px solid #0f172a !important;
-                padding: 12px 16px !important;
-                margin-top: 14px !important;
-                border-radius: 8px !important;
+                background: #fafaf8 !important;
+                border-right: 4px solid #8B6914 !important;
+                border-left: none !important;
+                border-top: 1px solid #e5e2d8 !important;
+                border-bottom: 1px solid #e5e2d8 !important;
+                padding: 14px 18px !important;
+                margin-top: 16px !important;
+                border-radius: 4px !important;
                 page-break-inside: avoid !important;
                 break-inside: avoid !important;
             }
 
             .callout-title {
-                color: #0f172a !important;
-                font-size: 11pt !important;
+                color: #8B6914 !important;
+                font-size: 10.5pt !important;
                 margin-bottom: 4px !important;
             }
 
-            .callout-desc {
-                color: #334155 !important;
+            .callout-body {
+                color: #333 !important;
+                font-size: 9pt !important;
+                line-height: 1.55 !important;
+            }
+
+            .section-divider {
+                border-color: #e0e0e0 !important;
+                margin: 0 !important;
+            }
+
+            /* ─── Print Polish: Section number badge ─── */
+            .section-num {
+                width: 30px !important;
+                height: 30px !important;
+                font-size: 13px !important;
+                border-radius: 6px !important;
+                background: #8B6914 !important;
+                color: #fff !important;
+                border: none !important;
+            }
+
+            /* ─── Print Polish: Header accent ─── */
+            header {
+                background: #fff !important;
+                border: none !important;
+                border-bottom: 3px solid #8B6914 !important;
+                box-shadow: none !important;
+                padding: 14px 18px 16px !important;
+                margin-bottom: 14px !important;
+                border-radius: 0 !important;
+            }
+
+            .brand-badge {
+                background: #8B6914 !important;
+                color: #fff !important;
+                border: none !important;
+                padding: 3px 14px !important;
+                border-radius: 4px !important;
+                margin-bottom: 8px !important;
+                font-size: 8pt !important;
+            }
+
+            h1 {
+                color: #111 !important;
+                font-size: 16pt !important;
+                margin-bottom: 6px !important;
+            }
+
+            /* ─── Print Polish: Feature boxes with accent ─── */
+            .feature-box {
+                background: #fafafa !important;
+                border: 1px solid #e8e8e8 !important;
+                border-right: 3px solid #8B6914 !important;
+                box-shadow: none !important;
+                padding: 8px 10px !important;
+                border-radius: 4px !important;
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+            }
+
+            .feature-title {
+                color: #8B6914 !important;
                 font-size: 9.5pt !important;
-                line-height: 1.5 !important;
+                margin-bottom: 3px !important;
             }
 
-            .badge-check {
-                color: #16a34a !important;
+            /* ─── Print Polish: Table zebra + borders ─── */
+            tr:nth-child(even) td {
+                background: #f8f8f6 !important;
             }
 
-            .badge-cross {
-                color: #dc2626 !important;
+            th {
+                background: #8B6914 !important;
+                color: #fff !important;
+                padding: 8px 10px !important;
+                border-bottom: none !important;
             }
 
-            .badge-partial {
-                color: #d97706 !important;
+            td {
+                padding: 6px 10px !important;
+                border-bottom: 1px solid #eee !important;
+            }
+
+            h2 {
+                font-size: 12pt !important;
+                color: #1a1a1a !important;
             }
         }
     </style>
@@ -596,507 +648,541 @@
 <body>
 
     <div class="container">
-        
+
         <!-- Actions Bar -->
         <div class="actions-bar">
-            <div style="font-family: 'Readex Pro', sans-serif; font-weight: 800; font-size: 14.5px; color: var(--gold); display: flex; align-items: center; gap: 8px;">
-                ✨ <span>منظومة Flow لمستلزمات المقاهي والمطاعم — التقرير الفني والتنافسي الشامل</span>
+            <div class="bar-title">
+                <span>منظومة Flow — دليل المميزات</span>
             </div>
-            <div style="display: flex; gap: 10px;">
-                <button class="btn" onclick="toggleTheme()">🌓 النمط (ليلي/نهاري)</button>
-                <button class="btn btn-primary" onclick="printLandscape()">🖼️ طباعة أفقية (Landscape)</button>
-                <button class="btn" onclick="printPortrait()">📄 طباعة عمودية (Portrait)</button>
+            <div class="bar-buttons">
+                <button class="btn" onclick="toggleTheme()">🌓 تبديل النمط</button>
+                <button class="btn btn-primary" onclick="printPortrait()">📄 طباعة عمودية</button>
+                <button class="btn" onclick="printLandscape()">🖼️ طباعة أفقية</button>
             </div>
         </div>
 
-        <!-- Hero Header -->
+        <!-- Header -->
         <header>
-            <div class="brand-badge">🏆 الجيل الجديد من المنظومات المالية والمخزنية المتكاملة</div>
+            <div class="brand-badge">منظومة إدارة المبيعات والمخزون</div>
             <h1>منظومة Flow لمستلزمات المقاهي والمطاعم</h1>
             <div class="subtitle">
-                دليل تفصيلي شامل يحلل هندسة النظام والمميزات التشغيلية والمالية لمنظومة Flow الأوفلاين 100% — المصممة خصيصاً لإدارة المبيعات، المخزون، ديون العملاء والموردين، والورديات بكل أمان ودقة في السوق الليبي.
+                منظومة متكاملة تشتغل بدون إنترنت نهائياً — مصممة لإدارة المبيعات والمخزون وحسابات الزبائن والموردين والورديات المالية لمحلات مستلزمات المقاهي والمطاعم في ليبيا.
             </div>
 
             <div class="hero-highlights">
-                <div class="tag-pill"><span>✓</span> أوفلاين 100% (صفر إنترنت)</div>
-                <div class="tag-pill"><span>✓</span> تشغيل مستقل أو شبكة LAN</div>
-                <div class="tag-pill"><span>✓</span> دقة ملي-دينار (3 خانات 0.000)</div>
-                <div class="tag-pill"><span>✓</span> تمريز معدات ومستهلكات</div>
-                <div class="tag-pill"><span>✓</span> فواتير A4 بتفقيط عربي + QR</div>
-                <div class="tag-pill"><span>✓</span> كشوفات حساب زبائن وموردين</div>
-                <div class="tag-pill"><span>✓</span> ملكية دائمة بدون اشتراكات</div>
+                <div class="tag-pill"><span class="check">✓</span> بدون إنترنت 100%</div>
+                <div class="tag-pill"><span class="check">✓</span> جهاز واحد أو شبكة محلية</div>
+                <div class="tag-pill"><span class="check">✓</span> دقة 3 خانات عشرية</div>
+                <div class="tag-pill"><span class="check">✓</span> معدات ومستهلكات</div>
+                <div class="tag-pill"><span class="check">✓</span> فواتير A4 + إيصالات حرارية</div>
+                <div class="tag-pill"><span class="check">✓</span> كشوفات حساب زبائن وموردين</div>
+                <div class="tag-pill"><span class="check">✓</span> أسعار جملة وتجزئة وعروض أسعار</div>
+                <div class="tag-pill"><span class="check">✓</span> عرابين وباقات ووحدات متعددة</div>
+                <div class="tag-pill"><span class="check">✓</span> ملكية دائمة بدون اشتراكات</div>
             </div>
         </header>
 
-        <!-- Section 1: Standalone & Offline Architecture -->
+        <!-- ═══════════════ القسم 1 ═══════════════ -->
         <div class="card">
             <div class="card-header">
-                <div class="icon-box">🔌</div>
+                <div class="section-num">1</div>
                 <div>
-                    <h2>1. بنية العمل أوفلاين والتشغيل على جهاز واحد أو شبكة محلية (Offline-First Architecture)</h2>
+                    <h2>العمل بدون إنترنت والتشغيل المستقل</h2>
                 </div>
             </div>
             <div class="section-desc">
-                تم تصميم منظومة Flow وفقاً لأعلى معايير الاستقلالية التشغيلية. لا تعتمد المنظومة على السحابة أو الإنترنت إطلاقاً، مما يقضي تماماً على مخاطر انقطاع المبيعات بسبب مشاكل الشبكة أو خوادم الاشتراك.
+                المنظومة تشتغل بدون إنترنت من أول يوم. الخادم وقاعدة البيانات والطباعة — كل شيء يدور على جهازك داخل المحل. ما تحتاج خط نت ولا اشتراك سحابي.
             </div>
-            
+
             <div class="features-grid">
                 <div class="feature-box">
-                    <div>
-                        <div class="feature-title">💻 العمل على جهاز كمبيوتر واحد (Standalone PC)</div>
-                        <div class="feature-desc">
-                            يمكن تنصيب المنظومة وتشغيلها بالكامل على حاسوب شخصي واحد داخل المحل. يعمل الخادم الداخلي وقاعدة البيانات والمطبوعات على ذات الجهاز كمنظومة مستقلة ذاتية الكفاءة.
-                        </div>
+                    <div class="feature-title">💻 تشغيل على جهاز واحد</div>
+                    <div class="feature-desc">
+                        تقدر تنصب المنظومة على كمبيوتر واحد في المحل وتبدأ تشتغل فوراً. كل شيء — من إصدار الفواتير للمخزون للتقارير — يمشي على نفس الجهاز بدون ما تحتاج أي شيء إضافي.
                     </div>
                 </div>
 
                 <div class="feature-box">
-                    <div>
-                        <div class="feature-title">📡 الربط الشبكي المحلي (Local WiFi LAN)</div>
-                        <div class="feature-desc">
-                            عند الحاجة لتشغيل نقاط بيع متعددة أو أجهزة كاشير إضافية وأجهزة تابلت للجرد، يتم ربطها جميعاً بسيرفر المحل المحلي عبر شبكة WiFi داخلية دون حزم إنترنت.
-                        </div>
+                    <div class="feature-title">📡 ربط أجهزة عبر شبكة محلية</div>
+                    <div class="feature-desc">
+                        لو عندك أكثر من كاشير أو تابلت للجرد، تربطهم كلهم على سيرفر المحل عبر WiFi داخلي. ما يحتاج إنترنت — شبكة محلية وبس.
                     </div>
                 </div>
 
                 <div class="feature-box">
-                    <div>
-                        <div class="feature-title">🛡️ حماية البيانات والملكية الدائمة (Zero SaaS Dependency)</div>
-                        <div class="feature-desc">
-                            بيانات المبيعات والأسعار وأسماء العملاء مخزنة في محلك تحت سيطرتك المباشرة. شراء المنظومة هو شراء لملكية دائمة دون أي رسوم تجديد شهري أو سنوي.
-                        </div>
+                    <div class="feature-title">🛡️ بياناتك عندك وتحت إيدك</div>
+                    <div class="feature-desc">
+                        أسعارك وأسماء زبائنك وبيانات مبيعاتك مخزنة في جهازك أنت — مش على سيرفرات خارجية. وشراء المنظومة ملكية دائمة بدون رسوم شهرية أو سنوية.
                     </div>
                 </div>
 
                 <div class="feature-box">
-                    <div>
-                        <div class="feature-title">⚡ الاستجابة بالفيمتو ثانية (SQLite WAL Engine)</div>
-                        <div class="feature-desc">
-                            تعتمد المنظومة محرك قواعد البيانات المتطور SQLite بنمط كتابة WAL المباشر مع Fastify، مما يضمن معالجة الفواتير وإجراء عمليات البحث والاستعلام في أقل من 10 ملي ثانية.
-                        </div>
+                    <div class="feature-title">⚡ استجابة فورية</div>
+                    <div class="feature-desc">
+                        لأن كل شيء يشتغل محلي على جهازك، سرعة المنظومة ما تتأثر بالنت أو بالضغط على سيرفرات بعيدة. الفواتير والبحث عن الأصناف يتم في لمح البصر.
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Section 2: POS & Dual Printing Engine -->
+        <!-- ═══════════════ القسم 2 ═══════════════ -->
         <div class="card">
             <div class="card-header">
-                <div class="icon-box">🛍️</div>
+                <div class="section-num">2</div>
                 <div>
-                    <h2>2. نقطة البيع المحترفة ونظام الطباعة المزدوج (Smart POS & Print Engine)</h2>
+                    <h2>نقطة البيع والطباعة</h2>
                 </div>
             </div>
             <div class="section-desc">
-                واجهة بيع مريحة وسريعة تمكن الكاشير من إتمام الفاتورة في ثوانٍ معدودة، مع تقديم طباعة A4 رسمية للمعدات وإيصالات حرارية للمواد الاستهلاكية.
+                شاشة بيع سهلة وسريعة — الكاشير يقدر يخلص الفاتورة في ثواني. ومعها نظام طباعة مزدوج: فواتير A4 رسمية للمعدات، وإيصالات حرارية سريعة للمستهلكات.
             </div>
 
             <div class="features-grid">
                 <div class="feature-box">
-                    <div>
-                        <div class="feature-title">🔍 البحث الفوري وقراءة الباركود المتعددة</div>
-                        <div class="feature-desc">
-                            قراءة فورية لباركود الأصناف عبر القارئ المكتبي USB أو كاميرا التابلت، مع إمكانية البحث المرن بالاسم، التصنيف، أو الرقم التسلسلي للأجهزة.
-                        </div>
+                    <div class="feature-title">🔍 بحث فوري وقراءة باركود</div>
+                    <div class="feature-desc">
+                        الكاشير يمرر الباركود بالقارئ أو يفتح كاميرا التابلت ويقرأ. وإذا ما كان فيه باركود، يبحث بالاسم أو التصنيف أو الرقم التسلسلي ويلقى الصنف بسرعة.
                     </div>
                 </div>
 
                 <div class="feature-box">
-                    <div>
-                        <div class="feature-title">📄 فواتير المعدات A4 الرسمية والتفقيط العربي</div>
-                        <div class="feature-desc">
-                            نموذج طباعة A4 محترف لبيع الآلات والمعدات يشتمل على اسم الموديل، الأرقام التسلسلية، شروط الضمان، خاتم المؤسسة، والتفقيط المالي باللغة العربية (مثال: خمسة آلاف دينار لا غير).
-                        </div>
+                    <div class="feature-title">📄 فواتير A4 رسمية للمعدات</div>
+                    <div class="feature-desc">
+                        لما تبيع آلة أو جهاز، المنظومة تطبع فاتورة A4 فيها: اسم الموديل، الرقم التسلسلي، شروط الضمان، خاتم المؤسسة، والمبلغ مكتوب بالحروف العربية (مثال: خمسة آلاف دينار لا غير).
                     </div>
                 </div>
 
                 <div class="feature-box">
-                    <div>
-                        <div class="feature-title">🧾 الإيصالات الحرارية السريعة 80mm + كود QR</div>
-                        <div class="feature-desc">
-                            طباعة فورية مباشر للإيصالات الحرارية 80mm للبيوعات السريعة، تحتوي على كود رمز استجابة سريعة QR محمي وتفاصيل الوردية والكاشير.
-                        </div>
+                    <div class="feature-title">🧾 إيصالات حرارية 80mm</div>
+                    <div class="feature-desc">
+                        للبيوعات اليومية السريعة، المنظومة تطبع إيصال حراري صغير فيه تفاصيل العملية وكود QR وبيانات الوردية والكاشير. طباعة فورية بدون تأخير.
                     </div>
                 </div>
 
                 <div class="feature-box">
-                    <div>
-                        <div class="feature-title">💳 تنوع وسائل الدفع (كاش / آجل / بطاقة / تحويل)</div>
-                        <div class="feature-desc">
-                            مرونة كاملة في تحديد طريقة الدفع لكل فاتورة: كاش نقد، بيع بالدين على حساب الزبون، سداد عبر بطاقة تداول/تداولية أو تحويل مصرفي مع توثيق العملية.
-                        </div>
+                    <div class="feature-title">💳 طرق دفع متعددة</div>
+                    <div class="feature-desc">
+                        كل فاتورة تقدر تحدد طريقة دفعها: نقد مباشر، على حساب الزبون (دين)، بطاقة تداول، أو تحويل مصرفي. كل طريقة تتوثق ويتسجل أثرها.
                     </div>
                 </div>
 
                 <div class="feature-box">
-                    <div>
-                        <div class="feature-title">🔄 إرجاع وإلغاء الفواتير وتسوية المخزون والتدرج</div>
-                        <div class="feature-desc">
-                            إلغاء الفواتير أو إرجاع بند محدد بموافقة المدير، مع إعادة الكميات آلياً إلى المخزون وتعديل رصيد الخزينة أو حساب دين الزبون بمرونة تامة.
-                        </div>
+                    <div class="feature-title">🔄 إلغاء وإرجاع الفواتير</div>
+                    <div class="feature-desc">
+                        إذا حصل خطأ أو الزبون رجّع بضاعة، المنظومة تلغي الفاتورة أو ترجّع بند محدد بموافقة المدير. الكميات ترجع للمخزون والنقدية تتعدل تلقائياً.
                     </div>
                 </div>
 
                 <div class="feature-box">
-                    <div>
-                        <div class="feature-title">🔒 حماية وتجاوز المدير (Manager PIN Override)</div>
-                        <div class="feature-desc">
-                            منع البيع عند عدم كفاية الكمية أو عند منح خصم أعلى من السقف المحدد للموظف إلا بإدخال رمز موافقة المدير بشكل لحظي وموثق.
-                        </div>
+                    <div class="feature-title">🔒 موافقة المدير برمز PIN</div>
+                    <div class="feature-desc">
+                        عمليات حساسة مثل البيع بدون رصيد كافي أو منح خصم فوق الحد المسموح — ما تمشي إلا بإدخال رمز المدير. العملية تتوثق ويتسجل مين وافق ومتى.
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Section 3: Dual Inventory Engine -->
+        <!-- ═══════════════ القسم 3 ═══════════════ -->
         <div class="card">
             <div class="card-header">
-                <div class="icon-box">📦</div>
+                <div class="section-num">3</div>
                 <div>
-                    <h2>3. إدارة المخزون المزدوجة والمحسوبة (Equipment vs Consumables Engine)</h2>
+                    <h2>إدارة المخزون — معدات ومستهلكات</h2>
                 </div>
             </div>
             <div class="section-desc">
-                نظام تمريز ذكي يفرق ببراعة بين الأجهزة الثقيلة عالية القيمة والمواد الاستهلاكية اليومية ليلائم متطلبات نشاط المقاهي والمطاعم ليبيا.
+                المنظومة تفرق بين الأجهزة الكبيرة (ماكينات، مطاحن) والمواد الاستهلاكية (أكواب، حبوب بن، نكهات). كل نوع عنده حقوله وطريقة تتبعه.
             </div>
 
             <div class="features-grid">
                 <div class="feature-box">
-                    <div>
-                        <div class="feature-title">⚙️ سجل المعدات والأجهزة (Equipment Tracking)</div>
-                        <div class="feature-desc">
-                            تتبع كل آلة (مثل ماكينات الإسبريسو ومطاحن البن) برقم تسلسلي فريد (Serial Number)، مع تحديد موديل الجهاز ومدة الضمان وتواريخ الاستحقاق.
-                        </div>
+                    <div class="feature-title">⚙️ تتبع المعدات والأجهزة</div>
+                    <div class="feature-desc">
+                        كل جهاز يتسجل برقم تسلسلي فريد واسم الموديل ومدة الضمان. لما تبيعه، هالبيانات تظهر في الفاتورة تلقائياً.
                     </div>
                 </div>
 
                 <div class="feature-box">
-                    <div>
-                        <div class="feature-title">☕ سجل المواد الاستهلاكية (Consumables & Batches)</div>
-                        <div class="feature-desc">
-                            إدارة المواد الخام (حبوب البن، الأكواب، النكهات) برقم التشغيلة (Batch No)، وتاريخ انتهاء الصلاحية، وتحديد نقطة إعادة الطلب التلقائية.
-                        </div>
+                    <div class="feature-title">☕ تتبع المواد الاستهلاكية</div>
+                    <div class="feature-desc">
+                        المواد الخام تتسجل برقم التشغيلة وتاريخ انتهاء الصلاحية. وتقدر تحدد نقطة إعادة الطلب لكل صنف عشان ما يخلص عليك بدون ما تنتبه.
                     </div>
                 </div>
 
                 <div class="feature-box">
-                    <div>
-                        <div class="feature-title">📜 دفتر حركة المخزون المحصن (Stock Movements Ledger)</div>
-                        <div class="feature-desc">
-                            أي إضافة أو خصم تسجل في سجل دائم يوضح نوع الحركة (مبيعات، مشتريات، تسوية)، المستخدم المسؤول، والرصيد المتبقي بعد الحركة (Balance After).
-                        </div>
+                    <div class="feature-title">📜 سجل حركة المخزون</div>
+                    <div class="feature-desc">
+                        أي حركة على المخزون — بيع، شراء، تسوية — تتسجل في دفتر دائم يوضح: نوع الحركة، الموظف اللي نفذها، والرصيد بعد الحركة. ما فيه تعديل يمر بدون توثيق.
                     </div>
                 </div>
 
                 <div class="feature-box">
-                    <div>
-                        <div class="feature-title">⚠️ تنبيهات النواقص والصلاحية الفورية</div>
-                        <div class="feature-desc">
-                            نظام إنذار مبكر ينبه الإدارة بالأصناف الواصلة لحد النواقص أو القريبة من انتهاء الصلاحية لاتخاذ قرار الشراء قبل نفاد المخزون.
-                        </div>
+                    <div class="feature-title">⚠️ تنبيهات النواقص والصلاحية</div>
+                    <div class="feature-desc">
+                        المنظومة تنبهك لما صنف يوصل لحد النقص أو لما مادة تقرب من انتهاء صلاحيتها، عشان تقدر تطلب قبل ما ينفد.
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Section 4: Purchases & Weighted Average Costing -->
+        <!-- ═══════════════ القسم 4 ═══════════════ -->
         <div class="card">
             <div class="card-header">
-                <div class="icon-box">🚚</div>
+                <div class="section-num">4</div>
                 <div>
-                    <h2>4. دورة المشتريات والموردين وإعادة احتساب التكلفة (Purchases & WAC Engine)</h2>
+                    <h2>المشتريات والموردين</h2>
                 </div>
             </div>
             <div class="section-desc">
-                إدارة كاملة لعمليات الشراء من الموردين وتتبع الديون وإعادة التكلفة المرجحة تلقائياً لحساب الأرباح الصافية الحقيقية.
+                تسجيل فواتير الشراء من الموردين وتتبع ديونهم، مع إعادة حساب تكلفة الأصناف تلقائياً عشان تقارير الأرباح تكون دقيقة.
             </div>
 
             <div class="features-grid">
                 <div class="feature-box">
-                    <div>
-                        <div class="feature-title">📝 فواتير الشراء التسلسلية (PUR-YYYY-NNNNN)</div>
-                        <div class="feature-desc">
-                            إدخال فواتير الشراء برقم تسلسلي غير قابل للتقافز، مع إضافة الكميات المشتراة للمخزون آلياً وربط الدفع بنقدية درج الخزينة.
-                        </div>
+                    <div class="feature-title">📝 فواتير شراء مرقمة</div>
+                    <div class="feature-desc">
+                        كل فاتورة شراء تاخذ رقم تسلسلي مرتب وبدون فراغات. الكميات المشتراة تنضاف للمخزون فوراً، والدفعة ترتبط بنقدية الوردية.
                     </div>
                 </div>
 
                 <div class="feature-box">
-                    <div>
-                        <div class="feature-title">📈 متوسط التكلفة المرجح (Weighted Average Cost)</div>
-                        <div class="feature-desc">
-                            عند الشراء بأسعار متغيرة، تقوم المنظومة تلقائياً بإعادة احتساب تكلفة الوحدة المرجحة لضمان دقة تقارير الأرباح والخسائر.
-                        </div>
+                    <div class="feature-title">📈 تحديث التكلفة تلقائياً</div>
+                    <div class="feature-desc">
+                        لما تشتري نفس الصنف بسعر مختلف عن المرة اللي قبلها، المنظومة تحسب متوسط التكلفة المرجح تلقائياً. هذا يضمن إن تقارير الأرباح تعكس الواقع.
                     </div>
                 </div>
 
                 <div class="feature-box">
-                    <div>
-                        <div class="feature-title">🤝 سجل الموردين وحساب الديون (Supplier Payables)</div>
-                        <div class="feature-desc">
-                            تتبع مستحقات الموردين وسجل التسديدات النقدية الصادرة من الخزينة، مع كشوفات حساب متكاملة لكل مورد.
-                        </div>
+                    <div class="feature-title">🤝 حسابات الموردين</div>
+                    <div class="feature-desc">
+                        تتبع اللي عليك لكل مورد، وسجل التسديدات اللي دفعتها. وتقدر تطبع كشف حساب لكل مورد يوضح الحركة كاملة.
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Section 5: Customer Credit & Statements -->
+        <!-- ═══════════════ القسم 5 ═══════════════ -->
         <div class="card">
             <div class="card-header">
-                <div class="icon-box">👥</div>
+                <div class="section-num">5</div>
                 <div>
-                    <h2>5. إدارة ديون العملاء وكشوف الحسابات A4 (Customers & Receivables)</h2>
+                    <h2>ديون الزبائن وكشوف الحسابات</h2>
                 </div>
             </div>
             <div class="section-desc">
-                تمكين عمليات البيع بالدين للعملاء الدائمين مع تتبع فوري للرصيد وتوليد كشوفات حساب تفصيلية قابلة للطباعة والتصدير.
+                تقدر تبيع بالدين للزبائن الدائمين وتتابع رصيد كل واحد. والمنظومة تولد كشف حساب A4 جاهز للطباعة يوضح كل الحركات والرصيد.
             </div>
 
             <div class="features-grid">
                 <div class="feature-box">
-                    <div>
-                        <div class="feature-title">📒 كشف حساب العميل ورصيد الحركة المتتابع</div>
-                        <div class="feature-desc">
-                            عرض وتوليد كشف حساب A4 محترف لكل عميل، يوضح المبيعات الآجلة والسدادات السابقة والرصيد المتبقي بدقة ملي-دينار.
-                        </div>
+                    <div class="feature-title">📒 كشف حساب الزبون</div>
+                    <div class="feature-desc">
+                        كشف حساب A4 لكل زبون يوضح فيه: كل فاتورة آجلة، كل سداد دفعه، والرصيد المتبقي عليه بدقة 3 خانات عشرية. يتطبع أو يتصدر حسب الحاجة.
                     </div>
                 </div>
 
                 <div class="feature-box">
-                    <div>
-                        <div class="feature-title">💵 تسجيل المقبوضات وإيداع درج الوردية</div>
-                        <div class="feature-desc">
-                            عند سداد الزبون لجزء أو كل دينه، يتم إيداع المبلغ فوراً في درج النقدية للوردية النشطة مع إصدار إيصال سداد وتحديث رصيد العميل.
-                        </div>
+                    <div class="feature-title">💵 تسجيل السدادات</div>
+                    <div class="feature-desc">
+                        لما الزبون يدفع جزء من دينه أو كله، المبلغ يتسجل في الوردية النشطة ويدخل درج النقدية، ورصيد الزبون يتحدث فوراً. ويتصدر له إيصال سداد.
                     </div>
                 </div>
 
                 <div class="feature-box">
-                    <div>
-                        <div class="feature-title">🔍 سرعة السداد والاختيار من الشاشة الرئيسية</div>
-                        <div class="feature-desc">
-                            ربط سريع لاسم العميل من شاشة نقطة البيع أو اختيار العميل الدائم لتوجيه الفاتورة لحسابه بضغطة زر واحدة.
-                        </div>
+                    <div class="feature-title">🔍 ربط سريع من شاشة البيع</div>
+                    <div class="feature-desc">
+                        من شاشة نقطة البيع، تختار الزبون بضغطة وحدة والفاتورة تتوجه لحسابه مباشرة. ما تحتاج تفتح شاشات ثانية أو تبحث طويل.
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Section 6: Shared Shift & Cash Audit -->
-        <div class="card">
+        <!-- ═══════════════ القسم 6 ═══════════════ -->
+        <div class="card print-page-break">
             <div class="card-header">
-                <div class="icon-box">💵</div>
+                <div class="section-num">6</div>
                 <div>
-                    <h2>6. إدارة التوكات والرقابة المالية الصارمة (Shifts & Cash Audit Engine)</h2>
+                    <h2>الورديات والرقابة المالية</h2>
                 </div>
             </div>
             <div class="section-desc">
-                إغلاق ثغرات التسريب المالي وضمان المطابقة التامة بين المبيعات النقدية والمبلغ الموجود بالخزينة بشكل محصن.
+                نظام ورديات صارم يربط كل عملية بالموظف والوردية. عند الإغلاق، النظام يقارن النقدية الفعلية بالمتوقعة ويسجل الفارق بشكل لا يقبل التعديل.
             </div>
 
             <div class="features-grid">
                 <div class="feature-box">
-                    <div>
-                        <div class="feature-title">🔒 وردية مالية موحدة للدرج الفيزيائي</div>
-                        <div class="feature-desc">
-                            وردية واحدة تشترك فيها كافة الأجهزة المتصلة بالدرج الفيزيائي، مع نسبة وتسجيل الموظف المنفذ لكل عملية بدقة.
-                        </div>
+                    <div class="feature-title">🔒 وردية موحدة للدرج</div>
+                    <div class="feature-desc">
+                        وردية واحدة تشترك فيها كل الأجهزة المتصلة بنفس درج النقدية. كل عملية — بيع، سداد، مصروف — يتسجل فيها اسم الموظف اللي نفذها.
                     </div>
                 </div>
 
                 <div class="feature-box">
-                    <div>
-                        <div class="feature-title">📊 الجرد الآلي وحساب الفارق الإجباري (Cash Variance)</div>
-                        <div class="feature-desc">
-                            عند إغلاق التوكة يطلب النظام إدخال النقدية الفعلية، ويقوم آلياً بحساب الفارق (عجز أو زيادة) وتوثيقه في سجل غير قابل للتعديل.
-                        </div>
+                    <div class="feature-title">📊 مطابقة النقدية عند الإغلاق</div>
+                    <div class="feature-desc">
+                        لما تقفل الوردية، المنظومة تطلب منك تعد النقدية في الدرج وتدخل المبلغ الفعلي. بعدها تحسب الفرق — زيادة أو عجز — وتسجله في سجل دائم ما يتعدل.
                     </div>
                 </div>
 
                 <div class="feature-box">
-                    <div>
-                        <div class="feature-title">🧾 المصروفات اليومية وتصنيفها من الدرج</div>
-                        <div class="feature-desc">
-                            تسجيل المصروفات التشغيلية اليومية مباشرة من درج الكاشير مع بيان السبب والتصنيف، لخصمها فوراً من النقدية المتوقعة للوردية.
-                        </div>
+                    <div class="feature-title">🧾 مصروفات يومية من الدرج</div>
+                    <div class="feature-desc">
+                        لو صرفت فلوس من الدرج على مصروف تشغيلي (صيانة، توصيل، غيره)، تسجله مع السبب والتصنيف. المبلغ ينخصم تلقائياً من النقدية المتوقعة للوردية.
                     </div>
                 </div>
 
                 <div class="feature-box">
-                    <div>
-                        <div class="feature-title">🎯 الدقة المالية المتناهية (Milli-LYD Precision)</div>
-                        <div class="feature-desc">
-                            تخزين كافة المبالغ بصيغة الأعداد الصحيحة (مضروبة × 1000) للقضاء التام على أخطاء التقريب الفاصلة العائمة الشائعة.
-                        </div>
+                    <div class="feature-title">🎯 دقة حسابية بالملي-دينار</div>
+                    <div class="feature-desc">
+                        المنظومة تخزن المبالغ بدقة 3 خانات عشرية (0.000 د.ل) وتستخدم طريقة حساب تمنع أخطاء التقريب اللي تصير في المنظومات الثانية لما تتعامل مع أرقام كثيرة.
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Section 7: System Backup & Security -->
+        <!-- ═══════════════ القسم 7 ═══════════════ -->
         <div class="card">
             <div class="card-header">
-                <div class="icon-box">🛡️</div>
+                <div class="section-num">7</div>
                 <div>
-                    <h2>7. الأمن، سجل الرقابة والنسخ الاحتياطي (Security & Backup Engine)</h2>
+                    <h2>الأمن والصلاحيات والنسخ الاحتياطي</h2>
                 </div>
             </div>
             <div class="section-desc">
-                نظام صلاحيات صارم يفرق بين المدير والبائع، مع توثيق شامل للعمليات وإمكانية النسخ والاستعادة بنقرة واحدة.
+                نظام صلاحيات يفرق بين المدير والبائع، مع سجل رقابة يوثق كل عملية. والنسخ الاحتياطي والاستعادة بنقرة واحدة.
             </div>
 
             <div class="features-grid">
                 <div class="feature-box">
-                    <div>
-                        <div class="feature-title">🔑 التبديل السريع برمز PIN للموظفين</div>
-                        <div class="feature-desc">
-                            تبديل سريع بين كاشير وآخر على نفس الجهاز برمز 4 أرقام دون الحاجة لتسجيل الخروج الكامل لتسريع العمل.
-                        </div>
+                    <div class="feature-title">🔑 تبديل سريع برمز PIN</div>
+                    <div class="feature-desc">
+                        على نفس الجهاز، الكاشير يتبدل بإدخال رمز 4 أرقام بدون ما يسجل خروج كامل. العملية فورية ولا تعطل سير العمل.
                     </div>
                 </div>
 
                 <div class="feature-box">
-                    <div>
-                        <div class="feature-title">📋 سجل التدقيق والرقابة الشامل (System Audit Logs)</div>
-                        <div class="feature-desc">
-                            سجل أمني يوثق كل عملية (دخول، إلغاء فاتورة، تعديل مخزون، إضافة بائع) بالاسم والوقت والتاريخ والتفاصيل الكاملة.
-                        </div>
+                    <div class="feature-title">📋 سجل رقابة شامل</div>
+                    <div class="feature-desc">
+                        كل عملية — دخول النظام، إلغاء فاتورة، تعديل مخزون، إضافة موظف — تتسجل باسم المستخدم والوقت والتاريخ. ما فيه شيء يمر بدون أثر.
                     </div>
                 </div>
 
                 <div class="feature-box">
-                    <div>
-                        <div class="feature-title">💾 النسخ الاحتياطي والاستعادة بنقرة واحدة</div>
-                        <div class="feature-desc">
-                            إنشاء نسخة احتياطية محلية مضغوطة لقاعدة البيانات بالكامل وإمكانية استرجاعها بضغطة زر واحدة بأمان مطلق.
-                        </div>
+                    <div class="feature-title">💾 نسخ احتياطي بنقرة واحدة</div>
+                    <div class="feature-desc">
+                        تنشئ نسخة احتياطية مضغوطة لكل بيانات المنظومة بضغطة زر. ولو حصلت مشكلة، تقدر تسترجع النسخة بنفس السهولة.
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Section 8: Extended Comparison Matrix -->
+        <!-- ═══════════════ القسم 8: المقارنة ═══════════════ -->
         <div class="card">
             <div class="card-header">
-                <div class="icon-box">⚖️</div>
+                <div class="section-num">8</div>
                 <div>
-                    <h2>8. جدول المقارنة الشامل والتنافسي: لماذا Flow هي الخيار الأقوى والأفضل؟</h2>
+                    <h2>مقارنة مع البدائل المتاحة</h2>
                 </div>
             </div>
             <div class="section-desc">
-                مقارنة تفصيلية تستعرض 15 معياراً تشغيلياً ومالياً بين منظومة Flow المنظومات السحابية والمنظومات التقليدية البسيطة.
+                مقارنة عملية بين منظومة Flow والبدائل السحابية والمنظومات التقليدية على 15 معياراً أساسياً.
             </div>
 
-            <div class="table-responsive">
+            <div class="table-wrap">
                 <table>
                     <thead>
                         <tr>
-                            <th>المعيار والخاصية الفنية</th>
-                            <th>منظومة Flow POS</th>
-                            <th>المنظومات السحابية (Cloud POS)</th>
-                            <th>المنظومات التقليدية القديمة</th>
+                            <th>المعيار</th>
+                            <th>منظومة Flow</th>
+                            <th>البدائل السحابية</th>
+                            <th>المنظومات التقليدية</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr>
-                            <td><strong>العمل أوفلاين 100% بدون إنترنت</strong></td>
-                            <td><span class="badge-check">✓ تعمل 100% بدون إنترنت</span></td>
-                            <td><span class="badge-cross">✗ تتوقف تماماً عند انقطاع النت</span></td>
-                            <td><span class="badge-check">✓ تعمل أوفلاين</span></td>
+                            <td><strong>العمل بدون إنترنت</strong></td>
+                            <td><span class="yes">✓ تعمل 100% بدون إنترنت</span></td>
+                            <td><span class="no">✗ تحتاج اتصال مستمر</span></td>
+                            <td><span class="yes">✓ تعمل بدون إنترنت</span></td>
                         </tr>
                         <tr>
-                            <td><strong>التشغيل المستقل (جهاز واحد standalone)</strong></td>
-                            <td><span class="badge-check">✓ دعم كامل وجاهز فوراً</span></td>
-                            <td><span class="badge-cross">✗ تتطلب متصفح وإنترنت دائم</span></td>
-                            <td><span class="badge-check">✓ تعمل على جهاز واحد</span></td>
+                            <td><strong>التشغيل على جهاز واحد</strong></td>
+                            <td><span class="yes">✓ جاهزة فوراً</span></td>
+                            <td><span class="no">✗ تحتاج متصفح وإنترنت</span></td>
+                            <td><span class="yes">✓ تعمل على جهاز واحد</span></td>
                         </tr>
                         <tr>
-                            <td><strong>الربط الشبكي المحلي (Local LAN WiFi)</strong></td>
-                            <td><span class="badge-check">✓ ربط أجهزة متعددة بدون نت</span></td>
-                            <td><span class="badge-cross">✗ تحتاج إنترنت لكل جهاز</span></td>
-                            <td><span class="badge-cross">✗ معقدة وصعبة الشبكة</span></td>
+                            <td><strong>ربط أجهزة عبر شبكة محلية</strong></td>
+                            <td><span class="yes">✓ ربط بدون إنترنت</span></td>
+                            <td><span class="no">✗ تحتاج إنترنت لكل جهاز</span></td>
+                            <td><span class="no">✗ إعداد معقد</span></td>
                         </tr>
                         <tr>
-                            <td><strong>الاشتراكات والرسوم الشهرية</strong></td>
-                            <td><span class="badge-check">✓ ملكية دائمة (صفر اشتراك)</span></td>
-                            <td><span class="badge-cross">✗ رسوم شهري/سنوي مستمرة</span></td>
-                            <td><span class="badge-check">✓ شراء مرة واحدة</span></td>
+                            <td><strong>الرسوم الشهرية</strong></td>
+                            <td><span class="yes">✓ ملكية دائمة — بدون اشتراك</span></td>
+                            <td><span class="no">✗ رسوم شهرية أو سنوية</span></td>
+                            <td><span class="yes">✓ شراء مرة واحدة</span></td>
                         </tr>
                         <tr>
-                            <td><strong>خصوصية وأمان البيانات</strong></td>
-                            <td><span class="badge-check">✓ البيانات في محلك وعلى سيرفرك</span></td>
-                            <td><span class="badge-cross">✗ بياناتك على سيرفرات خارجية</span></td>
-                            <td><span class="badge-check">✓ محددة محلياً</span></td>
+                            <td><strong>خصوصية البيانات</strong></td>
+                            <td><span class="yes">✓ البيانات في جهازك</span></td>
+                            <td><span class="no">✗ البيانات على سيرفرات خارجية</span></td>
+                            <td><span class="yes">✓ بيانات محلية</span></td>
                         </tr>
                         <tr>
-                            <td><strong>تمريز مزدوج للمخزون (معدات/مستهلكات)</strong></td>
-                            <td><span class="badge-check">✓ دعم كامل (سيريال + دفعة)</span></td>
-                            <td><span class="badge-cross">✗ كميات نصوص مجردة</span></td>
-                            <td><span class="badge-cross">✗ كميات مجردة فقط</span></td>
+                            <td><strong>تمريز مزدوج (معدات + مستهلكات)</strong></td>
+                            <td><span class="yes">✓ سيريال + دفعة + صلاحية</span></td>
+                            <td><span class="no">✗ كميات مجردة فقط</span></td>
+                            <td><span class="no">✗ كميات مجردة</span></td>
                         </tr>
                         <tr>
-                            <td><strong>طباعة فواتير A4 للمعدات مع التفقيط العربي</strong></td>
-                            <td><span class="badge-check">✓ فواتير A4 + تفقيط + ضمان</span></td>
-                            <td><span class="badge-partial">▲ فواتير عامة بسيطة</span></td>
-                            <td><span class="badge-cross">✗ بدون تفقيط أو ضمان</span></td>
+                            <td><strong>فواتير A4 للمعدات مع تفقيط عربي</strong></td>
+                            <td><span class="yes">✓ فواتير A4 + تفقيط + ضمان</span></td>
+                            <td><span class="mid">▲ فواتير عامة بسيطة</span></td>
+                            <td><span class="no">✗ غير متوفر</span></td>
                         </tr>
                         <tr>
-                            <td><strong>طباعة الإيصالات الحرارية 80mm مع QR</strong></td>
-                            <td><span class="badge-check">✓ طباعة حرارية سريعة + QR</span></td>
-                            <td><span class="badge-check">✓ تدعم الطباعة</span></td>
-                            <td><span class="badge-partial">▲ طباعة تقليدية بدون QR</span></td>
+                            <td><strong>إيصالات حرارية 80mm مع QR</strong></td>
+                            <td><span class="yes">✓ طباعة سريعة + كود QR</span></td>
+                            <td><span class="yes">✓ تدعم الطباعة</span></td>
+                            <td><span class="mid">▲ طباعة بدون QR</span></td>
                         </tr>
                         <tr>
-                            <td><strong>كشوفات حساب الزبائن والموردين A4</strong></td>
-                            <td><span class="badge-check">✓ كشوف حساب متتابعة بدقة</span></td>
-                            <td><span class="badge-partial">▲ تقارير مجمعة غير تفصيلية</span></td>
-                            <td><span class="badge-cross">✗ غير متوفرة أو معقدة</span></td>
+                            <td><strong>كشوفات حساب زبائن وموردين</strong></td>
+                            <td><span class="yes">✓ كشوف حساب تفصيلية A4</span></td>
+                            <td><span class="mid">▲ تقارير مجمعة</span></td>
+                            <td><span class="no">✗ غير متوفرة</span></td>
                         </tr>
                         <tr>
-                            <td><strong>الدقة الحسابية (Milli-LYD Precision)</strong></td>
-                            <td><span class="badge-check">✓ 3 خانات دقيقة (0.000 د.ل)</span></td>
-                            <td><span class="badge-cross">✗ 2 خانة (أخطاء تقريب)</span></td>
-                            <td><span class="badge-cross">✗ 2 خانة فقط</span></td>
+                            <td><strong>دقة 3 خانات عشرية</strong></td>
+                            <td><span class="yes">✓ دقة 0.000 د.ل</span></td>
+                            <td><span class="no">✗ خانتين فقط</span></td>
+                            <td><span class="no">✗ خانتين فقط</span></td>
                         </tr>
                         <tr>
-                            <td><strong>إعادة احتساب التكلفة المرجحة (WAC)</strong></td>
-                            <td><span class="badge-check">✓ آلي عند كل عملية شراء</span></td>
-                            <td><span class="badge-cross">✗ سعر ثابت أو يدوي</span></td>
-                            <td><span class="badge-cross">✗ لا يوجد احتساب آلي</span></td>
+                            <td><strong>تحديث تكلفة الصنف تلقائياً</strong></td>
+                            <td><span class="yes">✓ تلقائي مع كل عملية شراء</span></td>
+                            <td><span class="no">✗ سعر ثابت أو يدوي</span></td>
+                            <td><span class="no">✗ غير متوفر</span></td>
                         </tr>
                         <tr>
-                            <td><strong>الوردية المالية الموحدة للدرج وقفل العجز</strong></td>
-                            <td><span class="badge-check">✓ وردية مشتركة + مطابقة محصنة</span></td>
-                            <td><span class="badge-partial">▲ ورديات مستقلة منفصلة</span></td>
-                            <td><span class="badge-cross">✗ لا يوجد مطابقة فارق</span></td>
+                            <td><strong>وردية مالية موحدة + مطابقة نقدية</strong></td>
+                            <td><span class="yes">✓ وردية مشتركة + فارق محسوب</span></td>
+                            <td><span class="mid">▲ ورديات منفصلة</span></td>
+                            <td><span class="no">✗ بدون مطابقة</span></td>
                         </tr>
                         <tr>
-                            <td><strong>التبديل السريع برمز PIN وموافقة المدير</strong></td>
-                            <td><span class="badge-check">✓ تبديل بـ PIN وموافقات مخصصة</span></td>
-                            <td><span class="badge-cross">✗ دخول وخروج كامل بطيء</span></td>
-                            <td><span class="badge-cross">✗ كلمة سر واحدة للجميع</span></td>
+                            <td><strong>تبديل موظفين برمز PIN</strong></td>
+                            <td><span class="yes">✓ تبديل فوري بـ PIN</span></td>
+                            <td><span class="no">✗ تسجيل خروج ودخول كامل</span></td>
+                            <td><span class="no">✗ كلمة سر واحدة للجميع</span></td>
                         </tr>
                         <tr>
-                            <td><strong>النسخ الاحتياطي والاستعادة بنقرة واحدة</strong></td>
-                            <td><span class="badge-check">✓ بنقرة واحدة محلياً وبأمان</span></td>
-                            <td><span class="badge-cross">✗ لا تستطيع تحميل النسخة</span></td>
-                            <td><span class="badge-cross">✗ يدوي وصعب للغاية</span></td>
+                            <td><strong>نسخ احتياطي بنقرة واحدة</strong></td>
+                            <td><span class="yes">✓ نسخ واستعادة فورية</span></td>
+                            <td><span class="no">✗ لا تستطيع تحميل بياناتك</span></td>
+                            <td><span class="no">✗ إعداد يدوي معقد</span></td>
                         </tr>
                         <tr>
-                            <td><strong>سرعة معالجة الفواتير (Performance)</strong></td>
-                            <td><span class="badge-check">✓ استجابة تحت 10 ملي ثانية</span></td>
-                            <td><span class="badge-cross">✗ تتأثر بسخونة النت</span></td>
-                            <td><span class="badge-partial">▲ بطء متزايد مع الوقت</span></td>
+                            <td><strong>سرعة معالجة الفواتير</strong></td>
+                            <td><span class="yes">✓ استجابة فورية محلياً</span></td>
+                            <td><span class="no">✗ تتأثر بسرعة الإنترنت</span></td>
+                            <td><span class="mid">▲ تبطئ مع كثرة البيانات</span></td>
                         </tr>
                     </tbody>
                 </table>
             </div>
 
+
             <div class="callout">
-                <div class="callout-title">💡 الخلاصة الاستثمارية والقرار التنفيذي</div>
-                <div class="callout-desc">
-                    توفر لك منظومة <strong>Flow POS</strong> الاستقرار المالي والتشغيلي المطلق. تدمج المنظومة بين قوة المعالجة المحلية السريعة، الدقة الحسابية بالملي-دينار، المرونة الكاملة في الطباعة والتفقيط، والحماية الصارمة للمبيعات والورديات. تعتبر المنظومة خيار الاستثمار الأوفر والأكثر أماناً لمشروعك التجاري لكونها توفر ملكية دائمة وتلغي تماماً مخاطر توقف الإنترنت أو أعباء الاشتراكات الدورية.
+                <div class="callout-title">خلاصة</div>
+                <div class="callout-body">
+                    منظومة Flow تجمع لك بين السرعة المحلية اللي ما تعتمد على إنترنت، ودقة حسابية بالملي-دينار، وطباعة فواتير رسمية ومتخصصة، ورقابة مالية صارمة على الورديات والنقدية. ملكية دائمة بدون رسوم شهرية — تستثمر مرة واحدة وتشتغل عليها على طول.
+                </div>
+            </div>
+        </div>
+
+        <!-- ═══════════════ القسم 9 ═══════════════ -->
+        <div class="card">
+            <div class="card-header">
+                <div class="section-num">9</div>
+                <div>
+                    <h2>الجديد في الإصدار V1.2.8</h2>
+                </div>
+            </div>
+            <div class="section-desc">
+                حزمة كبيرة من الميزات الجديدة اللي تكمّل دورة العمل التجارية بالكامل — من التسعير المرن لعروض الأسعار للعرابين والباقات — مع تحصين شامل لأمان المنظومة ودقة حساباتها.
+            </div>
+
+            <div class="features-grid">
+                <div class="feature-box">
+                    <div class="feature-title">🏷️ أسعار جملة وتجزئة وأسعار خاصة</div>
+                    <div class="feature-desc">
+                        صنّف زبونك «جملة» وياخذ سعر الجملة تلقائياً، أو حدد له سعر خاص على صنف معيّن يتجاوز كل الأسعار. المنظومة هي اللي تحسم السعر — الكاشير ما يقدر يغيّره بدون موافقة المدير.
+                    </div>
+                </div>
+
+                <div class="feature-box">
+                    <div class="feature-title">📄 عروض أسعار رسمية</div>
+                    <div class="feature-desc">
+                        احفظ سلة البيع كعرض سعر برقم متسلسل وصلاحية محددة، واطبعه بمستند A4 أنيق فيه كود QR والتفقيط. عند موافقة الزبون، تحوّله لفاتورة نهائية بضغطة واحدة — وما ينخصم أي مخزون قبلها.
+                    </div>
+                </div>
+
+                <div class="feature-box">
+                    <div class="feature-title">📦 وحدات بيع متعددة</div>
+                    <div class="feature-desc">
+                        بيع بالكوب أو بالربطة أو بالكرتونة — كل وحدة بسعرها، والمخزون يتحسب دايماً بالوحدة الأساسية. كرتونة = 1000 كوب؟ المنظومة تخصم 1000 كوب تلقائياً.
+                    </div>
+                </div>
+
+                <div class="feature-box">
+                    <div class="feature-title">💰 عرابين وحجز أجهزة</div>
+                    <div class="feature-desc">
+                        استلم عربون من الزبون واحجز له الجهاز — محد غيره يقدر يشتريه. العربون يدخل الدرج فوراً وينخصم تلقائياً من الفاتورة النهائية، مع إمكانية الاسترداد أو المصادرة بقرار المدير.
+                    </div>
+                </div>
+
+                <div class="feature-box">
+                    <div class="feature-title">🎁 باقات تجهيز متكاملة</div>
+                    <div class="feature-desc">
+                        جهّز باقة «افتتاح مقهى» — ماكينة + مطحنة + أكواب — بسعر واحد مغري. بيع الباقة يخصم كل مكوناتها من المخزون تلقائياً، والمنظومة تعرض لك كم باقة تقدر تجهّز من المخزون الحالي.
+                    </div>
+                </div>
+
+                <div class="feature-box">
+                    <div class="feature-title">↩️ مرتجعات الموردين</div>
+                    <div class="feature-desc">
+                        بضاعة فيها عيب؟ رجّعها للمورد مباشرة من فاتورة الشراء الأصلية — والمنظومة تحسم من دينه أو تسترد نقدي في الدرج، مع سقف إرجاع لكل صنف يمنع الأخطاء.
+                    </div>
+                </div>
+
+                <div class="feature-box">
+                    <div class="feature-title">🚦 سقف ائتمان لكل زبون</div>
+                    <div class="feature-desc">
+                        حدد لكل زبون حد أقصى للدين. أي فاتورة آجلة تتجاوز السقف تتوقف وتطلب موافقة المدير — وكل تجاوز مسجّل باسم من وافق عليه.
+                    </div>
+                </div>
+
+                <div class="feature-box">
+                    <div class="feature-title">🖼️ صور الأصناف وكود QR</div>
+                    <div class="feature-desc">
+                        أضف صورة لكل صنف تظهر في شاشة البيع وجدول المخزون، وكل فاتورة A4 تطلع بكود QR يتولد داخل المنظومة بدون إنترنت.
+                    </div>
+                </div>
+
+                <div class="feature-box">
+                    <div class="feature-title">🔐 تحصين أمني شامل</div>
+                    <div class="feature-desc">
+                        حماية من تخمين رموز PIN، جلسات مشفرة تنتهي تلقائياً، وكل حركة نقدية مربوطة بوردية مفتوحة. المدخلات المالية كلها تتفحص بصرامة — لا خصم سالب ولا مبلغ عشري يخرّب الدفاتر.
+                    </div>
+                </div>
+            </div>
+
+            <div class="callout">
+                <div class="callout-title">جودة مثبتة بالاختبارات</div>
+                <div class="callout-body">
+                    كل ميزة في هذا الإصدار مغطاة باختبارات آلية — 51 اختباراً يتأكد من صحة الحسابات والمخزون والصلاحيات في كل تعديل على المنظومة.
                 </div>
             </div>
         </div>
@@ -1104,7 +1190,6 @@
     </div>
 
     <script>
-        // Switch between dark and light themes and save preference
         function getTheme() {
             const saved = localStorage.getItem('pos-report-theme');
             if (saved) return saved;
@@ -1118,23 +1203,9 @@
 
         function toggleTheme() {
             const current = document.documentElement.getAttribute('data-theme') || getTheme();
-            const next = current === 'dark' ? 'light' : 'dark';
-            setTheme(next);
+            setTheme(current === 'dark' ? 'light' : 'dark');
         }
 
-        // Print in Landscape orientation
-        function printLandscape() {
-            let style = document.getElementById('print-mode-style');
-            if (!style) {
-                style = document.createElement('style');
-                style.id = 'print-mode-style';
-                document.head.appendChild(style);
-            }
-            style.innerHTML = `@media print { @page { size: A4 landscape; margin: 8mm 10mm; } .features-grid { grid-template-cols: repeat(3, 1fr) !important; } }`;
-            window.print();
-        }
-
-        // Print in Portrait orientation
         function printPortrait() {
             let style = document.getElementById('print-mode-style');
             if (!style) {
@@ -1142,11 +1213,21 @@
                 style.id = 'print-mode-style';
                 document.head.appendChild(style);
             }
-            style.innerHTML = `@media print { @page { size: A4 portrait; margin: 10mm 12mm; } .features-grid { grid-template-cols: repeat(2, 1fr) !important; } }`;
+            style.innerHTML = '@media print { @page { size: A4 portrait; margin: 0; } .features-grid { grid-template-columns: repeat(2, 1fr) !important; } .scenarios-grid { grid-template-columns: repeat(3, 1fr) !important; } }';
             window.print();
         }
 
-        // Initialize on page load
+        function printLandscape() {
+            let style = document.getElementById('print-mode-style');
+            if (!style) {
+                style = document.createElement('style');
+                style.id = 'print-mode-style';
+                document.head.appendChild(style);
+            }
+            style.innerHTML = '@media print { @page { size: A4 landscape; margin: 0; } .features-grid { grid-template-columns: repeat(3, 1fr) !important; } .scenarios-grid { grid-template-columns: repeat(3, 1fr) !important; } }';
+            window.print();
+        }
+
         setTheme(getTheme());
     </script>
 </body>

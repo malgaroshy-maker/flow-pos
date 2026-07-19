@@ -26,7 +26,32 @@ export async function settingsRoutes(app: FastifyInstance) {
       stampTitle?: string;
       taxEnabled?: boolean;
       taxRatePermille?: number;
+      discountCapPercent?: number;
     };
+
+    if (
+      body.taxRatePermille !== undefined &&
+      (!Number.isSafeInteger(body.taxRatePermille) ||
+        body.taxRatePermille < 0 ||
+        body.taxRatePermille > 1000)
+    ) {
+      return reply.code(400).send({
+        error: 'invalid_taxRatePermille',
+        message: 'نسبة الضريبة يجب أن تكون عدداً صحيحاً بين 0 و 1000 (بالميل ×10)',
+      });
+    }
+
+    if (
+      body.discountCapPercent !== undefined &&
+      (!Number.isSafeInteger(body.discountCapPercent) ||
+        body.discountCapPercent < 0 ||
+        body.discountCapPercent > 100)
+    ) {
+      return reply.code(400).send({
+        error: 'invalid_discountCapPercent',
+        message: 'حد الخصم يجب أن يكون نسبة مئوية صحيحة بين 0 و 100',
+      });
+    }
 
     const row = app.db.select().from(settings).limit(1).all()[0];
     if (!row) {
@@ -37,9 +62,11 @@ export async function settingsRoutes(app: FastifyInstance) {
       .update(settings)
       .set({
         businessName: body.businessName !== undefined ? body.businessName : row.businessName,
-        businessSubtitle: body.businessSubtitle !== undefined ? body.businessSubtitle : row.businessSubtitle,
+        businessSubtitle:
+          body.businessSubtitle !== undefined ? body.businessSubtitle : row.businessSubtitle,
         businessPhone: body.businessPhone !== undefined ? body.businessPhone : row.businessPhone,
-        businessPhone2: body.businessPhone2 !== undefined ? body.businessPhone2 : row.businessPhone2,
+        businessPhone2:
+          body.businessPhone2 !== undefined ? body.businessPhone2 : row.businessPhone2,
         businessAddress:
           body.businessAddress !== undefined ? body.businessAddress : row.businessAddress,
         warrantyTerms: body.warrantyTerms !== undefined ? body.warrantyTerms : row.warrantyTerms,
@@ -47,6 +74,8 @@ export async function settingsRoutes(app: FastifyInstance) {
         taxEnabled: body.taxEnabled !== undefined ? body.taxEnabled : row.taxEnabled,
         taxRatePermille:
           body.taxRatePermille !== undefined ? body.taxRatePermille : row.taxRatePermille,
+        discountCapPercent:
+          body.discountCapPercent !== undefined ? body.discountCapPercent : row.discountCapPercent,
       })
       .where(eq(settings.id, row.id))
       .run();

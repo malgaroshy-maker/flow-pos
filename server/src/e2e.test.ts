@@ -124,7 +124,9 @@ describe('Full End-to-End Business Cycle Integration Test', () => {
             unitCost: 38000, // 38.000 LYD (Weighted average will update cost)
           },
         ],
-        paid: 760000, // Paid in full
+        // Recorded as supplier debt: paying cash requires an open drawer shift,
+        // and the shift is opened later in this flow.
+        paid: 0,
         notes: 'فاتورة شراء شحنة قهوة جديدة',
       },
     });
@@ -225,9 +227,7 @@ describe('Full End-to-End Business Cycle Integration Test', () => {
       url: '/api/products',
       headers: { authorization: `Bearer ${salesToken}` },
     });
-    const lowStockProductInList = allProductsRes
-      .json()
-      .find((p: any) => p.id === coffeeProduct.id);
+    const lowStockProductInList = allProductsRes.json().find((p: any) => p.id === coffeeProduct.id);
     expect(lowStockProductInList.quantity).toBeLessThanOrEqual(lowStockProductInList.reorderPoint);
 
     // 8. Create Customer & Perform Credit Sale

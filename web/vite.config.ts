@@ -7,6 +7,8 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': 'http://localhost:3001',
+      // Product images are served by the API server from server/data/uploads
+      '/uploads': 'http://localhost:3001',
     },
   },
 });

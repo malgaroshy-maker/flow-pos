@@ -1,21 +1,26 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository. Other AI agents (Antigravity, Cursor, Codex, …) read `AGENTS.md`, which mirrors this file — **when you change one, keep the other in sync**.
+
+## Git Rule
+
+**Do NOT push to GitHub unless the user explicitly asks.** Committing locally when the user requests it is fine; pushing is always a separate, explicit instruction from the user.
 
 ## Project Status
 
-**Phase 1 (MVP) and Phase 2 (Full business cycle: purchases, receivables, credit sales, cash integration, A4 equipment invoicing, customer statements) are 100% fully completed, verified, typechecked, and built for production.**
+**Phase 1 (MVP) and Phase 2 are feature-complete as of 2026-07-19** — every approved scope item in `docs/roadmap.md` is implemented and covered by the 51-test server suite. One gate remains before Phase 3: refactoring the `web/src/App.tsx` monolith (7,000+ lines, single component) into per-screen components. Historical note: an earlier revision of this file claimed Phase 2 was complete while six approved features were missing and several UI features (invoice printing, statement modal, Tafqeet) were dead code; that was corrected and then the missing scope was actually built — never mark a phase complete while approved scope items remain unchecked.
 
-Key completed implementations:
-- **Offline Core**: Full Fastify + SQLite + Drizzle monorepo with 3-decimal milli-LYD monetary precision and migration `0004_dashing_tarot.sql`.
-- **Product & Stock**: Equipment vs Consumable branch fields, barcode search/scan, stock movements ledger, manual adjustments with manager PIN override.
-- **Cash Drawer & Shifts**: Shared drawer shift model, initial cash, cash expenses, shift closing with immutable variance audit.
-- **POS Invoicing & Print**: Gap-free sequential numbers (`INV-YYYY-NNNNN`), specialized A4 equipment invoices (with model, serial numbers, warranty terms, Arabic `Tafqeet` currency spelling, and company stamp), 80mm thermal receipts, invoice cancellation with stock & cash/credit reversal.
-- **Purchases & Suppliers**: Purchase invoices (`PUR-YYYY-NNNNN`), weighted average cost recalculations, stock addition, supplier debt tracking & payments linked to shift cash drawer.
-- **Customers & Credit Sales**: POS Cash vs Credit toggle, customer selector, customer debt tracking, customer statement of account (A4 exportable running balance), payments linked to shift cash drawer deposit.
-- **Branding & System Settings**: Full customization of business name, subtitle, secondary phone, warranty terms, stamp title, local database backup & single-click restore, tax engine toggle, light/dark RTL UI, and Readex Pro font reporting.
+Working today (typechecked, tested, built):
 
-Next up is Phase 3 (Intelligence: barcode stocktaking sessions, charts & Excel/HTML/PDF export, notification center, warranty tickets).
+- **Offline Core**: Fastify + SQLite + Drizzle monorepo with 3-decimal milli-LYD monetary precision; migrations through `0005_wet_kabuki.sql`.
+- **Product & Stock**: Equipment vs Consumable branch fields, barcode search/scan, stock movements ledger, manual adjustments; all product routes require a session.
+- **Cash Drawer & Shifts**: Shared drawer shift model, initial cash, cash expenses, shift closing with immutable variance audit and auto-backup. All cash in/out (sales, expenses, customer/supplier payments, paid purchases) requires an open shift.
+- **POS Invoicing & Print**: Gap-free sequential numbers (`INV-YYYY-NNNNN`, max+1 within the year), A4 equipment invoices (model, serials, warranty, Tafqeet, stamp), 80mm thermal receipts, invoice cancellation with stock & cash/credit reversal.
+- **Purchases & Suppliers**: Purchase invoices (`PUR-YYYY-NNNNN`), weighted average cost recalculation, supplier debt tracking & payments.
+- **Customers & Credit Sales**: Cash vs Credit toggle, customer debt tracking with overpayment rejection, statement of account with a true (sign-preserving) running balance.
+- **Hardening (2026-07-19)**: server-authoritative sale prices (custom price needs manager/PIN, audit-flagged), integer validation on every money/quantity input, string-based money parsing in the web app (no float rounding), crypto session tokens with 12h idle expiry + logout, login/PIN rate limiting, restore path-traversal guard, restore swaps the DB handle safely via `app.swapDatabase`.
+
+Phase 2 additions (2026-07-19): price tiers + per-customer special prices, quotations with atomic convert-to-sale, supplier returns, multi-unit products (base-unit stock, per-unit prices), deposits with equipment reservation, setup bundles, credit limits, per-product tax exemption, product image upload, invoice QR, real A4/thermal print path with Tafqeet + warranty + stamp, customer statement modal. Next: refactor `web/src/App.tsx` into per-screen components, then Phase 3 (stocktaking, charts & exports, notifications, warranty tickets).
 
 ## What This Project Is
 
@@ -28,8 +33,15 @@ An **offline-first, Arabic (RTL) sales & inventory management system** for a caf
 - `docs/plan.md` — implementation plan, confirmed decisions, and tech stack.
 - `docs/roadmap.md` — the 4 delivery phases and what belongs in each.
 - `docs/design.md` — the design system (tokens, type, components, print templates). All UI work follows it; extend it before deviating.
+- `سجل-التغييرات.md` — the official Arabic changelog, one summarized section per version, newest first.
+- `تقرير-مميزات-المنظومة.html` — customer-facing features report (Arabic); update it when major features ship.
+- `AGENTS.md` — the same working agreement for non-Claude agents; keep it in sync with this file.
 
 If code and docs ever disagree, raise it — do not silently pick one.
+
+## Changelog Rule (سجل التغييرات)
+
+Every time a version is released (a `Vx.y.z` commit) or a meaningful batch of changes lands, **add a summarized Arabic section at the top of the versions list in `سجل-التغييرات.md`** following the template documented at the top of that file: plain Arabic a shop owner can read, grouped as features / fixes / security / UI / docs as applicable, ending with the commit hash and test count. Do not close out work without updating it.
 
 ## Non-Negotiable Domain Rules
 

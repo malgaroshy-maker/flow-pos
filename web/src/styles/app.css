@@ -2,29 +2,29 @@
 @import './tokens.css';
 
 @theme inline {
-  --color-bg:       var(--bg);
-  --color-surface:  var(--surface);
-  --color-surface-2:var(--surface-2);
-  --color-paper:    var(--paper);
-  --color-ink:      var(--ink);
-  --color-fg:       var(--text);
-  --color-text:     var(--text);
-  --color-muted:    var(--text-muted);
-  --color-border:   var(--border);
-  --color-line:     var(--border);
-  --color-jade:     var(--jade);
-  --color-jade-2:   var(--jade-2);
-  --color-copper:   var(--copper);
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-paper: var(--paper);
+  --color-ink: var(--ink);
+  --color-fg: var(--text);
+  --color-text: var(--text);
+  --color-muted: var(--text-muted);
+  --color-border: var(--border);
+  --color-line: var(--border);
+  --color-jade: var(--jade);
+  --color-jade-2: var(--jade-2);
+  --color-copper: var(--copper);
   --color-copper-2: var(--copper-2);
-  --color-alert:    var(--alert);
+  --color-alert: var(--alert);
 
-  --font-display:  'Cairo', 'Readex Pro', sans-serif;
-  --font-body:     'Readex Pro', 'Tajawal', sans-serif;
-  --font-mono:     'JetBrains Mono', monospace;
+  --font-display: 'Cairo', 'Readex Pro', sans-serif;
+  --font-body: 'Readex Pro', 'Tajawal', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
 
-  --radius-card:    var(--radius-card);
+  --radius-card: var(--radius-card);
   --radius-control: var(--radius-control);
-  --shadow-card:    var(--shadow);
+  --shadow-card: var(--shadow);
   --shadow-md-card: var(--shadow-md);
 }
 
@@ -46,7 +46,10 @@
       color 0.35s ease;
   }
 
-  h1, h2, h3, h4 {
+  h1,
+  h2,
+  h3,
+  h4 {
     font-family: 'Cairo', sans-serif;
     line-height: 1.35;
     text-wrap: balance;
@@ -81,7 +84,9 @@
   }
 
   @media (prefers-reduced-motion: reduce) {
-    *, *::before, *::after {
+    *,
+    *::before,
+    *::after {
       transition: none !important;
       animation: none !important;
     }
@@ -137,13 +142,34 @@
 }
 
 /* ── Print Media Styles (A4 & Thermal 80mm) ────────────────────────── */
+/* The print-only invoice render is invisible on screen… */
+.print-only {
+  display: none;
+}
+
 @media print {
+  /* …and the only visible element on paper. */
+  body * {
+    visibility: hidden;
+  }
+  .print-only,
+  .print-only * {
+    visibility: visible;
+  }
+  .print-only {
+    display: block !important;
+    position: absolute;
+    inset: 0;
+    width: 100%;
+  }
+
   @page {
     size: A4 portrait;
     margin: 8mm 10mm;
   }
 
-  html, body {
+  html,
+  body {
     background: #ffffff !important;
     color: #000000 !important;
     font-size: 10.5pt;

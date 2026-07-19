@@ -11,9 +11,15 @@ import {
   settings,
   users,
   customers,
+  quotations,
+  productUnits,
+  productComponents,
+  deposits,
 } from '../db/schema.js';
 import { authenticateRequest } from './auth.js';
 import { applyPermille, lineTotal } from '../lib/money.js';
+import { requireNonNegativeInt, requirePositiveInt, ValidationError } from '../lib/validate.js';
+import { resolveUnitPrice } from '../lib/pricing.js';
 
 export async function saleRoutes(app: FastifyInstance) {
   // Apply authentication to all sales routes
@@ -48,6 +54,8 @@ export async function saleRoutes(app: FastifyInstance) {
         id: saleItems.id,
         productId: saleItems.productId,
         quantity: saleItems.quantity,
+        unitName: saleItems.unitName,
+        conversionFactor: saleItems.conversionFactor,
         unitPrice: saleItems.unitPrice,
         total: saleItems.total,
         productName: products.name,
@@ -72,12 +80,15 @@ export async function saleRoutes(app: FastifyInstance) {
         productId: number;
         quantity: number;
         unitPrice: number;
+        unitId?: number; // packaging unit; absent = base unit
         serialNumber?: string;
       }>;
       discount: number; // in milli-LYD
       paymentType?: 'cash' | 'credit';
       paymentMethod?: 'cash' | 'card' | 'transfer';
       overridePin?: string;
+      quotationId?: number; // converting a quotation: marked atomically with the sale
+      depositId?: number; // applying a held customer deposit against this invoice
     };
 
     const {
@@ -88,16 +99,34 @@ export async function saleRoutes(app: FastifyInstance) {
       paymentType = 'cash',
       paymentMethod = 'cash',
       overridePin,
+      quotationId,
+      depositId,
     } = body;
 
     if (!items || items.length === 0) {
       return reply.code(400).send({ error: 'empty_cart', message: 'السلة فارغة' });
     }
 
+    try {
+      for (const item of items) {
+        requirePositiveInt(item.productId, 'productId');
+        requirePositiveInt(item.quantity, 'quantity');
+        requireNonNegativeInt(item.unitPrice, 'unitPrice');
+        if (item.unitId !== undefined) requirePositiveInt(item.unitId, 'unitId');
+      }
+      requireNonNegativeInt(discount, 'discount');
+    } catch (err) {
+      if (err instanceof ValidationError) {
+        return reply.code(400).send({ error: err.code, message: err.message });
+      }
+      throw err;
+    }
+
     if (paymentType === 'credit' && !customerId) {
-      return reply
-        .code(400)
-        .send({ error: 'customer_required', message: 'يجب اختيار العميل لتسجيل فاتورة بيع آجل (دين)' });
+      return reply.code(400).send({
+        error: 'customer_required',
+        message: 'يجب اختيار العميل لتسجيل فاتورة بيع آجل (دين)',
+      });
     }
 
     // 1. Must check for active shift
@@ -118,6 +147,7 @@ export async function saleRoutes(app: FastifyInstance) {
     const currentSettings = app.db.select().from(settings).where(eq(settings.id, 1)).get();
     const isTaxEnabled = currentSettings?.taxEnabled ?? false;
     const taxRatePermille = currentSettings?.taxRatePermille ?? 0;
+    const discountCapPercent = currentSettings?.discountCapPercent ?? 10;
 
     // Check discount cap
     let subtotal = 0;
@@ -125,7 +155,13 @@ export async function saleRoutes(app: FastifyInstance) {
       subtotal += lineTotal(item.unitPrice, item.quantity);
     }
 
-    const discountCap = Math.floor(subtotal * 0.1); // default 10% discount cap for Sales role
+    if (discount > subtotal) {
+      return reply
+        .code(400)
+        .send({ error: 'discount_exceeds_subtotal', message: 'الخصم أكبر من قيمة الفاتورة' });
+    }
+
+    const discountCap = Math.floor((subtotal * discountCapPercent) / 100);
     const isOverDiscountCap = discount > discountCap;
 
     // 2. Perform overrides or permission check
@@ -142,7 +178,7 @@ export async function saleRoutes(app: FastifyInstance) {
     if (isOverDiscountCap && req.user!.role !== 'manager' && !pinUser) {
       return reply.code(400).send({
         error: 'discount_limit_exceeded',
-        message: 'لقد تجاوزت حد الخصم المسموح به (10%). يرجى إدخال PIN المدير للموافقة.',
+        message: `لقد تجاوزت حد الخصم المسموح به (${discountCapPercent}%). يرجى إدخال PIN المدير للموافقة.`,
       });
     }
 
@@ -150,6 +186,23 @@ export async function saleRoutes(app: FastifyInstance) {
     try {
       const result = app.sqlite.transaction(() => {
         const now = new Date().toISOString();
+
+        // Converting a quotation: it must still be active and within validity.
+        // Marked converted inside this transaction so it can never convert twice.
+        let quotation: typeof quotations.$inferSelect | undefined;
+        if (quotationId) {
+          quotation = app.db.select().from(quotations).where(eq(quotations.id, quotationId)).get();
+          if (!quotation) throw new Error('quotation_not_found');
+          if (quotation.status !== 'active') throw new Error('quotation_not_active');
+          if (quotation.validUntil < now.slice(0, 10)) {
+            app.db
+              .update(quotations)
+              .set({ status: 'expired' })
+              .where(eq(quotations.id, quotation.id))
+              .run();
+            throw new Error('quotation_expired');
+          }
+        }
 
         // Check customer existence if customerId provided
         let targetCustomerName = customerName || null;
@@ -161,7 +214,40 @@ export async function saleRoutes(app: FastifyInstance) {
           targetCustomerName = cust.name;
         }
 
-        // Verification step inside transaction
+        // Applying a customer deposit: must be held and belong to this
+        // customer; its value comes off the cash due / credit added.
+        let appliedDeposit: typeof deposits.$inferSelect | undefined;
+        if (depositId) {
+          appliedDeposit = app.db.select().from(deposits).where(eq(deposits.id, depositId)).get();
+          if (!appliedDeposit) throw new Error('deposit_not_found');
+          if (appliedDeposit.status !== 'held') throw new Error('deposit_not_held');
+          if (!customerId || appliedDeposit.customerId !== customerId) {
+            throw new Error('deposit_customer_mismatch');
+          }
+        }
+
+        // Verification step inside transaction. Prices are server-authoritative:
+        // base units resolve special→tier→retail; packaging units sell at
+        // their own configured price. Stock is always checked in base units,
+        // net of deposit reservations (this sale's own reservation is freed).
+        const stockOverrides: string[] = [];
+        const priceOverrides: string[] = [];
+        const resolvedItems: Array<{
+          item: (typeof items)[number];
+          product: typeof products.$inferSelect;
+          unitName: string | null;
+          conversionFactor: number;
+          baseQuantity: number;
+          components: Array<{ componentProductId: number; quantity: number }>;
+        }> = [];
+        let taxableSubtotal = 0;
+        const reservationRelease = new Map<number, number>();
+        if (appliedDeposit?.productId) {
+          reservationRelease.set(appliedDeposit.productId, 1);
+        }
+        const availableOf = (p: typeof products.$inferSelect) =>
+          p.quantity - p.reservedQuantity + (reservationRelease.get(p.id) ?? 0);
+
         for (const item of items) {
           const product = app.db
             .select()
@@ -171,12 +257,94 @@ export async function saleRoutes(app: FastifyInstance) {
           if (!product) {
             throw new Error(`product_not_found:${item.productId}`);
           }
-          if (product.quantity < item.quantity && !pinUser && req.user!.role !== 'manager') {
-            throw new Error(`insufficient_stock:${product.name}:${product.quantity}`);
+
+          const components = app.db
+            .select()
+            .from(productComponents)
+            .where(eq(productComponents.productId, product.id))
+            .all();
+          const isBundle = components.length > 0;
+          if (isBundle && item.unitId) {
+            throw new Error(`unit_not_found:${product.name}`);
           }
+
+          let authorizedPrice: number;
+          let unitName: string | null = null;
+          let conversionFactor = 1;
+          if (item.unitId) {
+            const unit = app.db
+              .select()
+              .from(productUnits)
+              .where(eq(productUnits.id, item.unitId))
+              .get();
+            if (!unit || unit.productId !== product.id) {
+              throw new Error(`unit_not_found:${product.name}`);
+            }
+            authorizedPrice = unit.price;
+            unitName = unit.unitName;
+            conversionFactor = unit.conversionFactor;
+          } else {
+            authorizedPrice = resolveUnitPrice(app.db, customerId, product);
+          }
+
+          if (item.unitPrice !== authorizedPrice) {
+            if (!pinUser && req.user!.role !== 'manager') {
+              throw new Error(`price_not_allowed:${product.name}`);
+            }
+            priceOverrides.push(`${product.name}: ${item.unitPrice} بدلاً من ${authorizedPrice}`);
+          }
+
+          const baseQuantity = item.quantity * conversionFactor;
+          if (!Number.isSafeInteger(baseQuantity)) {
+            throw new Error(`product_not_found:${item.productId}`);
+          }
+
+          if (isBundle) {
+            // A bundle sells at its own price and consumes its components.
+            for (const comp of components) {
+              const compProduct = app.db
+                .select()
+                .from(products)
+                .where(eq(products.id, comp.componentProductId))
+                .get();
+              if (!compProduct) throw new Error(`product_not_found:${comp.componentProductId}`);
+              const needed = comp.quantity * item.quantity;
+              if (availableOf(compProduct) < needed) {
+                if (!pinUser && req.user!.role !== 'manager') {
+                  throw new Error(
+                    `insufficient_stock:${compProduct.name}:${availableOf(compProduct)}`,
+                  );
+                }
+                stockOverrides.push(
+                  `${compProduct.name} ضمن الباقة ${product.name} (المتاح: ${availableOf(compProduct)}, المطلوب: ${needed})`,
+                );
+              }
+            }
+          } else if (availableOf(product) < baseQuantity) {
+            if (!pinUser && req.user!.role !== 'manager') {
+              throw new Error(`insufficient_stock:${product.name}:${availableOf(product)}`);
+            }
+            stockOverrides.push(
+              `${product.name} (المتاح: ${availableOf(product)}, المباع: ${baseQuantity})`,
+            );
+          }
+
+          if (!product.taxExempt) {
+            taxableSubtotal += lineTotal(item.unitPrice, item.quantity);
+          }
+          resolvedItems.push({
+            item,
+            product,
+            unitName,
+            conversionFactor,
+            baseQuantity,
+            components,
+          });
         }
 
-        // Generate gap-free sequential invoice number: INV-YYYY-NNNNN
+        // Generate gap-free sequential invoice number: INV-YYYY-NNNNN.
+        // Uses max(existing)+1 within the year so it stays correct even if
+        // historical rows are ever purged; cancelled invoices keep their number.
         const currentYear = new Date().getFullYear();
         const yearPrefix = `INV-${currentYear}-`;
         const matchingSales = app.db
@@ -185,12 +353,43 @@ export async function saleRoutes(app: FastifyInstance) {
           .where(like(sales.invoiceNumber, `${yearPrefix}%`))
           .all();
 
-        const nextNum = matchingSales.length + 1;
-        const invoiceNumber = `${yearPrefix}${String(nextNum).padStart(5, '0')}`;
+        let maxNum = 0;
+        for (const s of matchingSales) {
+          const num = parseInt(s.invoiceNumber.slice(yearPrefix.length), 10);
+          if (Number.isFinite(num) && num > maxNum) maxNum = num;
+        }
+        const invoiceNumber = `${yearPrefix}${String(maxNum + 1).padStart(5, '0')}`;
 
-        // Compute Tax & Totals
-        const taxAmount = isTaxEnabled ? applyPermille(subtotal - discount, taxRatePermille) : 0;
+        // Compute Tax & Totals. Tax applies only to non-exempt lines; the
+        // invoice discount reduces the taxable base proportionally.
+        const taxableDiscountShare =
+          subtotal > 0 ? Math.floor((discount * taxableSubtotal) / subtotal) : 0;
+        const taxAmount = isTaxEnabled
+          ? applyPermille(taxableSubtotal - taxableDiscountShare, taxRatePermille)
+          : 0;
         const total = subtotal + taxAmount - discount;
+
+        // The applied deposit comes off what is due now — it can never exceed
+        // the invoice total (refund the difference first).
+        const depositAmount = appliedDeposit ? appliedDeposit.amount : 0;
+        if (depositAmount > total) {
+          throw new Error('deposit_exceeds_total');
+        }
+
+        // Credit limit: exceeding it blocks the credit sale unless a manager
+        // (or PIN) approves — approved overshoots are audit-flagged below.
+        let creditLimitOverride: string | null = null;
+        if (paymentType === 'credit' && customerId) {
+          const cust = app.db.select().from(customers).where(eq(customers.id, customerId)).get()!;
+          if (cust.creditLimit > 0 && cust.creditBalance + total > cust.creditLimit) {
+            if (!pinUser && req.user!.role !== 'manager') {
+              throw new Error(
+                `credit_limit_exceeded:${cust.name}:${cust.creditLimit}:${cust.creditBalance}`,
+              );
+            }
+            creditLimitOverride = `${cust.name}: الرصيد ${cust.creditBalance + total} يتجاوز السقف ${cust.creditLimit}`;
+          }
+        }
 
         // Create Sales record
         const saleInsert = app.db
@@ -214,53 +413,123 @@ export async function saleRoutes(app: FastifyInstance) {
 
         const saleId = Number(saleInsert.lastInsertRowid);
 
-        // Update customer debt balance if credit sale
+        // Update customer debt balance if credit sale (net of applied deposit)
         if (paymentType === 'credit' && customerId) {
           const cust = app.db.select().from(customers).where(eq(customers.id, customerId)).get()!;
           app.db
             .update(customers)
-            .set({ creditBalance: cust.creditBalance + total })
+            .set({ creditBalance: cust.creditBalance + total - depositAmount })
             .where(eq(customers.id, customerId))
             .run();
         }
 
-        // Process each item
-        for (const item of items) {
-          const product = app.db
-            .select()
-            .from(products)
-            .where(eq(products.id, item.productId))
-            .get()!;
-          const newQty = product.quantity - item.quantity;
-
-          // Update stock
+        // Consume the deposit: applied, linked, reservation released
+        if (appliedDeposit) {
           app.db
-            .update(products)
-            .set({ quantity: newQty })
-            .where(eq(products.id, item.productId))
+            .update(deposits)
+            .set({ status: 'applied', saleId, resolvedAt: now })
+            .where(eq(deposits.id, appliedDeposit.id))
             .run();
-
-          // Create stock movement ledger
+          if (appliedDeposit.productId) {
+            const reservedProduct = app.db
+              .select()
+              .from(products)
+              .where(eq(products.id, appliedDeposit.productId))
+              .get();
+            if (reservedProduct && reservedProduct.reservedQuantity > 0) {
+              app.db
+                .update(products)
+                .set({ reservedQuantity: reservedProduct.reservedQuantity - 1 })
+                .where(eq(products.id, reservedProduct.id))
+                .run();
+            }
+          }
           app.db
-            .insert(stockMovements)
+            .insert(auditLogs)
             .values({
-              productId: item.productId,
-              type: 'sale',
-              quantity: -item.quantity,
-              balanceAfter: newQty,
-              reason: `مبيعات فاتورة رقم ${invoiceNumber}`,
               userId: req.user!.userId,
+              action: 'apply_deposit',
+              details: `خصم عربون #${appliedDeposit.id} بقيمة ${(depositAmount / 1000).toFixed(3)} د.ل من الفاتورة ${invoiceNumber}`,
               createdAt: now,
             })
             .run();
+        }
 
-          // Create sale items
+        // Process each item — stock always mutates in base units. Bundles
+        // deduct every component; the bundle parent's own stock is untouched.
+        for (const {
+          item,
+          unitName,
+          conversionFactor,
+          baseQuantity,
+          components,
+        } of resolvedItems) {
+          if (components.length > 0) {
+            for (const comp of components) {
+              const compProduct = app.db
+                .select()
+                .from(products)
+                .where(eq(products.id, comp.componentProductId))
+                .get()!;
+              const deduct = comp.quantity * item.quantity;
+              const newQty = compProduct.quantity - deduct;
+              app.db
+                .update(products)
+                .set({ quantity: newQty })
+                .where(eq(products.id, compProduct.id))
+                .run();
+              app.db
+                .insert(stockMovements)
+                .values({
+                  productId: compProduct.id,
+                  type: 'sale',
+                  quantity: -deduct,
+                  balanceAfter: newQty,
+                  reason: `مبيعات فاتورة رقم ${invoiceNumber}`,
+                  userId: req.user!.userId,
+                  createdAt: now,
+                })
+                .run();
+            }
+          } else {
+            const product = app.db
+              .select()
+              .from(products)
+              .where(eq(products.id, item.productId))
+              .get()!;
+            const newQty = product.quantity - baseQuantity;
+
+            // Update stock
+            app.db
+              .update(products)
+              .set({ quantity: newQty })
+              .where(eq(products.id, item.productId))
+              .run();
+
+            // Create stock movement ledger (base units)
+            app.db
+              .insert(stockMovements)
+              .values({
+                productId: item.productId,
+                type: 'sale',
+                quantity: -baseQuantity,
+                balanceAfter: newQty,
+                reason: `مبيعات فاتورة رقم ${invoiceNumber}`,
+                userId: req.user!.userId,
+                createdAt: now,
+              })
+              .run();
+          }
+
+          // Create sale items (quantity in the sold unit + unit snapshot)
           app.db
             .insert(saleItems)
             .values({
               saleId,
               productId: item.productId,
               quantity: item.quantity,
+              unitName,
+              conversionFactor,
               unitPrice: item.unitPrice,
               total: lineTotal(item.unitPrice, item.quantity),
               serialNumber: item.serialNumber || null,
@@ -268,14 +537,15 @@ export async function saleRoutes(app: FastifyInstance) {
             .run();
         }
 
-        // Cash flow movement (only for cash payments)
-        if (paymentType === 'cash' && paymentMethod === 'cash') {
+        // Cash flow movement (only for cash payments; net of applied deposit
+        // — that cash entered the drawer when the deposit was taken)
+        if (paymentType === 'cash' && paymentMethod === 'cash' && total - depositAmount > 0) {
           app.db
             .insert(cashMovements)
             .values({
               shiftId: activeShift.id,
               type: 'sale',
-              amount: total,
+              amount: total - depositAmount,
               referenceId: invoiceNumber,
               userId: req.user!.userId,
               createdAt: now,
@@ -291,6 +561,60 @@ export async function saleRoutes(app: FastifyInstance) {
               userId: pinUser.id,
               action: 'manager_override_sale',
               details: `موافقة المدير ${pinUser.username} لتخطي الحدود لفاتورة ${invoiceNumber}`,
+              createdAt: now,
+            })
+            .run();
+        }
+
+        // Flag every stock/price override in the audit log — including a
+        // manager acting on their own account, per the domain rules.
+        if (stockOverrides.length > 0) {
+          app.db
+            .insert(auditLogs)
+            .values({
+              userId: (pinUser ? pinUser.id : req.user!.userId) as number,
+              action: 'stock_override_sale',
+              details: `بيع بكمية تتجاوز المخزون في الفاتورة ${invoiceNumber}: ${stockOverrides.join('، ')}`,
+              createdAt: now,
+            })
+            .run();
+        }
+        if (priceOverrides.length > 0) {
+          app.db
+            .insert(auditLogs)
+            .values({
+              userId: (pinUser ? pinUser.id : req.user!.userId) as number,
+              action: 'price_override_sale',
+              details: `بيع بسعر مخصص في الفاتورة ${invoiceNumber}: ${priceOverrides.join('، ')}`,
+              createdAt: now,
+            })
+            .run();
+        }
+        if (creditLimitOverride) {
+          app.db
+            .insert(auditLogs)
+            .values({
+              userId: (pinUser ? pinUser.id : req.user!.userId) as number,
+              action: 'credit_limit_override_sale',
+              details: `تجاوز سقف الائتمان في الفاتورة ${invoiceNumber}: ${creditLimitOverride}`,
+              createdAt: now,
+            })
+            .run();
+        }
+
+        // Mark the quotation converted, linked to this sale
+        if (quotation) {
+          app.db
+            .update(quotations)
+            .set({ status: 'converted', convertedSaleId: saleId })
+            .where(eq(quotations.id, quotation.id))
+            .run();
+          app.db
+            .insert(auditLogs)
+            .values({
+              userId: req.user!.userId,
+              action: 'convert_quotation',
+              details: `تحويل عرض السعر ${quotation.quoteNumber} إلى فاتورة ${invoiceNumber}`,
               createdAt: now,
             })
             .run();
@@ -325,6 +649,63 @@ export async function saleRoutes(app: FastifyInstance) {
           error: 'insufficient_stock',
           message: `المخزون غير كافٍ للمنتج (${name})، الكمية المتاحة: ${qty}. يرجى طلب موافقة المدير لتجاوز الرصيد.`,
         });
+      }
+      if (msg.startsWith('price_not_allowed:')) {
+        const [, name] = msg.split(':');
+        return reply.code(400).send({
+          error: 'price_not_allowed',
+          message: `تغيير سعر المنتج (${name}) يتطلب موافقة المدير أو إدخال رمز PIN`,
+        });
+      }
+      if (msg.startsWith('unit_not_found:')) {
+        const [, name] = msg.split(':');
+        return reply.code(400).send({
+          error: 'unit_not_found',
+          message: `وحدة التعبئة المحددة للمنتج (${name}) غير موجودة`,
+        });
+      }
+      if (msg.startsWith('credit_limit_exceeded:')) {
+        const [, name, limit] = msg.split(':');
+        return reply.code(400).send({
+          error: 'credit_limit_exceeded',
+          message: `هذه الفاتورة تتجاوز سقف الائتمان للعميل (${name}) البالغ ${(Number(limit) / 1000).toFixed(3)} د.ل — يتطلب موافقة المدير`,
+        });
+      }
+      if (msg === 'deposit_not_found') {
+        return reply.code(400).send({ error: 'deposit_not_found', message: 'العربون غير موجود' });
+      }
+      if (msg === 'deposit_not_held') {
+        return reply
+          .code(400)
+          .send({ error: 'deposit_not_held', message: 'العربون تم استخدامه أو تسويته مسبقاً' });
+      }
+      if (msg === 'deposit_customer_mismatch') {
+        return reply.code(400).send({
+          error: 'deposit_customer_mismatch',
+          message: 'العربون يخص عميلاً آخر — اختر نفس العميل على الفاتورة',
+        });
+      }
+      if (msg === 'deposit_exceeds_total') {
+        return reply.code(400).send({
+          error: 'deposit_exceeds_total',
+          message: 'قيمة العربون أكبر من إجمالي الفاتورة — استرد الفرق نقداً أولاً',
+        });
+      }
+      if (msg === 'quotation_not_found') {
+        return reply
+          .code(400)
+          .send({ error: 'quotation_not_found', message: 'عرض السعر غير موجود' });
+      }
+      if (msg === 'quotation_not_active') {
+        return reply.code(400).send({
+          error: 'quotation_not_active',
+          message: 'عرض السعر تم تحويله أو إلغاؤه مسبقاً',
+        });
+      }
+      if (msg === 'quotation_expired') {
+        return reply
+          .code(400)
+          .send({ error: 'quotation_expired', message: 'انتهت صلاحية عرض السعر' });
       }
       throw err;
     }
@@ -382,30 +763,36 @@ export async function saleRoutes(app: FastifyInstance) {
         // Cancel sale
         app.db.update(sales).set({ status: 'cancelled' }).where(eq(sales.id, saleId)).run();
 
-        // Get sale items to reverse stock
-        const items = app.db.select().from(saleItems).where(eq(saleItems.saleId, saleId)).all();
-        for (const item of items) {
+        // Reverse the sale's own stock movements. This is the source of truth
+        // for what was actually deducted — it restores bundle components and
+        // packaging-unit conversions correctly.
+        const saleMovements = app.db
+          .select()
+          .from(stockMovements)
+          .where(eq(stockMovements.type, 'sale'))
+          .all()
+          .filter((m) => m.reason === `مبيعات فاتورة رقم ${sale.invoiceNumber}`);
+        for (const movement of saleMovements) {
           const product = app.db
             .select()
             .from(products)
-            .where(eq(products.id, item.productId))
+            .where(eq(products.id, movement.productId))
             .get()!;
-          const newQty = product.quantity + item.quantity;
+          const restore = -movement.quantity; // sale movements are negative
+          const newQty = product.quantity + restore;
 
-          // Restore stock
           app.db
             .update(products)
             .set({ quantity: newQty })
-            .where(eq(products.id, item.productId))
+            .where(eq(products.id, movement.productId))
             .run();
 
-          // Create stock movement ledger for return
           app.db
             .insert(stockMovements)
             .values({
-              productId: item.productId,
+              productId: movement.productId,
               type: 'return',
-              quantity: item.quantity,
+              quantity: restore,
               balanceAfter: newQty,
               reason: `مرتجع مبيعات فاتورة رقم ${sale.invoiceNumber}`,
               userId: actorId,
@@ -414,23 +801,68 @@ export async function saleRoutes(app: FastifyInstance) {
             .run();
         }
 
-        // Reverse customer debt if credit sale
-        if (sale.paymentType === 'credit' && sale.customerId) {
-          const cust = app.db.select().from(customers).where(eq(customers.id, sale.customerId)).get();
-          if (cust) {
-            const newBal = Math.max(0, cust.creditBalance - sale.total);
-            app.db.update(customers).set({ creditBalance: newBal }).where(eq(customers.id, sale.customerId)).run();
+        // A deposit applied to this sale goes back to "held": the customer's
+        // money returns to being ours-in-trust, and its reservation resumes.
+        const appliedDeposit = app.db
+          .select()
+          .from(deposits)
+          .where(eq(deposits.saleId, saleId))
+          .get();
+        const depositAmount = appliedDeposit?.status === 'applied' ? appliedDeposit.amount : 0;
+        if (appliedDeposit && appliedDeposit.status === 'applied') {
+          app.db
+            .update(deposits)
+            .set({ status: 'held', saleId: null, resolvedAt: null })
+            .where(eq(deposits.id, appliedDeposit.id))
+            .run();
+          if (appliedDeposit.productId) {
+            const reservedProduct = app.db
+              .select()
+              .from(products)
+              .where(eq(products.id, appliedDeposit.productId))
+              .get();
+            if (reservedProduct) {
+              app.db
+                .update(products)
+                .set({ reservedQuantity: reservedProduct.reservedQuantity + 1 })
+                .where(eq(products.id, reservedProduct.id))
+                .run();
+            }
           }
         }
 
-        // Reverse cash (only if original payment was cash)
-        if (sale.paymentType === 'cash' && sale.paymentMethod === 'cash') {
+        // Reverse customer debt if credit sale (net of the applied deposit).
+        // The balance may go negative: that means we now owe the customer —
+        // never silently drop the difference.
+        if (sale.paymentType === 'credit' && sale.customerId) {
+          const cust = app.db
+            .select()
+            .from(customers)
+            .where(eq(customers.id, sale.customerId))
+            .get();
+          if (cust) {
+            const newBal = cust.creditBalance - (sale.total - depositAmount);
+            app.db
+              .update(customers)
+              .set({ creditBalance: newBal })
+              .where(eq(customers.id, sale.customerId))
+              .run();
+          }
+        }
+
+        // Reverse cash (only what was actually received now — the deposit
+        // portion stays in the drawer, back under the held deposit)
+        if (
+          sale.paymentType === 'cash' &&
+          sale.paymentMethod === 'cash' &&
+          sale.total - depositAmount > 0
+        ) {
           app.db
             .insert(cashMovements)
             .values({
               shiftId: activeShift.id,
               type: 'refund',
-              amount: -sale.total,
+              amount: -(sale.total - depositAmount),
               referenceId: sale.invoiceNumber,
               userId: actorId,
               createdAt: now,

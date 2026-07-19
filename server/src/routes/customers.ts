@@ -1,26 +1,27 @@
 import type { FastifyInstance } from 'fastify';
-import { eq, desc, asc } from 'drizzle-orm';
-import { customers, sales, auditLogs, shifts, cashMovements, customerPayments } from '../db/schema.js';
+import { and, eq, desc } from 'drizzle-orm';
+import {
+  customers,
+  customerSpecialPrices,
+  products,
+  sales,
+  auditLogs,
+  shifts,
+  cashMovements,
+  customerPayments,
+} from '../db/schema.js';
 import { authenticateRequest } from './auth.js';
+import { requireNonNegativeInt, requirePositiveInt, ValidationError } from '../lib/validate.js';
+
+const TIERS = ['retail', 'wholesale'] as const;
+type Tier = (typeof TIERS)[number];
+
+function parseTier(value: unknown): Tier | null {
+  return TIERS.includes(value as Tier) ? (value as Tier) : null;
+}
 
 export async function customerRoutes(app: FastifyInstance) {
   app.addHook('preHandler', authenticateRequest);
-
-  // Ensure customer_payments table exists dynamically if needed
-  try {
-    app.sqlite.exec(`
-      CREATE TABLE IF NOT EXISTS customer_payments (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        customer_id INTEGER NOT NULL REFERENCES customers(id),
-        amount INTEGER NOT NULL,
-        user_id INTEGER NOT NULL REFERENCES users(id),
-        notes TEXT,
-        created_at TEXT NOT NULL
-      );
-    `);
-  } catch (e) {
-    // Table already exists or table check passed
-  }
 
   // List all customers
   app.get('/customers', async (_req, _reply) => {
@@ -37,9 +38,24 @@ export async function customerRoutes(app: FastifyInstance) {
 
   // Create customer (manager & sales)
   app.post('/customers', async (req, reply) => {
-    const { name, phone, address, notes } = req.body as any;
+    const { name, phone, address, notes, tier, creditLimit } = req.body as any;
     if (!name)
       return reply.code(400).send({ error: 'missing_fields', message: 'اسم العميل مطلوب' });
+
+    if (tier !== undefined && !parseTier(tier)) {
+      return reply
+        .code(400)
+        .send({ error: 'invalid_tier', message: 'فئة التسعير يجب أن تكون تجزئة أو جملة' });
+    }
+
+    try {
+      if (creditLimit !== undefined) requireNonNegativeInt(creditLimit, 'creditLimit');
+    } catch (err) {
+      if (err instanceof ValidationError) {
+        return reply.code(400).send({ error: err.code, message: err.message });
+      }
+      throw err;
+    }
 
     const now = new Date().toISOString();
     const result = app.db
@@ -48,6 +64,8 @@ export async function customerRoutes(app: FastifyInstance) {
         name,
         phone: phone || null,
         address: address || null,
+        tier: parseTier(tier) ?? 'retail',
+        creditLimit: creditLimit ?? 0,
         notes: notes || null,
         createdAt: now,
       })
@@ -63,7 +81,7 @@ export async function customerRoutes(app: FastifyInstance) {
         createdAt: now,
       })
       .run();
-    
+
     const newCustomer = app.db.select().from(customers).where(eq(customers.id, newId)).get();
     return newCustomer;
   });
@@ -79,16 +97,158 @@ export async function customerRoutes(app: FastifyInstance) {
     const existing = app.db.select().from(customers).where(eq(customers.id, id)).get();
     if (!existing) return reply.code(404).send({ error: 'not_found' });
 
-    const { name, phone, address, notes } = req.body as any;
+    const { name, phone, address, notes, tier, creditLimit } = req.body as any;
+    if (tier !== undefined && !parseTier(tier)) {
+      return reply
+        .code(400)
+        .send({ error: 'invalid_tier', message: 'فئة التسعير يجب أن تكون تجزئة أو جملة' });
+    }
+
+    try {
+      if (creditLimit !== undefined) requireNonNegativeInt(creditLimit, 'creditLimit');
+    } catch (err) {
+      if (err instanceof ValidationError) {
+        return reply.code(400).send({ error: err.code, message: err.message });
+      }
+      throw err;
+    }
+
     app.db
       .update(customers)
       .set({
         name: name ?? existing.name,
         phone: phone !== undefined ? phone : existing.phone,
         address: address !== undefined ? address : existing.address,
+        tier: tier !== undefined ? parseTier(tier)! : existing.tier,
+        creditLimit: creditLimit !== undefined ? creditLimit : existing.creditLimit,
         notes: notes !== undefined ? notes : existing.notes,
       })
       .where(eq(customers.id, id))
+      .run();
+
+    return { success: true };
+  });
+
+  // ── Special prices (highest pricing precedence) ─────────────────────────────
+
+  // List a customer's special prices with product context
+  app.get('/customers/:id/special-prices', async (req, reply) => {
+    const id = Number((req.params as any).id);
+    const customer = app.db.select().from(customers).where(eq(customers.id, id)).get();
+    if (!customer) return reply.code(404).send({ error: 'not_found', message: 'العميل غير موجود' });
+
+    return app.db
+      .select({
+        id: customerSpecialPrices.id,
+        productId: customerSpecialPrices.productId,
+        price: customerSpecialPrices.price,
+        createdAt: customerSpecialPrices.createdAt,
+        productName: products.name,
+        retailPrice: products.retailPrice,
+        wholesalePrice: products.wholesalePrice,
+      })
+      .from(customerSpecialPrices)
+      .leftJoin(products, eq(customerSpecialPrices.productId, products.id))
+      .where(eq(customerSpecialPrices.customerId, id))
+      .orderBy(desc(customerSpecialPrices.id))
+      .all();
+  });
+
+  // Set/update a special price (manager only)
+  app.put('/customers/:id/special-prices', async (req, reply) => {
+    if (req.user?.role !== 'manager') {
+      return reply
+        .code(403)
+        .send({ error: 'forbidden', message: 'تحديد الأسعار الخاصة متاح للمدراء فقط' });
+    }
+
+    const id = Number((req.params as any).id);
+    const { productId, price } = req.body as { productId?: number; price?: number };
+
+    try {
+      requirePositiveInt(productId, 'productId');
+      requireNonNegativeInt(price, 'price');
+    } catch (err) {
+      if (err instanceof ValidationError) {
+        return reply.code(400).send({ error: err.code, message: err.message });
+      }
+      throw err;
+    }
+
+    const customer = app.db.select().from(customers).where(eq(customers.id, id)).get();
+    if (!customer) return reply.code(404).send({ error: 'not_found', message: 'العميل غير موجود' });
+
+    const product = app.db.select().from(products).where(eq(products.id, productId!)).get();
+    if (!product)
+      return reply.code(404).send({ error: 'product_not_found', message: 'المنتج غير موجود' });
+
+    const now = new Date().toISOString();
+    const existing = app.db
+      .select()
+      .from(customerSpecialPrices)
+      .where(
+        and(
+          eq(customerSpecialPrices.customerId, id),
+          eq(customerSpecialPrices.productId, productId!),
+        ),
+      )
+      .get();
+
+    if (existing) {
+      app.db
+        .update(customerSpecialPrices)
+        .set({ price: price! })
+        .where(eq(customerSpecialPrices.id, existing.id))
+        .run();
+    } else {
+      app.db
+        .insert(customerSpecialPrices)
+        .values({ customerId: id, productId: productId!, price: price!, createdAt: now })
+        .run();
+    }
+
+    app.db
+      .insert(auditLogs)
+      .values({
+        userId: req.user!.userId,
+        action: 'set_special_price',
+        details: `سعر خاص للعميل ${customer.name} على ${product.name}: ${(price! / 1000).toFixed(3)} د.ل`,
+        createdAt: now,
+      })
+      .run();
+
+    return { success: true };
+  });
+
+  // Remove a special price (manager only)
+  app.delete('/customers/:id/special-prices/:productId', async (req, reply) => {
+    if (req.user?.role !== 'manager') {
+      return reply
+        .code(403)
+        .send({ error: 'forbidden', message: 'تحديد الأسعار الخاصة متاح للمدراء فقط' });
+    }
+
+    const id = Number((req.params as any).id);
+    const productId = Number((req.params as any).productId);
+
+    app.db
+      .delete(customerSpecialPrices)
+      .where(
+        and(
+          eq(customerSpecialPrices.customerId, id),
+          eq(customerSpecialPrices.productId, productId),
+        ),
+      )
+      .run();
+
+    app.db
+      .insert(auditLogs)
+      .values({
+        userId: req.user!.userId,
+        action: 'remove_special_price',
+        details: `حذف سعر خاص للعميل ${id} على المنتج ${productId}`,
+        createdAt: new Date().toISOString(),
+      })
       .run();
 
     return { success: true };
@@ -98,29 +258,19 @@ export async function customerRoutes(app: FastifyInstance) {
   const handleCustomerPayment = async (req: any, reply: any) => {
     const id = Number((req.params as any).id);
     const { amount, notes } = req.body as { amount: number; notes?: string };
-    if (!amount || amount <= 0) return reply.code(400).send({ error: 'invalid_amount' });
+    try {
+      requirePositiveInt(amount, 'amount');
+    } catch (err) {
+      if (err instanceof ValidationError) {
+        return reply.code(400).send({ error: err.code, message: err.message });
+      }
+      throw err;
+    }
 
     const customer = app.db.select().from(customers).where(eq(customers.id, id)).get();
     if (!customer) return reply.code(404).send({ error: 'not_found' });
 
-    const newBalance = Math.max(0, customer.creditBalance - amount);
-    app.db.update(customers).set({ creditBalance: newBalance }).where(eq(customers.id, id)).run();
-
-    const now = new Date().toISOString();
-
-    // Insert into customer_payments
-    app.db
-      .insert(customerPayments)
-      .values({
-        customerId: id,
-        amount: amount,
-        userId: req.user.userId,
-        notes: notes || null,
-        createdAt: now,
-      })
-      .run();
-
-    // Check active shift to register cash deposit
+    // Cash entering the drawer must be tied to an open shift.
     const activeShift = app.db
       .select()
       .from(shifts)
@@ -128,7 +278,37 @@ export async function customerRoutes(app: FastifyInstance) {
       .limit(1)
       .get();
 
-    if (activeShift) {
+    if (!activeShift) {
+      return reply.code(400).send({
+        error: 'no_active_shift',
+        message: 'استلام نقدية من العميل يتطلب توكة مفتوحة لتسجيلها في الدرج',
+      });
+    }
+
+    if (amount > customer.creditBalance) {
+      return reply.code(400).send({
+        error: 'overpayment',
+        message: `المبلغ المدفوع أكبر من الدين المستحق (${(customer.creditBalance / 1000).toFixed(3)} د.ل)`,
+      });
+    }
+
+    const now = new Date().toISOString();
+    const newBalance = app.sqlite.transaction(() => {
+      const balance = customer.creditBalance - amount;
+      app.db.update(customers).set({ creditBalance: balance }).where(eq(customers.id, id)).run();
+
+      app.db
+        .insert(customerPayments)
+        .values({
+          customerId: id,
+          shiftId: activeShift.id,
+          amount: amount,
+          userId: req.user.userId,
+          notes: notes || null,
+          createdAt: now,
+        })
+        .run();
+
       app.db
         .insert(cashMovements)
         .values({
@@ -140,17 +320,19 @@ export async function customerRoutes(app: FastifyInstance) {
           createdAt: now,
         })
         .run();
-    }
 
-    app.db
-      .insert(auditLogs)
-      .values({
-        userId: req.user.userId,
-        action: 'customer_payment',
-        details: `سداد عميل ${customer.name}: ${(amount / 1000).toFixed(3)} د.ل. الرصيد الجديد: ${(newBalance / 1000).toFixed(3)} د.ل`,
-        createdAt: now,
-      })
-      .run();
+      app.db
+        .insert(auditLogs)
+        .values({
+          userId: req.user.userId,
+          action: 'customer_payment',
+          details: `سداد عميل ${customer.name}: ${(amount / 1000).toFixed(3)} د.ل. الرصيد الجديد: ${(balance / 1000).toFixed(3)} د.ل`,
+          createdAt: now,
+        })
+        .run();
+
+      return balance;
+    })();
 
     return { success: true, newCreditBalance: newBalance };
   };
@@ -176,11 +358,7 @@ export async function customerRoutes(app: FastifyInstance) {
     if (!customer) return reply.code(404).send({ error: 'not_found', message: 'العميل غير موجود' });
 
     // Fetch all sales for this customer
-    const customerSales = app.db
-      .select()
-      .from(sales)
-      .where(eq(sales.customerId, id))
-      .all();
+    const customerSales = app.db.select().from(sales).where(eq(sales.customerId, id)).all();
 
     // Fetch payments recorded in customer_payments table
     const payments = app.db
@@ -241,9 +419,10 @@ export async function customerRoutes(app: FastifyInstance) {
       totalPurchases += tx.debit;
       totalPaid += tx.credit;
       runningBalance += tx.debit - tx.credit;
+      // Negative running balance is meaningful: it is credit we owe the customer.
       return {
         ...tx,
-        runningBalance: Math.max(0, runningBalance),
+        runningBalance,
       };
     });
 
@@ -253,10 +432,9 @@ export async function customerRoutes(app: FastifyInstance) {
         totalPurchases,
         totalPaid,
         currentBalance: customer.creditBalance,
-        calculatedBalance: Math.max(0, runningBalance),
+        calculatedBalance: runningBalance,
       },
       statement: statementRows,
     };
   });
 }
-

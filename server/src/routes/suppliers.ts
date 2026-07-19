@@ -2,6 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import { eq, desc } from 'drizzle-orm';
 import { suppliers, auditLogs, shifts, cashMovements } from '../db/schema.js';
 import { authenticateRequest } from './auth.js';
+import { requirePositiveInt, ValidationError } from '../lib/validate.js';
 
 export async function supplierRoutes(app: FastifyInstance) {
   app.addHook('preHandler', authenticateRequest);
@@ -80,17 +81,26 @@ export async function supplierRoutes(app: FastifyInstance) {
     }
     const id = Number((req.params as any).id);
     const { amount } = req.body as { amount: number };
-    if (!amount || amount <= 0) return reply.code(400).send({ error: 'invalid_amount' });
+    try {
+      requirePositiveInt(amount, 'amount');
+    } catch (err) {
+      if (err instanceof ValidationError) {
+        return reply.code(400).send({ error: err.code, message: err.message });
+      }
+      throw err;
+    }
 
     const supplier = app.db.select().from(suppliers).where(eq(suppliers.id, id)).get();
     if (!supplier) return reply.code(404).send({ error: 'not_found' });
 
-    const newDebt = Math.max(0, supplier.debtBalance - amount);
-    app.db.update(suppliers).set({ debtBalance: newDebt }).where(eq(suppliers.id, id)).run();
+    if (amount > supplier.debtBalance) {
+      return reply.code(400).send({
+        error: 'overpayment',
+        message: `المبلغ المدفوع أكبر من الدين المستحق للمورد (${(supplier.debtBalance / 1000).toFixed(3)} د.ل)`,
+      });
+    }
 
-    const now = new Date().toISOString();
-
-    // Check active shift to register withdrawal cash movement
+    // Cash leaving the drawer must be tied to an open shift.
     const activeShift = app.db
       .select()
       .from(shifts)
@@ -98,7 +108,18 @@ export async function supplierRoutes(app: FastifyInstance) {
       .limit(1)
       .get();
 
-    if (activeShift) {
+    if (!activeShift) {
+      return reply.code(400).send({
+        error: 'no_active_shift',
+        message: 'دفع نقدية للمورد يتطلب توكة مفتوحة لتسجيلها في الدرج',
+      });
+    }
+
+    const now = new Date().toISOString();
+    const newDebt = app.sqlite.transaction(() => {
+      const debt = supplier.debtBalance - amount;
+      app.db.update(suppliers).set({ debtBalance: debt }).where(eq(suppliers.id, id)).run();
+
       app.db
         .insert(cashMovements)
         .values({
@@ -106,21 +127,23 @@ export async function supplierRoutes(app: FastifyInstance) {
           type: 'withdrawal',
           amount: -amount,
           referenceId: `سداد مورد ${supplier.name}`,
-          userId: req.user.userId,
+          userId: req.user!.userId,
           createdAt: now,
         })
         .run();
-    }
 
-    app.db
-      .insert(auditLogs)
-      .values({
-        userId: req.user.userId,
-        action: 'supplier_payment',
-        details: `سداد للمورد ${supplier.name}: ${(amount / 1000).toFixed(3)} د.ل. الدين المتبقي: ${(newDebt / 1000).toFixed(3)} د.ل`,
-        createdAt: now,
-      })
-      .run();
+      app.db
+        .insert(auditLogs)
+        .values({
+          userId: req.user!.userId,
+          action: 'supplier_payment',
+          details: `سداد للمورد ${supplier.name}: ${(amount / 1000).toFixed(3)} د.ل. الدين المتبقي: ${(debt / 1000).toFixed(3)} د.ل`,
+          createdAt: now,
+        })
+        .run();
+
+      return debt;
+    })();
 
     return { success: true, newDebtBalance: newDebt };
   });

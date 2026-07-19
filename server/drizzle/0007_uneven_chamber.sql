@@ -1,0 +1,1 @@
+ALTER TABLE `purchase_items` ADD `returned_quantity` integer DEFAULT 0 NOT NULL;

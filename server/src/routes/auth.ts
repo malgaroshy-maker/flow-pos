@@ -1,4 +1,5 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { randomBytes } from 'node:crypto';
 import { eq } from 'drizzle-orm';
 import bcrypt from 'bcryptjs';
 import { users, auditLogs } from '../db/schema.js';
@@ -7,10 +8,57 @@ export interface UserSession {
   userId: number;
   username: string;
   role: 'manager' | 'sales';
+  expiresAt: number; // epoch ms; refreshed on each authenticated request
 }
+
+// Sessions idle out after 12 hours without a request (shop runs one shift a day).
+const SESSION_IDLE_MS = 12 * 60 * 60 * 1000;
 
 // In-memory session store (simple and offline-safe)
 export const sessions = new Map<string, UserSession>();
+
+function createSession(user: { id: number; username: string; role: 'manager' | 'sales' }): {
+  token: string;
+  session: UserSession;
+} {
+  const token = randomBytes(32).toString('hex');
+  const session: UserSession = {
+    userId: user.id,
+    username: user.username,
+    role: user.role,
+    expiresAt: Date.now() + SESSION_IDLE_MS,
+  };
+  sessions.set(token, session);
+  return { token, session };
+}
+
+// Brute-force guard for the credential endpoints (PINs are only 4 digits).
+// Keyed by client IP: 10 failures locks the IP out for 15 minutes.
+const MAX_FAILURES = 10;
+const LOCKOUT_MS = 15 * 60 * 1000;
+const authFailures = new Map<string, { count: number; lockedUntil: number }>();
+
+function isLockedOut(ip: string): boolean {
+  const entry = authFailures.get(ip);
+  return !!entry && entry.lockedUntil > Date.now();
+}
+
+function recordAuthFailure(ip: string) {
+  const entry = authFailures.get(ip) ?? { count: 0, lockedUntil: 0 };
+  entry.count += 1;
+  if (entry.count >= MAX_FAILURES) {
+    entry.lockedUntil = Date.now() + LOCKOUT_MS;
+    entry.count = 0;
+  }
+  authFailures.set(ip, entry);
+}
+
+function clearAuthFailures(ip: string) {
+  authFailures.delete(ip);
+}
+
+const LOCKOUT_MESSAGE =
+  'تم إيقاف محاولات الدخول مؤقتاً بسبب محاولات فاشلة متكررة. حاول بعد 15 دقيقة';
 
 declare module 'fastify' {
   interface FastifyRequest {
@@ -21,6 +69,10 @@ declare module 'fastify' {
 export async function authRoutes(app: FastifyInstance) {
   // Login with username and password
   app.post('/auth/login', async (req, reply) => {
+    if (isLockedOut(req.ip)) {
+      return reply.code(429).send({ error: 'too_many_attempts', message: LOCKOUT_MESSAGE });
+    }
+
     const { username, password } = req.body as { username?: string; password?: string };
     if (!username || !password) {
       return reply
@@ -30,6 +82,7 @@ export async function authRoutes(app: FastifyInstance) {
 
     const user = app.db.select().from(users).where(eq(users.username, username)).get();
     if (!user || !user.active) {
+      recordAuthFailure(req.ip);
       return reply
         .code(401)
         .send({ error: 'invalid_credentials', message: 'اسم المستخدم أو كلمة المرور غير صحيحة' });
@@ -37,18 +90,14 @@ export async function authRoutes(app: FastifyInstance) {
 
     const matches = bcrypt.compareSync(password, user.passwordHash);
     if (!matches) {
+      recordAuthFailure(req.ip);
       return reply
         .code(401)
         .send({ error: 'invalid_credentials', message: 'اسم المستخدم أو كلمة المرور غير صحيحة' });
     }
 
-    const token = Math.random().toString(36).substring(2) + Math.random().toString(36).substring(2);
-    const sessionData: UserSession = {
-      userId: user.id,
-      username: user.username,
-      role: user.role,
-    };
-    sessions.set(token, sessionData);
+    clearAuthFailures(req.ip);
+    const { token, session: sessionData } = createSession(user);
 
     // Audit log
     app.db
@@ -66,6 +115,10 @@ export async function authRoutes(app: FastifyInstance) {
 
   // Fast PIN switch (shared device workflow)
   app.post('/auth/pin-switch', async (req, reply) => {
+    if (isLockedOut(req.ip)) {
+      return reply.code(429).send({ error: 'too_many_attempts', message: LOCKOUT_MESSAGE });
+    }
+
     const { pin } = req.body as { pin?: string };
     if (!pin) {
       return reply.code(400).send({ error: 'missing_pin', message: 'رمز PIN مطلوب' });
@@ -73,18 +126,14 @@ export async function authRoutes(app: FastifyInstance) {
 
     const user = app.db.select().from(users).where(eq(users.pin, pin)).get();
     if (!user || !user.active) {
+      recordAuthFailure(req.ip);
       return reply
         .code(401)
         .send({ error: 'invalid_pin', message: 'رمز PIN غير صحيح أو المستخدم غير نشط' });
     }
 
-    const token = Math.random().toString(36).substring(2) + Math.random().toString(36).substring(2);
-    const sessionData: UserSession = {
-      userId: user.id,
-      username: user.username,
-      role: user.role,
-    };
-    sessions.set(token, sessionData);
+    clearAuthFailures(req.ip);
+    const { token, session: sessionData } = createSession(user);
 
     // Audit log
     app.db
@@ -102,6 +151,10 @@ export async function authRoutes(app: FastifyInstance) {
 
   // Manager PIN override validation
   app.post('/auth/manager-override', async (req, reply) => {
+    if (isLockedOut(req.ip)) {
+      return reply.code(429).send({ error: 'too_many_attempts', message: LOCKOUT_MESSAGE });
+    }
+
     const { pin, reason } = req.body as { pin?: string; reason?: string };
     if (!pin) {
       return reply.code(400).send({ error: 'missing_pin', message: 'رمز PIN مطلوب للموافقة' });
@@ -109,8 +162,10 @@ export async function authRoutes(app: FastifyInstance) {
 
     const user = app.db.select().from(users).where(eq(users.pin, pin)).get();
     if (!user || !user.active) {
+      recordAuthFailure(req.ip);
       return reply.code(401).send({ error: 'invalid_pin', message: 'رمز PIN غير صحيح' });
     }
+    clearAuthFailures(req.ip);
 
     if (user.role !== 'manager') {
       return reply
@@ -130,6 +185,13 @@ export async function authRoutes(app: FastifyInstance) {
       .run();
 
     return { success: true, managerName: user.username, managerId: user.id };
+  });
+
+  // Logout: invalidate the current session token
+  app.post('/auth/logout', { preHandler: authenticateRequest }, async (req, reply) => {
+    const authHeader = req.headers.authorization!;
+    sessions.delete(authHeader.substring(7));
+    return { success: true };
   });
 
   // Get active users for switching
@@ -280,9 +342,11 @@ export async function authenticateRequest(req: FastifyRequest, reply: FastifyRep
 
   const token = authHeader.substring(7);
   const session = sessions.get(token);
-  if (!session) {
+  if (!session || session.expiresAt < Date.now()) {
+    if (session) sessions.delete(token);
     return reply.code(401).send({ error: 'unauthorized', message: 'انتهت صلاحية الجلسة' });
   }
 
+  session.expiresAt = Date.now() + SESSION_IDLE_MS;
   req.user = session;
 }

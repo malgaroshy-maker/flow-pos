@@ -1,7 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { existsSync, readdirSync, mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
-import { openDatabase, resolveDbPath, createDb } from '../db/index.js';
+import { openDatabase, resolveDbPath } from '../db/index.js';
 import { authenticateRequest } from './auth.js';
 import { auditLogs } from '../db/schema.js';
 
@@ -103,6 +103,13 @@ export async function backupRoutes(app: FastifyInstance) {
         .send({ error: 'missing_fields', message: 'اسم ملف النسخة الاحتياطية مطلوب' });
     }
 
+    // Only bare backup filenames — no path separators or traversal.
+    if (!/^pos_backup_[\w.-]+\.db$/.test(filename)) {
+      return reply
+        .code(400)
+        .send({ error: 'invalid_filename', message: 'اسم ملف النسخة الاحتياطية غير صالح' });
+    }
+
     const dbPath = resolveDbPath();
     if (dbPath === ':memory:') {
       return reply
@@ -127,19 +134,20 @@ export async function backupRoutes(app: FastifyInstance) {
       await restoreSqlite.backup(dbPath);
       restoreSqlite.close();
 
-      // Re-open/reconnect the sqlite connection on the app instance
-      const newSqlite = openDatabase(dbPath);
-      app.sqlite = newSqlite;
-      // We can also re-decorate app.db if needed, but since it's references,
-      // it should be fine. Wait, to make sure we don't break existing references,
-      // we can reboot the server, or just replace the inner sqlite object.
-      // Actually, since in production it's simple, we can do a restart or replace connection.
-      // Let's replace the decorate property or just let them reboot.
-      // Replacing the SQLite object is fine since createDb is just a wrapper:
-      // However, app.db is decorated with createDb(newSqlite).
-      // So let's re-decorate or modify the app's properties:
-      (app as any).sqlite = newSqlite;
-      (app as any).db = createDb(newSqlite);
+      // Swap the shared connection holder so every route context sees the
+      // reopened database (a plain property reassignment would only shadow it
+      // in this plugin's encapsulated context, leaving others on the closed handle).
+      app.swapDatabase(openDatabase(dbPath));
+
+      app.db
+        .insert(auditLogs)
+        .values({
+          userId: req.user!.userId,
+          action: 'restore_database',
+          details: `استرجاع قاعدة البيانات من النسخة الاحتياطية ${filename}`,
+          createdAt: new Date().toISOString(),
+        })
+        .run();
 
       return { success: true };
     } catch (err: any) {

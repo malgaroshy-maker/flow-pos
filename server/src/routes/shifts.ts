@@ -5,6 +5,7 @@ import { dirname, join } from 'node:path';
 import { resolveDbPath } from '../db/index.js';
 import { shifts, cashMovements, expenses, auditLogs, users } from '../db/schema.js';
 import { authenticateRequest } from './auth.js';
+import { requireNonNegativeInt, requirePositiveInt, ValidationError } from '../lib/validate.js';
 
 export async function shiftRoutes(app: FastifyInstance) {
   // Apply authentication to all shift and expense routes
@@ -37,10 +38,13 @@ export async function shiftRoutes(app: FastifyInstance) {
   app.post('/shifts/open', async (req, reply) => {
     const { openingCash } = req.body as { openingCash?: number };
 
-    if (openingCash === undefined || openingCash < 0) {
-      return reply
-        .code(400)
-        .send({ error: 'missing_fields', message: 'مبلغ الرصيد الافتتاحي مطلوب وغير سالب' });
+    try {
+      requireNonNegativeInt(openingCash, 'openingCash');
+    } catch (err) {
+      if (err instanceof ValidationError) {
+        return reply.code(400).send({ error: err.code, message: err.message });
+      }
+      throw err;
     }
 
     // Check if there is already an open shift
@@ -98,8 +102,13 @@ export async function shiftRoutes(app: FastifyInstance) {
   app.post('/shifts/close', async (req, reply) => {
     const { actualCash } = req.body as { actualCash?: number };
 
-    if (actualCash === undefined || actualCash < 0) {
-      return reply.code(400).send({ error: 'missing_fields', message: 'مبلغ الجرد الفعلي مطلوب' });
+    try {
+      requireNonNegativeInt(actualCash, 'actualCash');
+    } catch (err) {
+      if (err instanceof ValidationError) {
+        return reply.code(400).send({ error: err.code, message: err.message });
+      }
+      throw err;
     }
 
     const active = app.db.select().from(shifts).where(eq(shifts.status, 'open')).limit(1).get();
@@ -236,10 +245,19 @@ export async function shiftRoutes(app: FastifyInstance) {
       category?: string;
     };
 
-    if (!amount || !reason || !category) {
+    if (!reason || !category) {
       return reply
         .code(400)
         .send({ error: 'missing_fields', message: 'المبلغ، السبب، والتصنيف حقول مطلوبة' });
+    }
+
+    try {
+      requirePositiveInt(amount, 'amount');
+    } catch (err) {
+      if (err instanceof ValidationError) {
+        return reply.code(400).send({ error: err.code, message: err.message });
+      }
+      throw err;
     }
 
     const active = app.db.select().from(shifts).where(eq(shifts.status, 'open')).limit(1).get();
@@ -301,8 +319,6 @@ export async function shiftRoutes(app: FastifyInstance) {
   // Get expenses list (optional shiftId filter)
   app.get('/expenses', async (req, reply) => {
     const { shiftId } = req.query as { shiftId?: string };
-
-    let query = app.db.select().from(expenses);
 
     if (shiftId) {
       const list = app.db

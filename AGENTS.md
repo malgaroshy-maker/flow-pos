@@ -1,83 +1,63 @@
 # AGENTS.md
 
-Guidance for AI coding agents (Antigravity, Claude Code, etc.) working in this repository.
-
-## Project Status
-
-**Phase 1 (MVP) and Phase 2 (Full business cycle: purchases, receivables, credit sales, cash integration, A4 equipment invoicing, customer statements) are 100% fully completed, verified, typechecked, and built for production.**
-
-Key completed implementations:
-- **Offline Core**: Full Fastify + SQLite + Drizzle monorepo with 3-decimal milli-LYD monetary precision and migration `0004_dashing_tarot.sql`.
-- **Product & Stock**: Equipment vs Consumable branch fields, barcode search/scan, stock movements ledger, manual adjustments with manager PIN override.
-- **Cash Drawer & Shifts**: Shared drawer shift model, initial cash, cash expenses, shift closing with immutable variance audit.
-- **POS Invoicing & Print**: Gap-free sequential numbers (`INV-YYYY-NNNNN`), specialized A4 equipment invoices (with model, serial numbers, warranty terms, Arabic `Tafqeet` currency spelling, and company stamp), 80mm thermal receipts, invoice cancellation with stock & cash/credit reversal.
-- **Purchases & Suppliers**: Purchase invoices (`PUR-YYYY-NNNNN`), weighted average cost recalculations, stock addition, supplier debt tracking & payments linked to shift cash drawer.
-- **Customers & Credit Sales**: POS Cash vs Credit toggle, customer selector, customer debt tracking, customer statement of account (A4 exportable running balance), payments linked to shift cash drawer deposit.
-- **Branding & System Settings**: Full customization of business name, subtitle, secondary phone, warranty terms, stamp title, local database backup & single-click restore, tax engine toggle, light/dark RTL UI, and Readex Pro font reporting.
-
-Next up is Phase 3 (Intelligence: barcode stocktaking sessions, charts & Excel/HTML/PDF export, notification center, warranty tickets).
+Working agreement for **any AI coding agent** (Antigravity, Cursor, Codex, Claude Code, etc.) operating on this repository. Claude Code additionally reads `CLAUDE.md`, which mirrors this file — **if you change one, keep the other in sync**.
 
 ## What This Project Is
 
-An **offline-first, Arabic (RTL) sales & inventory management system** for a café/restaurant supplies business in Libya. It runs on a local server (PC inside the shop) serving a responsive web app to cashier devices over local WiFi — **no internet required for any core function**. Cloud is used only for backups when a connection happens to exist.
+An **offline-first, Arabic (RTL) sales & inventory management system** ("منظومة Flow") for a café/restaurant supplies business in Libya. It runs on a local server (a PC inside the shop) serving a responsive web app to cashier devices over local WiFi — **no internet required for any core function**. Cloud is used only for backups when a connection happens to exist.
+
+## Project Status
+
+**Phase 1 (MVP) and Phase 2 are feature-complete (V1.2.8, released 2026-07-19).** See `docs/roadmap.md` for the authoritative checklist. One gate remains before Phase 3: refactoring the `web/src/App.tsx` monolith (7,000+ lines, single component) into per-screen components. Historical warning: an earlier revision of this file claimed Phase 2 was complete while six approved features were missing — **never mark a phase complete while approved scope items remain unchecked.**
+
+## Hard Rules (never violate)
+
+- **Do NOT push to GitHub unless the user explicitly asks.** Committing locally when the user requests it is fine; pushing is always a separate, explicit instruction from the user.
+- **Offline-first**: every feature must work with zero internet, indefinitely. No CDN assets, no external API calls in core paths.
+- **Money is integer milli-LYD** (value × 1000, 3 decimal places). Never use floating point for money. All money math goes through `server/src/lib/money.ts` (server) and `web/src/lib/money.ts` (web) — both parse strings, never `parseFloat`.
+- **Prices are server-authoritative**: the server resolves the authorized unit price (customer special price → customer tier wholesale/retail → product default; packaging units sell at their own configured price). Any other price requires manager role or manager PIN and is audit-logged.
+- **Stock only changes through recorded movements** (`stock_movements` with `balance_after` and the acting user). No direct quantity edits. Bundles deduct their components; packaging units convert to base units via `conversion_factor`.
+- **Every cash movement is tied to an open drawer shift** — sales, expenses, customer/supplier payments, paid purchases, deposits, refunds. One shared shift per physical drawer; each action still records its employee.
+- **Everything is attributed and overrides are flagged**: insufficient stock, custom prices, over-cap discounts, and credit-limit overshoots all require manager/PIN and land in `audit_logs`.
+- **Invoice numbers are sequential and gap-free** (`INV-YYYY-NNNNN`, max existing + 1 within the year, generated server-side inside the sale transaction; cancelled invoices keep their number). Same scheme for `PUR` and `QUO`.
+- **Quotations never touch stock or cash**; conversion applies all normal sale side-effects atomically (a quotation can never convert twice).
+- **Product cost is weighted average**, recalculated on every purchase.
+- **Server clock only** — clients never supply timestamps.
+- **UI is fully Arabic, RTL**, light + dark themes, responsive. Components consume design tokens (`web/src/styles/tokens.css`) — never raw hex. Fonts are bundled locally (Fontsource), never from a CDN. Wrap LTR fragments (phone numbers, codes, amounts) in the `mono` utility to avoid bidi reversal.
+- **Changelog rule**: every release (`Vx.y.z` commit) or meaningful batch of changes adds a summarized **Arabic** section at the top of the versions list in `سجل-التغييرات.md`, following the template at the top of that file. Do not close out work without updating it.
+- **Scope discipline**: do not pull later-phase features forward. Phase 4 items (cloud sync, multi-branch, installments…) each need explicit approval before any build.
 
 ## Source of Truth
 
-- `PRD-نظام-المبيعات-والمخزون-v3.1.html` — the original full PRD (Arabic, interactive HTML). Authoritative on requirements.
-- `docs/prd.md` — English markdown distillation of the PRD.
-- `docs/plan.md` — implementation plan, confirmed decisions, and tech stack.
-- `docs/roadmap.md` — the 4 delivery phases and what belongs in each.
-- `docs/design.md` — the design system (tokens, type, components, print templates). All UI work follows it; extend it before deviating.
+- `PRD-نظام-المبيعات-والمخزون-v3.1.html` — original full PRD (Arabic). Authoritative on requirements.
+- `docs/prd.md` — English distillation of the PRD.
+- `docs/plan.md` — confirmed decisions and tech stack.
+- `docs/roadmap.md` — the 4 delivery phases and current status.
+- `docs/design.md` — design system (tokens, type, components, print templates). All UI work follows it; extend it before deviating.
+- `سجل-التغييرات.md` — official Arabic changelog, one summarized section per version, newest first.
+- `تقرير-مميزات-المنظومة.html` — customer-facing features report (Arabic); update it when major features ship.
 
-If code and docs ever disagree, raise it — do not silently pick one.
-
-## Non-Negotiable Domain Rules
-
-- **Offline-first**: every feature must work with zero internet, indefinitely. Cloud sync/backup is additive only.
-- **Currency**: Libyan Dinar (LYD) with **3 decimal places** in all calculations, storage, and printed output. Never use floating-point for money.
-- **UI**: fully Arabic, RTL, light + dark themes, responsive (desktop, tablet, mobile).
-- **Two product types with different fields**: equipment (serial number, warranty, model) vs. consumables (batch, expiry date, reorder point). Forms and logic must branch on `type`.
-- **Stock is only mutated through recorded movements**: confirming a sale deducts stock, a purchase adds it, adjustments require a reason — every movement lands in `StockMovements` with `balance_after` and the acting user. No direct quantity edits.
-- **Everything is attributed**: every sale, payment, expense, and adjustment records the user who did it and (where applicable) the active shift. Shift close computes cash variance and stores it immutably.
-- **Quotations never touch stock**; converting a quotation to a sale applies all normal sale side-effects.
-- **Multi-unit products**: stock is always tracked in the base unit; packaging units (carton = 20 packs = 1000 cups) convert via `conversion_factor` and carry their own prices. Multi-unit is opt-in per product.
-- **Pricing precedence**: customer special price → customer tier (wholesale/retail) → product default.
-- **One shared drawer shift**: a single shift per physical cash drawer; all devices feed it; each action still records its employee.
-- **Insufficient stock blocks the sale**; a manager PIN override is allowed, logged, and flagged in reports.
-- **Discounts are capped** for the sales role (configurable % per invoice); larger discounts need manager PIN; all discounts are logged with the actor.
-- **Product cost is weighted average**, recalculated on every purchase; profit reports use it.
-- **Invoice numbers are sequential and gap-free** (`INV-YYYY-NNNNN`), generated server-side inside the sale transaction; cancelled invoices keep their number.
-- **Server clock only** — clients never supply timestamps.
+If code and docs ever disagree, raise it with the user — do not silently pick one.
 
 ## Roles
 
-Two launch roles — **Manager** (everything) and **Sales** (sell, shifts, view products, record customer payments, own reports only). A third **Storekeeper** role comes later; design permissions so adding it needs no rework. Fast PIN switching between employees on a shared device is a required pattern.
-
-## Delivery Phases (summary — details in docs/roadmap.md)
-
-1. **MVP**: products (images + barcode), stock, cash sales, A4 invoices with QR + 80mm thermal receipts, users/roles, shifts + cash drawer, cash expenses, themes — all offline.
-2. **Full business cycle**: purchases/suppliers, credit sales + receivables (both directions), configurable tax, card payment recording, wholesale/retail + special pricing, quotations, supplier returns, multi-units, deposits/reservations, bundles.
-3. **Intelligence**: barcode stocktaking sessions with automatic variance, charts + Excel/HTML/PDF export, slow-moving stock report, notification center, warranty & service tickets.
-4. **Future**: cloud sync, multi-branch, payroll/attendance, payment gateway, barcode label printing, WhatsApp sharing, installments (deferred decision — schema is ready, do not build until approved).
-
-Scope discipline matters: 19 approved features across 4 phases is the top project risk. Do not pull later-phase features forward.
+Two launch roles — **Manager** (everything) and **Sales** (sell, shifts, view products, record customer payments, own reports only). A third **Storekeeper** role comes later; design permissions so adding it needs no rework. Fast PIN switching between employees on a shared device is a required pattern (rate-limited server-side).
 
 ## Architecture
 
 npm workspaces monorepo:
 
-- `server/` — Fastify 5 + better-sqlite3 + Drizzle ORM (TypeScript, ESM, NodeNext). SQLite lives at `server/data/pos.db` (WAL + `synchronous=FULL`; gitignored). Migrations in `server/drizzle/` are generated from `server/src/db/schema.ts`. The entrypoint runs migrations + seed on boot and serves the built SPA from `web/dist` when it exists.
-- `web/` — React 19 + Vite + Tailwind v4, Arabic RTL. Design tokens (`web/src/styles/tokens.css`) implement docs/design.md; components consume tokens/Tailwind theme names only — never raw hex. Fonts are bundled from Fontsource packages (never CDN). Dev server proxies `/api` to `localhost:3001`.
-- **Money is integer milli-LYD** (`server/src/lib/money.ts` — value × 1000). All money math goes through that module.
+- `server/` — Fastify 5 + better-sqlite3 + Drizzle ORM (TypeScript, ESM, NodeNext). SQLite at `server/data/pos.db` (WAL + `synchronous=FULL`; gitignored). Migrations in `server/drizzle/` are generated from `server/src/db/schema.ts` via `npm run db:generate` — **never hand-write migrations or create tables at runtime**. The entrypoint runs migrations + seed on boot, serves the built SPA from `web/dist`, and serves product images from `server/data/uploads` under `/uploads/`.
+- `web/` — React 19 + Vite + Tailwind v4, Arabic RTL. Dev server proxies **both `/api` and `/uploads`** to `localhost:3001`. Printing works via a root-level `.print-only` element with visibility-based print CSS — modals are `.no-print`; the browser prints the document, never the screen.
 
-## Commands
-
-Run from the repo root:
+## Commands (run from repo root)
 
 - `npm install` — install all workspaces
 - `npm run dev` — server (tsx watch, :3001) + web (Vite, :5173) in parallel
-- `npm test` — server Vitest suite; single test: `npx vitest run src/lib/money.test.ts` from `server/`
+- `npm test` — server Vitest suite (51 tests); single file: `npx vitest run src/pricing.test.ts` from `server/`
 - `npm run build` — compile server (tsc) + typecheck & bundle web
 - `npm run typecheck` / `npm run format` — tsc --noEmit both workspaces / Prettier
 - `npm run db:generate` — regenerate migrations after editing `schema.ts`
 - `npm run db:migrate` / `npm run db:seed` — apply migrations / seed defaults (also run automatically on server boot)
+
+**Definition of done for any change:** `npm run typecheck`, `npm test`, and `npm run build` all pass; new behavior has tests in `server/src/*.test.ts` (follow the existing `app.inject` pattern); the changelog is updated per the rule above.

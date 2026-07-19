@@ -27,3 +27,6 @@ Desktop.ini
 
 # Logs
 *.log
+
+# Generated marketing/report documents
+*.docx
