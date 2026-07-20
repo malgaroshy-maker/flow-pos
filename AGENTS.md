@@ -8,7 +8,7 @@ An **offline-first, Arabic (RTL) sales & inventory management system** ("منظ�
 
 ## Project Status
 
-**Phases 1, 2, and 3 are feature-complete (V1.3.2, released 2026-07-20).** All milestones (Refactor Gate V1.2.9, Smart Stocktaking V1.3.0, Financial Reports & Excel V1.3.1, Notification Center & Warranties V1.3.2) are fully implemented and verified by 60 Vitest tests (100% green). See `docs/roadmap.md` and `docs/next-steps.md` for details.
+**Phases 1, 2, and 3 are complete (latest release V1.3.4, 2026-07-20).** All milestones (Refactor Gate V1.2.9, Smart Stocktaking V1.3.0, Financial Reports & Excel V1.3.1, Notification Center & Warranties V1.3.2, Full System Audit & UI Fixes V1.3.3, Security & Dependency Hardening V1.3.4) are implemented and verified by 62 Vitest tests (100% green). Current work: `docs/next-steps.md` — Milestone D (supplier statement, purchase A4 print, Playwright smoke) then Milestone E (commercial installer + offline licensing, owner-approved). See `docs/roadmap.md` for phase history.
 
 ## Hard Rules (never violate)
 
@@ -33,7 +33,7 @@ An **offline-first, Arabic (RTL) sales & inventory management system** ("منظ�
 - `docs/prd.md` — English distillation of the PRD.
 - `docs/plan.md` — confirmed decisions and tech stack.
 - `docs/roadmap.md` — the 4 delivery phases and current status.
-- `docs/next-steps.md` — **the execution plan for what to build next** (App.tsx refactor gate, then Phase 3 milestones). Start there when asked to "continue" or "do the next steps".
+- `docs/next-steps.md` — **the execution plan for what to build next** (backlog features, then commercial distribution V1.4.0). Start there when asked to "continue" or "do the next steps".
 - `docs/design.md` — design system (tokens, type, components, print templates). All UI work follows it; extend it before deviating.
 - `سجل-التغييرات.md` — official Arabic changelog, one summarized section per version, newest first.
 - `تقرير-مميزات-المنظومة.html` — customer-facing features report (Arabic); update it when major features ship.

@@ -350,3 +350,12 @@ export async function authenticateRequest(req: FastifyRequest, reply: FastifyRep
   session.expiresAt = Date.now() + SESSION_IDLE_MS;
   req.user = session;
 }
+
+// Authentication + manager-role hook for manager-only routes
+export async function requireManager(req: FastifyRequest, reply: FastifyReply) {
+  await authenticateRequest(req, reply);
+  if (reply.sent) return reply;
+  if (req.user!.role !== 'manager') {
+    return reply.code(403).send({ error: 'forbidden', message: 'هذا الإجراء متاح للمدراء فقط' });
+  }
+}

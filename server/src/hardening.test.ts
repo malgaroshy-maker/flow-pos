@@ -197,6 +197,43 @@ describe('stock overrides are always audited', () => {
   });
 });
 
+describe('backup endpoints are manager-only', () => {
+  it('rejects the sales role on backup create, list, and restore', async () => {
+    const create = await app.inject({
+      method: 'POST',
+      url: '/api/backup',
+      headers: { authorization: `Bearer ${salesToken}` },
+    });
+    expect(create.statusCode).toBe(403);
+    expect(create.json().error).toBe('forbidden');
+
+    const list = await app.inject({
+      method: 'GET',
+      url: '/api/backup/list',
+      headers: { authorization: `Bearer ${salesToken}` },
+    });
+    expect(list.statusCode).toBe(403);
+
+    const restore = await app.inject({
+      method: 'POST',
+      url: '/api/backup/restore',
+      headers: { authorization: `Bearer ${salesToken}` },
+      payload: { filename: 'pos_backup_x.db' },
+    });
+    expect(restore.statusCode).toBe(403);
+  });
+
+  it('allows the manager through the gate', async () => {
+    const list = await app.inject({
+      method: 'GET',
+      url: '/api/backup/list',
+      headers: { authorization: `Bearer ${managerToken}` },
+    });
+    expect(list.statusCode).toBe(200);
+    expect(Array.isArray(list.json())).toBe(true);
+  });
+});
+
 describe('receivables and drawer integrity', () => {
   it('rejects overpayment of a customer debt', async () => {
     const product = await createProduct();

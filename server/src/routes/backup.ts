@@ -2,15 +2,15 @@ import type { FastifyInstance } from 'fastify';
 import { existsSync, readdirSync, mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { openDatabase, resolveDbPath } from '../db/index.js';
-import { authenticateRequest } from './auth.js';
+import { authenticateRequest, requireManager } from './auth.js';
 import { auditLogs } from '../db/schema.js';
 
 export async function backupRoutes(app: FastifyInstance) {
   // Apply authentication
   app.addHook('preHandler', authenticateRequest);
 
-  // Trigger manual backup
-  app.post('/backup', async (req, reply) => {
+  // Trigger manual backup (manager only)
+  app.post('/backup', { preHandler: requireManager }, async (req, reply) => {
     const dbPath = resolveDbPath();
     if (dbPath === ':memory:') {
       return reply.code(400).send({
@@ -57,8 +57,8 @@ export async function backupRoutes(app: FastifyInstance) {
     }
   });
 
-  // Get list of available backups
-  app.get('/backup/list', async (req, reply) => {
+  // Get list of available backups (manager only)
+  app.get('/backup/list', { preHandler: requireManager }, async (req, reply) => {
     const dbPath = resolveDbPath();
     if (dbPath === ':memory:') {
       return [];
@@ -89,13 +89,7 @@ export async function backupRoutes(app: FastifyInstance) {
   });
 
   // Restore database (manager only)
-  app.post('/backup/restore', async (req, reply) => {
-    if (req.user!.role !== 'manager') {
-      return reply
-        .code(403)
-        .send({ error: 'forbidden', message: 'استرجاع البيانات متاح للمدراء فقط' });
-    }
-
+  app.post('/backup/restore', { preHandler: requireManager }, async (req, reply) => {
     const { filename } = req.body as { filename?: string };
     if (!filename) {
       return reply

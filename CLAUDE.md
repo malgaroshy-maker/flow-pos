@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Status
 
-**Phases 1, 2, and 3 are feature-complete (V1.3.2, released 2026-07-20).** All milestones (Refactor Gate V1.2.9, Smart Stocktaking V1.3.0, Financial Reports & Excel V1.3.1, Notification Center & Warranties V1.3.2) are fully implemented and covered by the 60-test server Vitest suite (100% green).
+**Phases 1, 2, and 3 are complete (latest release V1.3.4, 2026-07-20).** All milestones (Refactor Gate V1.2.9, Smart Stocktaking V1.3.0, Financial Reports & Excel V1.3.1, Notification Center & Warranties V1.3.2, Full System Audit & UI Fixes V1.3.3, Security & Dependency Hardening V1.3.4) are implemented and covered by the 62-test server Vitest suite (100% green). Current work: `docs/next-steps.md` — Milestone D (supplier statement, purchase A4 print, Playwright smoke) then Milestone E (commercial installer + offline licensing, owner-approved).
 
 Working today (typechecked, tested, built):
 
@@ -20,7 +20,9 @@ Working today (typechecked, tested, built):
 - **Customers & Credit Sales**: Cash vs Credit toggle, customer debt tracking with overpayment rejection, statement of account with a true (sign-preserving) running balance.
 - **Hardening (2026-07-19)**: server-authoritative sale prices (custom price needs manager/PIN, audit-flagged), integer validation on every money/quantity input, string-based money parsing in the web app (no float rounding), crypto session tokens with 12h idle expiry + logout, login/PIN rate limiting, restore path-traversal guard, restore swaps the DB handle safely via `app.swapDatabase`.
 
-Phase 2 additions (2026-07-19): price tiers + per-customer special prices, quotations with atomic convert-to-sale, supplier returns, multi-unit products (base-unit stock, per-unit prices), deposits with equipment reservation, setup bundles, credit limits, per-product tax exemption, product image upload, invoice QR, real A4/thermal print path with Tafqeet + warranty + stamp, customer statement modal. Next: refactor `web/src/App.tsx` into per-screen components, then Phase 3 (stocktaking, charts & exports, notifications, warranty tickets).
+Phase 2 additions (2026-07-19): price tiers + per-customer special prices, quotations with atomic convert-to-sale, supplier returns, multi-unit products (base-unit stock, per-unit prices), deposits with equipment reservation, setup bundles, credit limits, per-product tax exemption, product image upload, invoice QR, real A4/thermal print path with Tafqeet + warranty + stamp, customer statement modal.
+
+Phase 3 additions (2026-07-20): barcode stocktaking sessions with blind count and one-click variance-to-adjustment conversion, financial reports with charts and real Excel (`.xlsx`) export, slow-moving stock report, on-demand notification center (low stock, expiry, overdue debts, expiring quotations), auto-created equipment warranties and service tickets with shift-linked repair cash. V1.3.3 added mobile/tablet navigation, bidi-safe dates, and role-gated client fetches; V1.3.4 added server-side manager gates on the backup endpoints and cleared all `npm audit` findings (drizzle-orm 0.45.2, @fastify/static 10, vite 7, uuid/esbuild overrides).
 
 ## What This Project Is
 
@@ -32,7 +34,7 @@ An **offline-first, Arabic (RTL) sales & inventory management system** for a caf
 - `docs/prd.md` — English markdown distillation of the PRD.
 - `docs/plan.md` — implementation plan, confirmed decisions, and tech stack.
 - `docs/roadmap.md` — the 4 delivery phases and what belongs in each.
-- `docs/next-steps.md` — **the execution plan for what to build next** (App.tsx refactor gate, then Phase 3 milestones). Start there when asked to "continue" or "do the next steps".
+- `docs/next-steps.md` — **the execution plan for what to build next** (backlog features, then commercial distribution V1.4.0). Start there when asked to "continue" or "do the next steps".
 - `docs/design.md` — the design system (tokens, type, components, print templates). All UI work follows it; extend it before deviating.
 - `سجل-التغييرات.md` — the official Arabic changelog, one summarized section per version, newest first.
 - `تقرير-مميزات-المنظومة.html` — customer-facing features report (Arabic); update it when major features ship.
