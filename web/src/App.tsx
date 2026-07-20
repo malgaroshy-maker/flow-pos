@@ -595,8 +595,26 @@ export function App() {
     }
   };
 
-  // If license is unactivated or expired, block UI with LicenseActivationScreen
-  if (licenseInfo && !licenseInfo.active) {
+  // Block UI while license status is loading or if license is not active
+  if (!licenseInfo || !licenseInfo.active) {
+    // Still loading — show a plain spinner so the app never flashes through
+    if (!licenseInfo) {
+      return (
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          minHeight: '100dvh', background: 'var(--bg-base, #0f1117)',
+          flexDirection: 'column', gap: '1rem',
+        }}>
+          <div style={{
+            width: 48, height: 48, borderRadius: '50%',
+            border: '4px solid var(--color-primary, #6c63ff)',
+            borderTopColor: 'transparent',
+            animation: 'spin 0.8s linear infinite',
+          }} />
+          <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+        </div>
+      );
+    }
     return (
       <LicenseActivationScreen
         machineCode={licenseInfo.machineCode}
