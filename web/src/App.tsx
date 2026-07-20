@@ -54,7 +54,10 @@ export function App() {
 
   const checkLicenseStatus = async (retries = 30) => {
     try {
-      const res: any = await apiCall('/api/license/info');
+      // Plain fetch, not apiCall — this runs before login, so there is no
+      // auth token yet, and apiCall() refuses to send a request without one.
+      const r = await fetch('/api/license/info');
+      const res = await r.json();
       if (res && typeof res.active === 'boolean') {
         setLicenseInfo(res);
         return;

@@ -1,7 +1,26 @@
 import React, { useState } from 'react';
 import { useToast } from '../context/ToastContext';
-import { apiCall } from '../lib/api';
 import { Icons } from '../components/Icons';
+
+// Plain fetch, not apiCall — the activation screen runs before login, so
+// there is no auth token yet, and apiCall() refuses to send a request
+// without one (the server-side license routes are intentionally public).
+async function publicApiCall(url: string, body: any): Promise<{ success: boolean; error?: string; data?: any }> {
+  try {
+    const r = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const data = await r.json();
+    if (!r.ok || data.success === false) {
+      return { success: false, error: data.error || data.message || 'حدث خطأ غير متوقع' };
+    }
+    return { success: true, data: data.data };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+}
 
 interface LicenseActivationProps {
   machineCode: string;
@@ -41,7 +60,7 @@ export const LicenseActivationScreen: React.FC<LicenseActivationProps> = ({
 
     setSubmitting(true);
     try {
-      const res = await apiCall('/api/license/activate-pin', 'POST', {
+      const res = await publicApiCall('/api/license/activate-pin', {
         vendorPin: vendorPin.trim(),
         customerName: customerName.trim() || 'عميل محلي',
       });
@@ -70,7 +89,7 @@ export const LicenseActivationScreen: React.FC<LicenseActivationProps> = ({
 
     setSubmitting(true);
     try {
-      const res = await apiCall('/api/license/activate', 'POST', {
+      const res = await publicApiCall('/api/license/activate', {
         licenseKey: licenseKey.trim(),
       });
 

@@ -11,7 +11,44 @@
 
 ---
 
-## ✅ RESOLVED: Electron Packaged App — Server Does Not Start (fixed 2026-07-21)
+## ✅ RESOLVED (round 2): Activation screen stuck on "لم يتم الاتصال" / machine code `----` (fixed 2026-07-21)
+
+**This is a *second, separate* bug from the `DATA_DIR` fix below** — found after the
+user reinstalled with that fix and still hit the activation screen showing a
+connection-error banner and empty machine code, even though `server.log` showed the
+server started cleanly this time (no `_journal.json` error) and `curl` against
+`/api/health` and `/api/license/info` both worked fine.
+
+**Root cause:** `web/src/lib/api.ts`'s `apiCall()` helper refuses to send a request at
+all when there is no stored auth token — it short-circuits with
+`{ success: false, error: 'no_token' }` before ever touching the network. The license
+activation screen runs **before login**, so on a genuinely fresh install/profile there
+is no token yet. `checkLicenseStatus()` in `App.tsx` and both activation handlers in
+`LicenseActivation.tsx` were calling `/api/license/info`, `/api/license/activate-pin`,
+and `/api/license/activate` through `apiCall()` — so every attempt failed locally
+without ever reaching the server, retried 30× over 24s, then permanently showed the
+"can't connect" banner with `machineCode: '----'`. It only *appeared* to work on this
+dev machine because a stale token was left over in Electron's `userData` (which
+uninstalling the app does not clear) from earlier manual testing — bearing any
+non-empty (even garbage) token was enough to make `apiCall()` proceed, and the server
+doesn't actually gate `/api/license/*` on auth at all (confirmed in
+`server/src/app.ts`'s license-exempt `onRequest` hook).
+
+**Fix:** `checkLicenseStatus()` and both activation submit handlers now use a plain
+unauthenticated `fetch()` instead of `apiCall()`, matching the server's actual
+contract for these pre-login routes.
+
+**Verified:** wiped Electron's real `userData` directory
+(`%APPDATA%\flowpos-desktop`, *not* `%APPDATA%\FlowPOS` — the productName and the
+package.json `name` differ) so no stale token could mask the bug, confirmed via grep
+that no `pos-token` string existed in the fresh LevelDB `localStorage` files,
+reinstalled V1.4.2, launched, confirmed `/api/license/info` returns
+`active: false` with a real machine code, then activated via the same
+unauthenticated-`fetch` path the UI now uses — succeeded. Full Vitest suite: 69/69.
+
+---
+
+## ✅ RESOLVED (round 1): Electron Packaged App — Server Does Not Start (fixed 2026-07-21)
 
 **Root cause found in `server.log`** (which the 2026-07-20 session hadn't inspected for
 a fresh run): `Error: Can't find meta/_journal.json file` — an early crash, not a hang.
