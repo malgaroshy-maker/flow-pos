@@ -28,5 +28,8 @@ Desktop.ini
 # Logs
 *.log
 
+# Browser-tooling artifacts (Playwright MCP snapshots/screenshots)
+.playwright-mcp/
+
 # Generated marketing/report documents
 *.docx

@@ -13,6 +13,8 @@ import { apiCall, uploadProductImage } from '../lib/api';
 import { Icons } from './Icons';
 import { Modal } from './Modal';
 import { PrintDocument } from '../print/PrintRoot';
+import { StatementA4 } from '../print/StatementA4';
+import { formatDateTime } from '../lib/datetime';
 
 interface AppModalsProps {
   token: string | null;
@@ -84,6 +86,7 @@ interface AppModalsProps {
 
   showReturnModal: boolean;
   setShowReturnModal: (show: boolean) => void;
+  returnPurchaseId: number | null;
 
   showCreateUserModal: boolean;
   setShowCreateUserModal: (show: boolean) => void;
@@ -162,6 +165,7 @@ export const AppModals: React.FC<AppModalsProps> = ({
 
   showReturnModal,
   setShowReturnModal,
+  returnPurchaseId,
 
   showCreateUserModal,
   setShowCreateUserModal,
@@ -241,6 +245,15 @@ export const AppModals: React.FC<AppModalsProps> = ({
     paid: '0.000',
     notes: '',
   });
+
+  // Supplier Return Form
+  const [returnPurchase, setReturnPurchase] = useState<any | null>(null);
+  const [returnQuantities, setReturnQuantities] = useState<Record<number, string>>({});
+  const [returnRefundMethod, setReturnRefundMethod] = useState<'debt' | 'cash'>('debt');
+
+  // Customer Statement Date Filters
+  const [statementFilterStart, setStatementFilterStart] = useState('');
+  const [statementFilterEnd, setStatementFilterEnd] = useState('');
 
   // Create/Edit User Forms
   const [createUserForm, setCreateUserForm] = useState({
@@ -342,11 +355,37 @@ export const AppModals: React.FC<AppModalsProps> = ({
 
   useEffect(() => {
     if (statementCustomer) {
+      setStatementData(null);
+      setStatementFilterStart('');
+      setStatementFilterEnd('');
       apiCall(`/api/customers/${statementCustomer.id}/statement`).then((res) => {
         if (res.success) setStatementData(res.data);
       });
     }
   }, [statementCustomer]);
+
+  useEffect(() => {
+    if (editingUser) {
+      setEditUserForm({
+        password: '',
+        pin: '',
+        role: editingUser.role,
+        active: editingUser.active,
+      });
+    }
+  }, [editingUser]);
+
+  useEffect(() => {
+    if (showReturnModal && returnPurchaseId) {
+      setReturnPurchase(null);
+      setReturnQuantities({});
+      setReturnRefundMethod('debt');
+      apiCall(`/api/purchases/${returnPurchaseId}`).then((res) => {
+        if (res.success) setReturnPurchase(res.data);
+        else triggerToast(res.error || 'فشل جلب فاتورة المشتريات', 'alert');
+      });
+    }
+  }, [showReturnModal, returnPurchaseId]);
 
   useEffect(() => {
     if (specialPricesCustomer) {
@@ -614,6 +653,32 @@ export const AppModals: React.FC<AppModalsProps> = ({
       refreshAllData();
     } else {
       triggerToast(res.error || 'فشل تسجيل الشراء', 'alert');
+    }
+  };
+
+  const handlePurchaseReturnSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!returnPurchase) return;
+    const items = Object.entries(returnQuantities)
+      .map(([productId, qty]) => ({ productId: Number(productId), quantity: Number(qty) }))
+      .filter((i) => i.quantity > 0);
+    if (items.length === 0) {
+      triggerToast('حدد كمية مرتجعة لصنف واحد على الأقل', 'alert');
+      return;
+    }
+    const res = await apiCall(`/api/purchases/${returnPurchase.id}/return`, 'POST', {
+      items,
+      refundMethod: returnRefundMethod,
+    });
+    if (res.success) {
+      triggerToast(
+        `تم تسجيل المرتجع بقيمة ${formatLYD(res.data.returnValue)} د.ل (${returnRefundMethod === 'debt' ? 'خصم من دين المورد' : 'استرداد نقدي'})`,
+      );
+      setShowReturnModal(false);
+      setReturnPurchase(null);
+      refreshAllData();
+    } else {
+      triggerToast(res.error || 'فشل تسجيل المرتجع', 'alert');
     }
   };
 
@@ -1299,6 +1364,627 @@ export const AppModals: React.FC<AppModalsProps> = ({
             ))}
           </div>
         </div>
+      </Modal>
+
+      {/* 11. Stock Movements Modal */}
+      <Modal
+        isOpen={showMovementsModal}
+        onClose={() => setShowMovementsModal(false)}
+        title={`سجل حركات المخزون: ${movementsProduct?.name || ''}`}
+        maxWidthClass="max-w-2xl"
+      >
+        {movementsProduct && (
+          <div className="flex flex-col gap-3">
+            <p className="text-xs text-muted">
+              الرصيد الحالي:{' '}
+              <strong className="text-jade">
+                {movementsProduct.quantity} {movementsProduct.baseUnit}
+              </strong>
+            </p>
+            <div className="overflow-y-auto max-h-[60vh] border border-border rounded-control">
+              <table className="w-full text-right text-xs border-collapse">
+                <thead className="bg-surface-2 sticky top-0">
+                  <tr className="border-b border-border font-bold text-muted">
+                    <th className="p-2.5">التاريخ</th>
+                    <th className="p-2.5">النوع</th>
+                    <th className="p-2.5">الكمية</th>
+                    <th className="p-2.5">الرصيد بعد</th>
+                    <th className="p-2.5">السبب</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {stockMovements.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="p-6 text-center text-muted">
+                        لا توجد حركات مسجلة
+                      </td>
+                    </tr>
+                  ) : (
+                    stockMovements.map((m) => (
+                      <tr key={m.id} className="hover:bg-surface-2/40">
+                        <td className="p-2.5 mono text-muted">{formatDateTime(m.createdAt)}</td>
+                        <td className="p-2.5">
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${m.type === 'sale' ? 'bg-red-500/10 text-red-500' : m.type === 'purchase' ? 'bg-jade/10 text-jade' : 'bg-copper/10 text-copper'}`}
+                          >
+                            {m.type === 'sale'
+                              ? 'بيع'
+                              : m.type === 'purchase'
+                                ? 'شراء'
+                                : m.type === 'adjustment'
+                                  ? 'تسوية'
+                                  : m.type === 'return'
+                                    ? 'مرتجع'
+                                    : m.type === 'supplier_return'
+                                      ? 'مرتجع مورد'
+                                      : m.type}
+                          </span>
+                        </td>
+                        <td
+                          className={`p-2.5 mono font-bold ${m.quantity > 0 ? 'text-jade' : 'text-alert'}`}
+                        >
+                          {m.quantity > 0 ? '+' : ''}
+                          {m.quantity}
+                        </td>
+                        <td className="p-2.5 mono font-semibold">{m.balanceAfter}</td>
+                        <td className="p-2.5 text-muted">{m.reason || '—'}</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* 12. Customer Account Statement Modal (A4 printable) */}
+      <Modal
+        isOpen={showCustomerStatementModal}
+        onClose={() => setShowCustomerStatementModal(false)}
+        title={`كشف حساب العميل: ${statementCustomer?.name || ''}`}
+        maxWidthClass="max-w-3xl"
+      >
+        {statementCustomer && (
+          <div className="flex flex-col gap-4">
+            <div className="flex items-end gap-3 flex-wrap">
+              <div>
+                <label className="text-[10px] font-bold text-muted mb-1 block">من تاريخ</label>
+                <input
+                  type="date"
+                  value={statementFilterStart}
+                  onChange={(e) => setStatementFilterStart(e.target.value)}
+                  className="h-9 rounded-control border border-line bg-surface px-2 text-xs mono focus-visible:outline-none"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-bold text-muted mb-1 block">إلى تاريخ</label>
+                <input
+                  type="date"
+                  value={statementFilterEnd}
+                  onChange={(e) => setStatementFilterEnd(e.target.value)}
+                  className="h-9 rounded-control border border-line bg-surface px-2 text-xs mono focus-visible:outline-none"
+                />
+              </div>
+              {(statementFilterStart || statementFilterEnd) && (
+                <button
+                  onClick={() => {
+                    setStatementFilterStart('');
+                    setStatementFilterEnd('');
+                  }}
+                  className="h-9 px-3 text-xs border border-border rounded-control text-muted hover:text-text cursor-pointer"
+                >
+                  مسح الفترة
+                </button>
+              )}
+            </div>
+
+            <div className="border border-border bg-white rounded-[4px] max-h-[420px] overflow-y-auto select-none">
+              {statementData ? (
+                <StatementA4
+                  customer={statementCustomer}
+                  statementData={statementData}
+                  settings={settingsData}
+                  filterStart={statementFilterStart || undefined}
+                  filterEnd={statementFilterEnd || undefined}
+                />
+              ) : (
+                <div className="p-10 text-center text-muted text-sm">جارٍ تحميل كشف الحساب…</div>
+              )}
+            </div>
+
+            <button
+              onClick={() => {
+                if (!statementData) return;
+                setActivePrintDocument({
+                  type: 'statement-a4',
+                  customer: statementCustomer,
+                  statementData,
+                  filterStart: statementFilterStart || undefined,
+                  filterEnd: statementFilterEnd || undefined,
+                });
+                window.print();
+              }}
+              disabled={!statementData}
+              className="py-3 bg-jade text-white text-xs font-bold rounded-control hover:bg-jade-2 transition-colors cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50"
+            >
+              <Icons.Printer className="h-4 w-4" />
+              <span>طباعة كشف الحساب (A4)</span>
+            </button>
+          </div>
+        )}
+      </Modal>
+
+      {/* 13. Add/Edit Supplier Modal */}
+      <Modal
+        isOpen={showSupplierModal}
+        onClose={() => setShowSupplierModal(false)}
+        title={editingSupplier ? 'تعديل بيانات المورد' : 'إضافة مورد جديد'}
+      >
+        <form onSubmit={handleSupplierSubmit} className="flex flex-col gap-3">
+          {(['name', 'phone', 'address', 'notes'] as const).map((field) => (
+            <div key={field}>
+              <label className="text-xs font-bold text-muted mb-1 block">
+                {field === 'name'
+                  ? 'اسم المورد *'
+                  : field === 'phone'
+                    ? 'رقم الهاتف'
+                    : field === 'address'
+                      ? 'العنوان'
+                      : 'ملاحظات'}
+              </label>
+              <input
+                type="text"
+                required={field === 'name'}
+                value={supplierForm[field]}
+                onChange={(e) => setSupplierForm({ ...supplierForm, [field]: e.target.value })}
+                className="w-full h-10 rounded-control border border-line bg-surface px-3 text-sm focus-visible:outline-none"
+              />
+            </div>
+          ))}
+          <div className="flex gap-3 mt-2">
+            <button
+              type="submit"
+              className="flex-1 py-2.5 bg-jade text-white font-bold text-sm rounded-control hover:bg-jade-2 cursor-pointer"
+            >
+              حفظ
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowSupplierModal(false)}
+              className="flex-1 py-2.5 border border-border text-muted font-bold text-sm rounded-control hover:text-text cursor-pointer"
+            >
+              إلغاء
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* 14. New Purchase Modal */}
+      <Modal
+        isOpen={showPurchaseModal}
+        onClose={() => setShowPurchaseModal(false)}
+        title="تسجيل فاتورة مشتريات جديدة"
+        maxWidthClass="max-w-2xl"
+      >
+        <form onSubmit={handlePurchaseSubmit} className="flex flex-col gap-4">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-bold text-muted mb-1 block">المورد (اختياري)</label>
+              <select
+                value={purchaseForm.supplierId}
+                onChange={(e) => {
+                  const sup = suppliersList.find((s) => s.id === Number(e.target.value));
+                  setPurchaseForm({
+                    ...purchaseForm,
+                    supplierId: e.target.value,
+                    supplierName: sup?.name || '',
+                  });
+                }}
+                className="w-full h-10 rounded-control border border-line bg-surface px-2 text-sm focus-visible:outline-none"
+              >
+                <option value="">— بدون مورد —</option>
+                {suppliersList.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="text-xs font-bold text-muted mb-1 block">اسم المورد (نص حر)</label>
+              <input
+                type="text"
+                value={purchaseForm.supplierName}
+                onChange={(e) => setPurchaseForm({ ...purchaseForm, supplierName: e.target.value })}
+                placeholder="أو اكتب اسم المورد"
+                className="w-full h-10 rounded-control border border-line bg-surface px-3 text-sm focus-visible:outline-none"
+              />
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <div className="flex justify-between items-center">
+              <label className="text-xs font-bold text-muted">المنتجات المستلمة</label>
+              <button
+                type="button"
+                onClick={() =>
+                  setPurchaseForm({
+                    ...purchaseForm,
+                    items: [...purchaseForm.items, { productId: '', quantity: '1', unitCost: '0.000' }],
+                  })
+                }
+                className="text-xs text-jade font-bold hover:underline cursor-pointer"
+              >
+                + إضافة منتج
+              </button>
+            </div>
+            {purchaseForm.items.map((item, idx) => (
+              <div key={idx} className="grid grid-cols-[1fr_auto_auto_auto] gap-2 items-center">
+                <select
+                  value={item.productId}
+                  onChange={(e) => {
+                    const updated = [...purchaseForm.items];
+                    const prod = productsList.find((p) => p.id === Number(e.target.value));
+                    const currentItem = updated[idx];
+                    if (currentItem) {
+                      updated[idx] = {
+                        ...currentItem,
+                        productId: e.target.value,
+                        unitCost: prod ? (prod.costPrice / 1000).toFixed(3) : '0.000',
+                      };
+                      setPurchaseForm({ ...purchaseForm, items: updated });
+                    }
+                  }}
+                  className="h-9 rounded-control border border-line bg-surface px-2 text-xs focus-visible:outline-none"
+                >
+                  <option value="">— اختر منتجاً —</option>
+                  {productsList.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}
+                    </option>
+                  ))}
+                </select>
+                <input
+                  type="number"
+                  min="1"
+                  value={item.quantity}
+                  onChange={(e) => {
+                    const u = [...purchaseForm.items];
+                    const currentItem = u[idx];
+                    if (currentItem) {
+                      u[idx] = { ...currentItem, quantity: e.target.value };
+                      setPurchaseForm({ ...purchaseForm, items: u });
+                    }
+                  }}
+                  className="w-20 h-9 rounded-control border border-line bg-surface px-2 text-xs mono text-center focus-visible:outline-none"
+                  placeholder="الكمية"
+                />
+                <input
+                  type="number"
+                  step="0.001"
+                  value={item.unitCost}
+                  onChange={(e) => {
+                    const u = [...purchaseForm.items];
+                    const currentItem = u[idx];
+                    if (currentItem) {
+                      u[idx] = { ...currentItem, unitCost: e.target.value };
+                      setPurchaseForm({ ...purchaseForm, items: u });
+                    }
+                  }}
+                  className="w-28 h-9 rounded-control border border-line bg-surface px-2 text-xs mono text-center focus-visible:outline-none"
+                  placeholder="سعر الوحدة"
+                />
+                {purchaseForm.items.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setPurchaseForm({
+                        ...purchaseForm,
+                        items: purchaseForm.items.filter((_, i) => i !== idx),
+                      })
+                    }
+                    className="text-alert hover:text-red-600 cursor-pointer"
+                  >
+                    <Icons.Trash className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 border-t border-line pt-3">
+            <div>
+              <label className="text-xs font-bold text-muted mb-1 block">المبلغ المدفوع (د.ل)</label>
+              <input
+                type="number"
+                step="0.001"
+                value={purchaseForm.paid}
+                onChange={(e) => setPurchaseForm({ ...purchaseForm, paid: e.target.value })}
+                className="w-full h-10 rounded-control border border-line bg-surface px-3 text-sm mono font-semibold focus-visible:outline-none"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-bold text-muted mb-1 block">ملاحظات</label>
+              <input
+                type="text"
+                value={purchaseForm.notes}
+                onChange={(e) => setPurchaseForm({ ...purchaseForm, notes: e.target.value })}
+                className="w-full h-10 rounded-control border border-line bg-surface px-3 text-sm focus-visible:outline-none"
+              />
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            className="w-full py-3 bg-jade text-white font-bold rounded-control hover:bg-jade-2 transition-colors cursor-pointer"
+          >
+            تسجيل وحفظ فاتورة الشراء
+          </button>
+        </form>
+      </Modal>
+
+      {/* 15. Supplier Return Modal */}
+      <Modal
+        isOpen={showReturnModal}
+        onClose={() => {
+          setShowReturnModal(false);
+          setReturnPurchase(null);
+        }}
+        title={`مرتجع مشتريات${returnPurchase ? ` — ${returnPurchase.invoiceNumber}` : ''}`}
+        maxWidthClass="max-w-lg"
+      >
+        {!returnPurchase ? (
+          <div className="p-10 text-center text-muted text-sm">جارٍ تحميل الفاتورة…</div>
+        ) : (
+          <form onSubmit={handlePurchaseReturnSubmit} className="flex flex-col gap-4">
+            <p className="text-xs text-muted">
+              المورد: {returnPurchase.supplierName || 'بدون مورد'} — تنقص الكميات المرتجعة من
+              المخزون فوراً.
+            </p>
+
+            <div className="max-h-60 overflow-y-auto border border-line rounded-control">
+              <table className="w-full text-right text-xs">
+                <thead className="bg-surface-2 border-b border-line">
+                  <tr className="font-bold text-muted">
+                    <th className="p-2">الصنف</th>
+                    <th className="p-2 text-center">المشتراة</th>
+                    <th className="p-2 text-center">أُرجعت سابقاً</th>
+                    <th className="p-2 text-center">كمية المرتجع</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {(returnPurchase.items || []).map((item: any) => {
+                    const returnable = item.quantity - (item.returnedQuantity || 0);
+                    return (
+                      <tr key={item.id}>
+                        <td className="p-2 font-semibold">{item.productName}</td>
+                        <td className="p-2 text-center mono">{item.quantity}</td>
+                        <td className="p-2 text-center mono">{item.returnedQuantity || 0}</td>
+                        <td className="p-2 text-center">
+                          <input
+                            type="number"
+                            min={0}
+                            max={returnable}
+                            disabled={returnable === 0}
+                            value={returnQuantities[item.productId] ?? '0'}
+                            onChange={(e) =>
+                              setReturnQuantities({
+                                ...returnQuantities,
+                                [item.productId]: e.target.value,
+                              })
+                            }
+                            className="w-16 h-8 text-center rounded border border-line bg-surface mono text-xs focus-visible:outline-none disabled:opacity-40"
+                          />
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            <div>
+              <label className="text-xs font-bold text-muted mb-1 block">طريقة الاسترداد</label>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  disabled={!returnPurchase.supplierId}
+                  onClick={() => setReturnRefundMethod('debt')}
+                  className={`flex-1 py-2 text-xs font-bold rounded-control border cursor-pointer transition-colors disabled:opacity-40 ${
+                    returnRefundMethod === 'debt'
+                      ? 'bg-jade text-white border-jade'
+                      : 'bg-surface text-muted border-border hover:text-text'
+                  }`}
+                >
+                  خصم من دين المورد
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setReturnRefundMethod('cash')}
+                  className={`flex-1 py-2 text-xs font-bold rounded-control border cursor-pointer transition-colors ${
+                    returnRefundMethod === 'cash'
+                      ? 'bg-jade text-white border-jade'
+                      : 'bg-surface text-muted border-border hover:text-text'
+                  }`}
+                >
+                  استرداد نقدي للدرج (يتطلب توكة مفتوحة)
+                </button>
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                type="submit"
+                className="flex-1 py-2.5 bg-alert text-white font-bold text-sm rounded-control hover:bg-red-600 cursor-pointer"
+              >
+                تأكيد المرتجع
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowReturnModal(false);
+                  setReturnPurchase(null);
+                }}
+                className="flex-1 py-2.5 border border-border text-muted font-bold text-sm rounded-control hover:text-text cursor-pointer"
+              >
+                إلغاء
+              </button>
+            </div>
+          </form>
+        )}
+      </Modal>
+
+      {/* 16. Create User Modal (Manager only) */}
+      <Modal
+        isOpen={showCreateUserModal}
+        onClose={() => setShowCreateUserModal(false)}
+        title="إضافة مستخدم أو بائع جديد"
+      >
+        <form onSubmit={handleCreateUserSubmit} className="flex flex-col gap-4">
+          <div>
+            <label className="text-xs font-bold text-muted mb-1 block">اسم المستخدم (للدخول)</label>
+            <input
+              type="text"
+              required
+              value={createUserForm.username}
+              onChange={(e) => setCreateUserForm({ ...createUserForm, username: e.target.value })}
+              className="w-full h-10 rounded-control border border-line bg-surface px-3 text-sm focus-visible:outline-none"
+            />
+          </div>
+          <div>
+            <label className="text-xs font-bold text-muted mb-1 block">كلمة المرور</label>
+            <input
+              type="password"
+              required
+              autoComplete="new-password"
+              value={createUserForm.password}
+              onChange={(e) => setCreateUserForm({ ...createUserForm, password: e.target.value })}
+              className="w-full h-10 rounded-control border border-line bg-surface px-3 text-sm focus-visible:outline-none"
+            />
+          </div>
+          <div>
+            <label className="text-xs font-bold text-muted mb-1 block">رمز PIN السريع (4 أرقام)</label>
+            <input
+              type="text"
+              maxLength={4}
+              required
+              inputMode="numeric"
+              autoComplete="off"
+              value={createUserForm.pin}
+              onChange={(e) => setCreateUserForm({ ...createUserForm, pin: e.target.value })}
+              className="w-full h-10 rounded-control border border-line bg-surface px-3 text-sm focus-visible:outline-none mono"
+            />
+          </div>
+          <div>
+            <label className="text-xs font-bold text-muted mb-1 block">الصلاحية</label>
+            <select
+              value={createUserForm.role}
+              onChange={(e) =>
+                setCreateUserForm({ ...createUserForm, role: e.target.value as 'manager' | 'sales' })
+              }
+              className="w-full h-10 rounded-control border border-line bg-surface px-3 text-sm focus-visible:outline-none"
+            >
+              <option value="sales">بائع (نقاط البيع والتوكة فقط)</option>
+              <option value="manager">مدير كامل الصلاحيات</option>
+            </select>
+          </div>
+          <div className="flex gap-3">
+            <button
+              type="submit"
+              className="flex-1 py-3 bg-jade text-white text-xs font-bold rounded-control hover:bg-jade-2 transition-colors cursor-pointer"
+            >
+              إنشاء المستخدم الجديد
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowCreateUserModal(false)}
+              className="flex-1 py-3 bg-surface-2 border border-border text-muted text-xs font-bold rounded-control hover:text-text transition-colors cursor-pointer"
+            >
+              إلغاء
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* 17. Edit User Modal (Manager only) */}
+      <Modal
+        isOpen={showEditUserModal}
+        onClose={() => setShowEditUserModal(false)}
+        title={`تعديل بيانات المستخدم: ${editingUser?.username || ''}`}
+      >
+        <form onSubmit={handleEditUserSubmit} className="flex flex-col gap-4">
+          <p className="text-xs text-muted font-semibold">
+            اترك حقل كلمة المرور فارغاً إذا كنت لا ترغب في تغييره.
+          </p>
+          <div>
+            <label className="text-xs font-bold text-muted mb-1 block">
+              كلمة المرور الجديدة (اختياري)
+            </label>
+            <input
+              type="password"
+              autoComplete="new-password"
+              value={editUserForm.password}
+              onChange={(e) => setEditUserForm({ ...editUserForm, password: e.target.value })}
+              placeholder="أدخل كلمة مرور جديدة"
+              className="w-full h-10 rounded-control border border-line bg-surface px-3 text-sm focus-visible:outline-none"
+            />
+          </div>
+          <div>
+            <label className="text-xs font-bold text-muted mb-1 block">
+              رمز PIN السريع الجديد (4 أرقام - اختياري)
+            </label>
+            <input
+              type="text"
+              maxLength={4}
+              inputMode="numeric"
+              autoComplete="off"
+              value={editUserForm.pin}
+              onChange={(e) => setEditUserForm({ ...editUserForm, pin: e.target.value })}
+              placeholder="تحديث رمز PIN"
+              className="w-full h-10 rounded-control border border-line bg-surface px-3 text-sm focus-visible:outline-none mono"
+            />
+          </div>
+          <div>
+            <label className="text-xs font-bold text-muted mb-1 block">الصلاحية</label>
+            <select
+              value={editUserForm.role}
+              onChange={(e) =>
+                setEditUserForm({ ...editUserForm, role: e.target.value as 'manager' | 'sales' })
+              }
+              className="w-full h-10 rounded-control border border-line bg-surface px-3 text-sm focus-visible:outline-none"
+            >
+              <option value="sales">بائع (نقاط البيع والتوكة فقط)</option>
+              <option value="manager">مدير كامل الصلاحيات</option>
+            </select>
+          </div>
+          <div>
+            <label className="flex items-center gap-2 cursor-pointer font-semibold text-sm">
+              <input
+                type="checkbox"
+                checked={editUserForm.active}
+                onChange={(e) => setEditUserForm({ ...editUserForm, active: e.target.checked })}
+                className="h-4 w-4 rounded border-gray-300 text-jade focus:ring-jade"
+              />
+              <span>الحساب نشط ومفعل</span>
+            </label>
+          </div>
+          <div className="flex gap-3">
+            <button
+              type="submit"
+              className="flex-1 py-3 bg-jade text-white text-xs font-bold rounded-control hover:bg-jade-2 transition-colors cursor-pointer"
+            >
+              حفظ التعديلات
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowEditUserModal(false)}
+              className="flex-1 py-3 bg-surface-2 border border-border text-muted text-xs font-bold rounded-control hover:text-text transition-colors cursor-pointer"
+            >
+              إلغاء
+            </button>
+          </div>
+        </form>
       </Modal>
     </>
   );

@@ -107,6 +107,7 @@ export function App() {
 
   const [showPurchaseModal, setShowPurchaseModal] = useState(false);
   const [showReturnModal, setShowReturnModal] = useState(false);
+  const [returnPurchaseId, setReturnPurchaseId] = useState<number | null>(null);
 
   const [showCreateUserModal, setShowCreateUserModal] = useState(false);
   const [showEditUserModal, setShowEditUserModal] = useState(false);
@@ -895,6 +896,7 @@ export function App() {
             }}
             onOpenPurchaseModal={() => setShowPurchaseModal(true)}
             onOpenReturnModal={(pId) => {
+              setReturnPurchaseId(pId);
               setShowReturnModal(true);
             }}
           />
@@ -1009,6 +1011,7 @@ export function App() {
 
         showReturnModal={showReturnModal}
         setShowReturnModal={setShowReturnModal}
+        returnPurchaseId={returnPurchaseId}
 
         showCreateUserModal={showCreateUserModal}
         setShowCreateUserModal={setShowCreateUserModal}
