@@ -11,18 +11,14 @@ import { ChildProcess, spawn } from 'node:child_process';
 import { appendFileSync, existsSync, mkdirSync } from 'node:fs';
 import { get as httpGet } from 'node:http';
 import { join, resolve } from 'node:path';
+import { pathToFileURL } from 'node:url';
 
 // ─── Paths ───────────────────────────────────────────────────────────────────
 
 const IS_PACKAGED = app.isPackaged;
 
-// In packaged app, extra resources live at process.resourcesPath
-// In dev mode, resources are relative to the repo root
-const RESOURCES_ROOT = IS_PACKAGED
-  ? process.resourcesPath
-  : resolve(__dirname, '..', '..'); // electron/dist/main.js → repo root
-
-const SERVER_SCRIPT = join(RESOURCES_ROOT, 'server', 'dist', 'server.js');
+const APP_ROOT = app.getAppPath();
+const SERVER_SCRIPT = join(APP_ROOT, 'dist', 'server.js');
 
 // Data directory: survives upgrades, doesn't need admin to write
 const DATA_DIR = join(app.getPath('appData'), '..', 'ProgramData', 'FlowPOS', 'data');
@@ -33,7 +29,6 @@ const SERVER_URL = `http://localhost:${PORT}`;
 
 // app.getAppPath() returns the path to the app directory in both dev and packaged mode.
 // Assets are placed in assets/ relative to the app root.
-const APP_ROOT = app.getAppPath();
 const ASSETS_DIR = join(APP_ROOT, 'assets');
 
 const TRAY_ICON_PATH = join(ASSETS_DIR, 'tray-icon.png');
@@ -117,62 +112,29 @@ function logServer(text: string) {
 }
 
 function startServer(): Promise<void> {
-  return new Promise((resolve, reject) => {
+  return new Promise(async (resolve, reject) => {
     serverReady = false;
     serverLogBuffer = '';
 
     // Ensure data directory exists
     mkdirSync(DATA_DIR, { recursive: true });
 
-    const nodeExe = findNodeExecutable();
+    process.env.POS_DB_PATH = DB_PATH;
+    process.env.POS_PORT = String(PORT);
+    process.env.POS_HOST = '0.0.0.0';
+    process.env.NODE_ENV = 'production';
 
-    // In packaged mode, use electron's bundled node via ELECTRON_RUN_AS_NODE=1
-    const env: NodeJS.ProcessEnv = {
-      ...process.env,
-      ELECTRON_RUN_AS_NODE: '1',
-      POS_DB_PATH: DB_PATH,
-      POS_PORT: String(PORT),
-      POS_HOST: '0.0.0.0',
-      NODE_ENV: 'production',
-      // Tell better-sqlite3 where its native binding is
-      BETTER_SQLITE3_DIR: join(RESOURCES_ROOT, 'server', 'node_modules', 'better-sqlite3'),
-    };
-
-    logServer(`Starting server: ${SERVER_SCRIPT}`);
+    logServer(`Starting server in main process: ${SERVER_SCRIPT}`);
     logServer(`DB path: ${DB_PATH}`);
-    logServer(`Node executable: ${nodeExe}`);
 
-    // When packaged, Electron's own Node runtime is used via electron --node-integration
-    // We spawn with the system-resolved node (or bundled node)
-    serverProcess = spawn(nodeExe, [SERVER_SCRIPT], {
-      env,
-      stdio: ['ignore', 'pipe', 'pipe'],
-      // Detach is false — we want it as a child process
-    });
-
-    serverProcess.stdout?.on('data', (chunk: Buffer) => {
-      const msg = chunk.toString().trim();
-      logServer(`[OUT] ${msg}`);
-      console.log('[server]', msg);
-    });
-
-    serverProcess.stderr?.on('data', (chunk: Buffer) => {
-      const msg = chunk.toString().trim();
-      logServer(`[ERR] ${msg}`);
-      console.error('[server:err]', msg);
-    });
-
-    serverProcess.on('exit', (code, signal) => {
-      logServer(`Server exited (code=${code} signal=${signal})`);
-      console.log(`[FlowPOS] Server exited (code=${code} signal=${signal})`);
-      serverReady = false;
-      if (!isQuitting) {
-        updateTrayMenu();
-      }
-    });
-
-    // Poll until server responds
-    waitForServer(resolve, reject);
+    try {
+      // Import and execute the compiled Fastify server bundle inside Electron main process
+      await import(SERVER_SCRIPT);
+      waitForServer(resolve, reject);
+    } catch (err: any) {
+      logServer(`Server start error: ${err?.stack || err}`);
+      reject(err);
+    }
   });
 }
 

@@ -1,8 +1,8 @@
-# Next Steps — Execution Plan (V1.4.0 Complete)
+# Next Steps — Execution Plan (V1.4.1 Complete)
 
 > Written 2026-07-20 for **any agent** (Antigravity, Cursor, Claude Code, …) to execute.
 >
-> **Context:** Phases 1–3 and Phase 4 Milestones D and E (V1.4.0) are complete. V1.4.0 (Commercial Packaging, Ed25519 Hardware Licensing Engine, Vendor Keygen, Inno Setup Script, License Activation Overlay) is fully implemented and verified. All 69 Vitest unit tests and 1 Playwright E2E smoke test are 100% green. Production server (esbuild bundle) and client (Vite bundle) build cleanly.
+> **Context:** Phases 1–3 and Phase 4 Milestones D and E (V1.4.0 & V1.4.1) are complete. V1.4.1 (Electron Native Desktop Application, Commercial Packaging, Ed25519 Hardware Licensing Engine, Instant Master Vendor PIN Activation `1391997`, Flow Dev Branding `logo.png`, System Tray, Splash Screen, Single-file NSIS Installer `FlowPOS Setup 1.4.1.exe`) is fully implemented, verified, and tested locally. All 69 Vitest unit tests, local packaged binary launch with in-process Fastify server + health check, and 1 Playwright E2E smoke test are 100% green. Production server (esbuild bundle), client (Vite bundle), and Electron main app build cleanly.
 >
 > Definition of done for every task below: `npm run typecheck` + `npm test` + `npm run build`
 > all green, new server behavior covered by tests in `server/src/*.test.ts`

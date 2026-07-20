@@ -6,18 +6,22 @@
   "main": "dist/main.js",
   "private": true,
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && node copy-server.js",
     "start": "electron .",
     "dist": "npm run build && electron-builder",
     "dist:dir": "npm run build && electron-builder --dir"
   },
-  "dependencies": {},
+  "dependencies": {
+    "better-sqlite3": "^12.11.1",
+    "bindings": "^1.5.0",
+    "file-uri-to-path": "^2.0.0"
+  },
   "devDependencies": {
     "@electron/rebuild": "^3.7.1",
+    "@types/node": "^24.0.0",
     "electron": "^36.0.0",
     "electron-builder": "^25.0.0",
-    "typescript": "^5.8.3",
-    "@types/node": "^24.0.0"
+    "typescript": "^5.8.3"
   },
   "build": {
     "appId": "com.flowdev.flowpos",
@@ -42,47 +46,21 @@
     },
     "extraResources": [
       {
-        "from": "../server/dist",
-        "to": "server/dist"
-      },
-      {
-        "from": "../server/drizzle",
-        "to": "server/drizzle"
-      },
-      {
-        "from": "../node_modules/better-sqlite3",
-        "to": "server/node_modules/better-sqlite3"
-      },
-      {
-        "from": "../node_modules/bindings",
-        "to": "server/node_modules/bindings"
-      },
-      {
-        "from": "../node_modules/file-uri-to-path",
-        "to": "server/node_modules/file-uri-to-path"
-      },
-      {
         "from": "../web/dist",
         "to": "web/dist"
-      },
-      {
-        "from": "assets/splash.html",
-        "to": "splash.html"
-      },
-      {
-        "from": "assets/logo.png",
-        "to": "logo.png"
       }
     ],
     "win": {
       "target": [
         {
           "target": "nsis",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ],
       "icon": "assets/icon.ico",
-      "requestedExecutionLevel": "requireAdministrator"
+      "requestedExecutionLevel": "asInvoker"
     },
     "nsis": {
       "oneClick": false,

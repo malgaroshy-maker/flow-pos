@@ -9,6 +9,9 @@ import { existsSync } from 'node:fs';
 const here = dirname(fileURLToPath(import.meta.url));
 
 export function resolveMigrationsFolder(): string {
+  // Bundled with server.js: dist/drizzle
+  const sameDirPath = join(here, 'drizzle');
+  if (existsSync(sameDirPath)) return sameDirPath;
   // Production compiled bundle: server/dist → server/drizzle
   const prodPath = join(here, '..', 'drizzle');
   if (existsSync(prodPath)) return prodPath;

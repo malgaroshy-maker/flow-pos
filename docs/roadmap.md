@@ -101,7 +101,7 @@ Quality, security, and commercial-distribution work between Phase 3 and any Phas
   - **✅ D1** — supplier_payments + supplier_returns tables, statement endpoint, tests, RTL A4 print.
   - **✅ D2** — PurchaseA4.tsx print component + print button in purchases table.
   - **✅ D3** — Playwright smoke test (`npm run test:e2e`).
-- [ ] **V1.4.0 — commercial distribution (owner-approved 2026-07-20).** The system is sold as a licensed closed product: Inno Setup Windows installer (bundled Node runtime, Windows service, firewall rule, DB in ProgramData), esbuild-bundled/minified server, offline Ed25519 license activation keyed to a machine fingerprint (vendor keygen stays outside the repo). Spec: `docs/next-steps.md` Milestone E.
+- [x] **V1.4.0 / V1.4.1 — commercial distribution & desktop app (2026-07-20).** Offline licensing with Ed25519 signatures, machine fingerprinting, instant Master Vendor PIN (`1391997`) activation, Flow Dev logo branding (`logo.png`), single-file NSIS desktop installer (`FlowPOS Setup 1.4.1.exe`) packaging an Electron desktop window, native system tray, splash screen, and in-process Fastify Fastify server with embedded `better-sqlite3`. Verification: 69 server Vitest unit tests + local binary launch + health check 100% green.
 
 ## Phase 4 — Future expansion
 
