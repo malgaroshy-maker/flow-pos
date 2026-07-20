@@ -52,10 +52,21 @@ export function App() {
     reason?: string;
   } | null>(null);
 
-  const checkLicenseStatus = async () => {
-    const res: any = await apiCall('/api/license/info');
-    if (res && typeof res.active === 'boolean') {
-      setLicenseInfo(res);
+  const checkLicenseStatus = async (retries = 10) => {
+    try {
+      const res: any = await apiCall('/api/license/info');
+      if (res && typeof res.active === 'boolean') {
+        setLicenseInfo(res);
+        return;
+      }
+    } catch {
+      // ignore — will retry
+    }
+    if (retries > 0) {
+      setTimeout(() => checkLicenseStatus(retries - 1), 800);
+    } else {
+      // Server unreachable after all retries — show activation screen with error
+      setLicenseInfo({ active: false, machineCode: '----', reason: 'تعذر الاتصال بخادم المنظومة. تأكد من تشغيل التطبيق بشكل صحيح.' });
     }
   };
 
