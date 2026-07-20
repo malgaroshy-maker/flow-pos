@@ -149,8 +149,8 @@ function startServer(): Promise<void> {
 
       // Import and execute the compiled Fastify server bundle inside Electron main process
       await import(SERVER_SCRIPT);
-      // Give Fastify a moment to bind before polling
-      setTimeout(() => waitForServer(resolve, reject), 500);
+      // Give Fastify 2s to bind to the port before first poll
+      setTimeout(() => waitForServer(resolve, reject), 2000);
     } catch (err: any) {
       logServer(`Server start error: ${err?.stack || err}`);
       reject(err);
@@ -163,9 +163,9 @@ function waitForServer(
   reject: (err: Error) => void,
   attempt = 0
 ) {
-  const MAX_ATTEMPTS = 60; // 30 seconds total
+  const MAX_ATTEMPTS = 120; // 60 seconds total
   if (attempt >= MAX_ATTEMPTS) {
-    reject(new Error('Server did not start within 30 seconds'));
+    reject(new Error('Server did not start within 60 seconds'));
     return;
   }
 
