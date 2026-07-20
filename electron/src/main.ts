@@ -113,10 +113,10 @@ function startServer(): Promise<void> {
 
     const nodeExe = findNodeExecutable();
 
-    // In packaged mode, use electron's bundled node via --require trick
-    // We pass the server script as an argument
+    // In packaged mode, use electron's bundled node via ELECTRON_RUN_AS_NODE=1
     const env: NodeJS.ProcessEnv = {
       ...process.env,
+      ELECTRON_RUN_AS_NODE: '1',
       POS_DB_PATH: DB_PATH,
       POS_PORT: String(PORT),
       POS_HOST: '0.0.0.0',
@@ -366,34 +366,44 @@ function quitApp() {
   stopServer().then(() => app.quit());
 }
 
-app.whenReady().then(async () => {
-  // Auto-start with Windows on login
-  if (IS_PACKAGED) {
-    app.setLoginItemSettings({
-      openAtLogin: true,
-      name: 'FlowPOS',
-    });
-  }
+const gotTheLock = app.requestSingleInstanceLock();
 
-  // Show splash screen immediately while server starts
-  createSplashWindow();
+if (!gotTheLock) {
+  app.quit();
+} else {
+  app.on('second-instance', () => {
+    openOrFocusWindow();
+  });
 
-  // Create tray so user sees something even during startup
-  createTray();
+  app.whenReady().then(async () => {
+    // Auto-start with Windows on login
+    if (IS_PACKAGED) {
+      app.setLoginItemSettings({
+        openAtLogin: true,
+        name: 'FlowPOS',
+      });
+    }
 
-  // Start the Fastify server
-  try {
-    await startServer();
-    console.log('[FlowPOS] Server ready at', SERVER_URL);
-  } catch (err) {
-    console.error('[FlowPOS] Server failed to start:', err);
-  }
+    // Show splash screen immediately while server starts
+    createSplashWindow();
 
-  // Close splash and open main window
-  closeSplashWindow();
-  createMainWindow();
-  updateTrayMenu();
-});
+    // Create tray so user sees something even during startup
+    createTray();
+
+    // Start the Fastify server
+    try {
+      await startServer();
+      console.log('[FlowPOS] Server ready at', SERVER_URL);
+    } catch (err) {
+      console.error('[FlowPOS] Server failed to start:', err);
+    }
+
+    // Close splash and open main window
+    closeSplashWindow();
+    createMainWindow();
+    updateTrayMenu();
+  });
+}
 
 // Prevent app from quitting when all windows are closed (we live in the tray)
 app.on('window-all-closed', () => {
