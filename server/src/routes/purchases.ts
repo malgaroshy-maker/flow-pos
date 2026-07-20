@@ -6,6 +6,7 @@ import {
   products,
   stockMovements,
   suppliers,
+  supplierReturns,
   auditLogs,
   users,
   shifts,
@@ -361,6 +362,20 @@ export async function purchaseRoutes(app: FastifyInstance) {
             .run();
 
           returnValue += lineTotal(line.unitCost, item.quantity);
+        }
+
+        if (purchase.supplierId) {
+          app.db
+            .insert(supplierReturns)
+            .values({
+              purchaseId,
+              supplierId: purchase.supplierId,
+              amount: returnValue,
+              refundMethod: refundMethod as 'debt' | 'cash',
+              userId: req.user!.userId,
+              createdAt: now,
+            })
+            .run();
         }
 
         if (refundMethod === 'debt') {

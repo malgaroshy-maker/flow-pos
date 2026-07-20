@@ -21,6 +21,8 @@ import { stocktakingRoutes } from './routes/stocktaking.js';
 import { reportRoutes } from './routes/reports.js';
 import { notificationRoutes } from './routes/notifications.js';
 import { warrantyRoutes } from './routes/warranties.js';
+import { licenseRoutes } from './routes/license.js';
+import { getLicenseInfo } from './lib/license.js';
 
 declare module 'fastify' {
   interface FastifyInstance {
@@ -67,6 +69,28 @@ export function buildApp(sqlite: Database.Database) {
     serverTime: new Date().toISOString(),
   }));
 
+  // Enforce license on API endpoints when unactivated in production
+  app.addHook('onRequest', async (req, reply) => {
+    const url = req.raw.url || '';
+    if (
+      url.startsWith('/api/') &&
+      !url.startsWith('/api/health') &&
+      !url.startsWith('/api/license/') &&
+      !url.startsWith('/api/auth/')
+    ) {
+      const license = getLicenseInfo();
+      if (!license.active) {
+        reply.code(403).send({
+          success: false,
+          code: 'LICENSE_REQUIRED',
+          error: license.reason || 'يرجى تفعيل ترخيص المنظومة للبدء بالعمل',
+          machineCode: license.machineCode,
+        });
+      }
+    }
+  });
+
+  app.register(licenseRoutes, { prefix: '/api' });
   app.register(settingsRoutes, { prefix: '/api' });
   app.register(authRoutes, { prefix: '/api' });
   app.register(productRoutes, { prefix: '/api' });

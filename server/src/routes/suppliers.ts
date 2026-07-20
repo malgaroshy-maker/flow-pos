@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify';
-import { eq, desc } from 'drizzle-orm';
-import { suppliers, auditLogs, shifts, cashMovements } from '../db/schema.js';
+import { eq, desc, gte, lte, and } from 'drizzle-orm';
+import { suppliers, supplierPayments, supplierReturns, purchases, auditLogs, shifts, cashMovements } from '../db/schema.js';
 import { authenticateRequest } from './auth.js';
 import { requirePositiveInt, ValidationError } from '../lib/validate.js';
 
@@ -80,7 +80,7 @@ export async function supplierRoutes(app: FastifyInstance) {
       return reply.code(403).send({ error: 'forbidden', message: 'تسجيل المدفوعات للمدراء فقط' });
     }
     const id = Number((req.params as any).id);
-    const { amount } = req.body as { amount: number };
+    const { amount, notes } = req.body as { amount: number; notes?: string };
     try {
       requirePositiveInt(amount, 'amount');
     } catch (err) {
@@ -91,7 +91,7 @@ export async function supplierRoutes(app: FastifyInstance) {
     }
 
     const supplier = app.db.select().from(suppliers).where(eq(suppliers.id, id)).get();
-    if (!supplier) return reply.code(404).send({ error: 'not_found' });
+    if (!supplier) return reply.code(404).send({ error: 'not_found', message: 'المورد غير موجود' });
 
     if (amount > supplier.debtBalance) {
       return reply.code(400).send({
@@ -121,6 +121,18 @@ export async function supplierRoutes(app: FastifyInstance) {
       app.db.update(suppliers).set({ debtBalance: debt }).where(eq(suppliers.id, id)).run();
 
       app.db
+        .insert(supplierPayments)
+        .values({
+          supplierId: id,
+          shiftId: activeShift.id,
+          amount,
+          userId: req.user!.userId,
+          notes: notes || null,
+          createdAt: now,
+        })
+        .run();
+
+      app.db
         .insert(cashMovements)
         .values({
           shiftId: activeShift.id,
@@ -147,4 +159,142 @@ export async function supplierRoutes(app: FastifyInstance) {
 
     return { success: true, newDebtBalance: newDebt };
   });
+
+  // Get Supplier Account Statement (كشف حساب المورد)
+  app.get('/suppliers/:id/statement', async (req, reply) => {
+    const id = Number((req.params as any).id);
+    const { from, to } = req.query as { from?: string; to?: string };
+
+    const supplier = app.db.select().from(suppliers).where(eq(suppliers.id, id)).get();
+    if (!supplier) return reply.code(404).send({ error: 'not_found', message: 'المورد غير موجود' });
+
+    // Fetch purchases from this supplier
+    const supplierPurchases = app.db
+      .select()
+      .from(purchases)
+      .where(eq(purchases.supplierId, id))
+      .all();
+
+    // Fetch supplier payments
+    const payments = app.db
+      .select()
+      .from(supplierPayments)
+      .where(eq(supplierPayments.supplierId, id))
+      .all();
+
+    // Fetch supplier returns (debt refund method only affects statement)
+    const returns = app.db
+      .select()
+      .from(supplierReturns)
+      .where(eq(supplierReturns.supplierId, id))
+      .all();
+
+    const transactions: Array<{
+      id: string;
+      date: string;
+      type: 'purchase' | 'payment' | 'return';
+      typeLabel: string;
+      reference: string;
+      debit: number; // milli-LYD (raises debt we owe supplier)
+      credit: number; // milli-LYD (reduces debt we owe supplier)
+      notes?: string;
+    }> = [];
+
+    supplierPurchases.forEach((p) => {
+      const unpaid = p.total - p.paid;
+      const label =
+        p.paid === 0
+          ? 'فاتورة مشتريات (آجل)'
+          : p.paid < p.total
+            ? 'فاتورة مشتريات (جزئي)'
+            : 'فاتورة مشتريات (نقدي)';
+      transactions.push({
+        id: `pur-${p.id}`,
+        date: p.createdAt,
+        type: 'purchase',
+        typeLabel: label,
+        reference: p.invoiceNumber,
+        debit: unpaid,
+        credit: 0,
+        notes: p.notes || `إجمالي الفاتورة: ${(p.total / 1000).toFixed(3)} د.ل - مدفوع: ${(p.paid / 1000).toFixed(3)} د.ل`,
+      });
+    });
+
+    payments.forEach((pay) => {
+      transactions.push({
+        id: `pay-${pay.id}`,
+        date: pay.createdAt,
+        type: 'payment',
+        typeLabel: 'سداد دفعة للمورد (دفع)',
+        reference: `PAY-${pay.id}`,
+        debit: 0,
+        credit: pay.amount,
+        notes: pay.notes || 'سداد نقدي للمورد',
+      });
+    });
+
+    returns.forEach((ret) => {
+      if (ret.refundMethod !== 'debt') return; // cash returns do not alter debt
+      transactions.push({
+        id: `ret-${ret.id}`,
+        date: ret.createdAt,
+        type: 'return',
+        typeLabel: 'مرتجع مشتريات (خصم دين)',
+        reference: `RET-${ret.id}`,
+        debit: 0,
+        credit: ret.amount,
+        notes: 'إرجاع أصناف وخصم من رصيد المورد',
+      });
+    });
+
+    // Sort transactions chronologically
+    transactions.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+    // Filter by date range if provided
+    let fromDateStr = from ? (from.includes('T') ? from : `${from}T00:00:00.000Z`) : null;
+    let toDateStr = to ? (to.includes('T') ? to : `${to}T23:59:59.999Z`) : null;
+
+    let openingBalance = 0;
+    const filteredTransactions: typeof transactions = [];
+
+    transactions.forEach((tx) => {
+      if (fromDateStr && tx.date < fromDateStr) {
+        openingBalance += tx.debit - tx.credit;
+      } else if (toDateStr && tx.date > toDateStr) {
+        // After range, ignore
+      } else {
+        filteredTransactions.push(tx);
+      }
+    });
+
+    let runningBalance = openingBalance;
+    let totalPurchases = 0;
+    let totalPaid = 0;
+
+    const statementRows = filteredTransactions.map((tx) => {
+      totalPurchases += tx.debit;
+      totalPaid += tx.credit;
+      runningBalance += tx.debit - tx.credit;
+      return {
+        ...tx,
+        runningBalance,
+      };
+    });
+
+    // If no date range filter was applied, calculated balance matches running balance
+    const overallCalculatedBalance = transactions.reduce((acc, tx) => acc + (tx.debit - tx.credit), 0);
+
+    return {
+      supplier,
+      summary: {
+        totalPurchases,
+        totalPaid,
+        openingBalance,
+        currentBalance: supplier.debtBalance,
+        calculatedBalance: overallCalculatedBalance,
+      },
+      statement: statementRows,
+    };
+  });
 }
+

@@ -4,20 +4,31 @@ import { formatLYD } from '../lib/money';
 import { formatDateTime } from '../lib/datetime';
 
 interface StatementA4Props {
-  customer: Customer;
+  customer?: Partial<Customer> | null;
+  party?: { name: string; phone?: string | null; address?: string | null };
   statementData: any;
   settings: Settings | null;
   filterStart?: string;
   filterEnd?: string;
+  title?: string;
+  partyLabel?: string;
+  signatureLabel?: string;
 }
 
 export const StatementA4: React.FC<StatementA4Props> = ({
   customer,
+  party,
   statementData,
   settings,
   filterStart,
   filterEnd,
+  title = 'كشف حساب عميل',
+  partyLabel = 'العميل',
+  signatureLabel = 'توقيع العميل',
 }) => {
+  const entityName = party?.name ?? customer?.name ?? '';
+  const entityPhone = party?.phone ?? customer?.phone ?? '—';
+
   const statementView = (() => {
     const rows: any[] = statementData?.statement ?? [];
     const start = filterStart;
@@ -58,19 +69,19 @@ export const StatementA4: React.FC<StatementA4Props> = ({
           </p>
         </div>
         <div className="text-left">
-          <h2 className="font-extrabold text-base">كشف حساب عميل</h2>
+          <h2 className="font-extrabold text-base">{title}</h2>
           <p className="mono text-[10px]">{formatDateTime(new Date())}</p>
         </div>
       </div>
 
       <div className="grid grid-cols-2 gap-x-8 gap-y-1 text-[11px] mb-3">
         <div>
-          <span className="font-bold">العميل: </span>
-          {customer.name}
+          <span className="font-bold">{partyLabel}: </span>
+          {entityName}
         </div>
         <div>
           <span className="font-bold">الهاتف: </span>
-          {customer.phone || '—'}
+          {entityPhone}
         </div>
         {(filterStart || filterEnd) && (
           <div className="col-span-2">
@@ -137,7 +148,7 @@ export const StatementA4: React.FC<StatementA4Props> = ({
 
       <div className="flex justify-between items-end mt-8 text-[11px]">
         <div className="text-center">
-          <div className="border-t border-black/60 pt-1 px-8">توقيع العميل</div>
+          <div className="border-t border-black/60 pt-1 px-8">{signatureLabel}</div>
         </div>
         <div className="text-center">
           <div className="border-t border-black/60 pt-1 px-8">

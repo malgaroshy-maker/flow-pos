@@ -81,6 +81,10 @@ interface AppModalsProps {
   setShowSupplierModal: (show: boolean) => void;
   editingSupplier: Supplier | null;
 
+  showSupplierStatementModal?: boolean;
+  setShowSupplierStatementModal?: (show: boolean) => void;
+  statementSupplier?: Supplier | null;
+
   showPurchaseModal: boolean;
   setShowPurchaseModal: (show: boolean) => void;
 
@@ -159,6 +163,10 @@ export const AppModals: React.FC<AppModalsProps> = ({
   showSupplierModal,
   setShowSupplierModal,
   editingSupplier,
+
+  showSupplierStatementModal,
+  setShowSupplierStatementModal,
+  statementSupplier,
 
   showPurchaseModal,
   setShowPurchaseModal,
@@ -254,6 +262,11 @@ export const AppModals: React.FC<AppModalsProps> = ({
   // Customer Statement Date Filters
   const [statementFilterStart, setStatementFilterStart] = useState('');
   const [statementFilterEnd, setStatementFilterEnd] = useState('');
+
+  // Supplier Statement State
+  const [supplierStatementData, setSupplierStatementData] = useState<any>(null);
+  const [supplierStatementFilterStart, setSupplierStatementFilterStart] = useState('');
+  const [supplierStatementFilterEnd, setSupplierStatementFilterEnd] = useState('');
 
   // Create/Edit User Forms
   const [createUserForm, setCreateUserForm] = useState({
@@ -363,6 +376,17 @@ export const AppModals: React.FC<AppModalsProps> = ({
       });
     }
   }, [statementCustomer]);
+
+  useEffect(() => {
+    if (statementSupplier) {
+      setSupplierStatementData(null);
+      setSupplierStatementFilterStart('');
+      setSupplierStatementFilterEnd('');
+      apiCall(`/api/suppliers/${statementSupplier.id}/statement`).then((res) => {
+        if (res.success) setSupplierStatementData(res.data);
+      });
+    }
+  }, [statementSupplier]);
 
   useEffect(() => {
     if (editingUser) {
@@ -1985,6 +2009,87 @@ export const AppModals: React.FC<AppModalsProps> = ({
             </button>
           </div>
         </form>
+      </Modal>
+
+      {/* 16. Supplier Account Statement Modal (A4 printable) */}
+      <Modal
+        isOpen={Boolean(showSupplierStatementModal)}
+        onClose={() => setShowSupplierStatementModal?.(false)}
+        title={`كشف حساب المورد: ${statementSupplier?.name || ''}`}
+        maxWidthClass="max-w-3xl"
+      >
+        {statementSupplier && (
+          <div className="flex flex-col gap-4">
+            <div className="flex items-end gap-3 flex-wrap">
+              <div>
+                <label className="text-[10px] font-bold text-muted mb-1 block">من تاريخ</label>
+                <input
+                  type="date"
+                  value={supplierStatementFilterStart}
+                  onChange={(e) => setSupplierStatementFilterStart(e.target.value)}
+                  className="h-9 rounded-control border border-line bg-surface px-2 text-xs mono focus-visible:outline-none"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-bold text-muted mb-1 block">إلى تاريخ</label>
+                <input
+                  type="date"
+                  value={supplierStatementFilterEnd}
+                  onChange={(e) => setSupplierStatementFilterEnd(e.target.value)}
+                  className="h-9 rounded-control border border-line bg-surface px-2 text-xs mono focus-visible:outline-none"
+                />
+              </div>
+              {(supplierStatementFilterStart || supplierStatementFilterEnd) && (
+                <button
+                  onClick={() => {
+                    setSupplierStatementFilterStart('');
+                    setSupplierStatementFilterEnd('');
+                  }}
+                  className="h-9 px-3 text-xs border border-border rounded-control text-muted hover:text-text cursor-pointer"
+                >
+                  مسح الفترة
+                </button>
+              )}
+            </div>
+
+            <div className="border border-border bg-white rounded-[4px] max-h-[420px] overflow-y-auto select-none">
+              {supplierStatementData ? (
+                <StatementA4
+                  party={statementSupplier}
+                  statementData={supplierStatementData}
+                  settings={settingsData}
+                  filterStart={supplierStatementFilterStart || undefined}
+                  filterEnd={supplierStatementFilterEnd || undefined}
+                  title="كشف حساب مورد"
+                  partyLabel="المورد"
+                  signatureLabel="توقيع المورد"
+                />
+              ) : (
+                <div className="p-10 text-center text-muted text-sm">جارٍ تحميل كشف الحساب…</div>
+              )}
+            </div>
+
+            <button
+              onClick={() => {
+                if (!supplierStatementData) return;
+                setActivePrintDocument({
+                  type: 'statement-a4',
+                  party: statementSupplier,
+                  statementData: supplierStatementData,
+                  filterStart: supplierStatementFilterStart || undefined,
+                  filterEnd: supplierStatementFilterEnd || undefined,
+                  title: 'كشف حساب مورد',
+                  partyLabel: 'المورد',
+                  signatureLabel: 'توقيع المورد',
+                });
+                window.print();
+              }}
+              className="w-full py-2.5 bg-copper text-white font-bold text-sm rounded-control hover:bg-copper/90 cursor-pointer flex items-center justify-center gap-2"
+            >
+              <Icons.Printer className="h-4 w-4" /> طباعة كشف الحساب (A4)
+            </button>
+          </div>
+        )}
       </Modal>
     </>
   );

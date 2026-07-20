@@ -1,11 +1,8 @@
-# Next Steps — Execution Plan (post-V1.3.3)
+# Next Steps — Execution Plan (V1.4.0 Complete)
 
 > Written 2026-07-20 for **any agent** (Antigravity, Cursor, Claude Code, …) to execute.
 >
-> **Context:** Phases 1–3 are complete. V1.3.3 (full system audit + UI/responsive fixes)
-> is the latest release; 60 Vitest tests green. The previous plan in this file
-> (App.tsx refactor gate + Phase 3 milestones B1–B4) was fully executed and is now
-> recorded in `docs/roadmap.md` and `سجل-التغييرات.md`.
+> **Context:** Phases 1–3 and Phase 4 Milestones D and E (V1.4.0) are complete. V1.4.0 (Commercial Packaging, Ed25519 Hardware Licensing Engine, Vendor Keygen, Inno Setup Script, License Activation Overlay) is fully implemented and verified. All 69 Vitest unit tests and 1 Playwright E2E smoke test are 100% green. Production server (esbuild bundle) and client (Vite bundle) build cleanly.
 >
 > Definition of done for every task below: `npm run typecheck` + `npm test` + `npm run build`
 > all green, new server behavior covered by tests in `server/src/*.test.ts`

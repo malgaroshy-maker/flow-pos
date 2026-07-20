@@ -7,6 +7,8 @@ build/
 # Environment & secrets
 .env
 .env.*
+*.pem
+license.lic
 
 # Database & backups (runtime data, never committed)
 *.db
@@ -30,6 +32,8 @@ Desktop.ini
 
 # Browser-tooling artifacts (Playwright MCP snapshots/screenshots)
 .playwright-mcp/
+playwright-report/
+test-results/
 
 # Generated marketing/report documents
 *.docx

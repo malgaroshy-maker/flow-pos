@@ -8,14 +8,18 @@ import { Icons } from '../components/Icons';
 
 interface PurchasesProps {
   onOpenSupplierModal: (supplier?: Supplier) => void;
+  onOpenSupplierStatementModal?: (supplier: Supplier) => void;
   onOpenPurchaseModal: () => void;
   onOpenReturnModal: (purchaseId: number) => void;
+  onPrintPurchase?: (purchase: Purchase) => void;
 }
 
 export const PurchasesScreen: React.FC<PurchasesProps> = ({
   onOpenSupplierModal,
+  onOpenSupplierStatementModal,
   onOpenPurchaseModal,
   onOpenReturnModal,
+  onPrintPurchase,
 }) => {
   const { currentUser } = useAuth();
   const { purchasesList, suppliersList } = useData();
@@ -57,12 +61,22 @@ export const PurchasesScreen: React.FC<PurchasesProps> = ({
               >
                 <div className="flex justify-between items-center font-bold text-sm">
                   <span>{s.name}</span>
-                  <button
-                    onClick={() => onOpenSupplierModal(s)}
-                    className="text-muted hover:text-text cursor-pointer"
-                  >
-                    تعديل
-                  </button>
+                  <div className="flex items-center gap-2 text-xs">
+                    {onOpenSupplierStatementModal && (
+                      <button
+                        onClick={() => onOpenSupplierStatementModal(s)}
+                        className="text-jade hover:underline cursor-pointer font-bold"
+                      >
+                        كشف حساب
+                      </button>
+                    )}
+                    <button
+                      onClick={() => onOpenSupplierModal(s)}
+                      className="text-muted hover:text-text cursor-pointer"
+                    >
+                      تعديل
+                    </button>
+                  </div>
                 </div>
                 {s.phone && <div className="mono text-muted">هاتف: {s.phone}</div>}
                 <div className="flex justify-between items-center pt-1 border-t border-border/50">
@@ -105,7 +119,16 @@ export const PurchasesScreen: React.FC<PurchasesProps> = ({
                       <td className="p-3 mono font-bold">{formatLYD(p.total)} د.ل</td>
                       <td className="p-3 mono text-jade">{formatLYD(p.paid)} د.ل</td>
                       <td className="p-3 mono text-alert">{formatLYD(remaining)} د.ل</td>
-                      <td className="p-3">
+                      <td className="p-3 flex items-center gap-2">
+                        {onPrintPurchase && (
+                          <button
+                            onClick={() => onPrintPurchase(p)}
+                            title="طباعة فاتورة الشراء (A4)"
+                            className="p-1 text-muted hover:text-jade transition-colors cursor-pointer"
+                          >
+                            <Icons.Printer className="h-4 w-4" />
+                          </button>
+                        )}
                         {currentUser?.role === 'manager' && (
                           <button
                             onClick={() => onOpenReturnModal(p.id)}

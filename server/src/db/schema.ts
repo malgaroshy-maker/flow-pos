@@ -212,6 +212,20 @@ export const suppliers = sqliteTable('suppliers', {
   createdAt: text('created_at').notNull(),
 });
 
+export const supplierPayments = sqliteTable('supplier_payments', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  supplierId: integer('supplier_id')
+    .notNull()
+    .references(() => suppliers.id),
+  shiftId: integer('shift_id').references(() => shifts.id),
+  amount: integer('amount').notNull(), // milli-LYD
+  userId: integer('user_id')
+    .notNull()
+    .references(() => users.id),
+  notes: text('notes'),
+  createdAt: text('created_at').notNull(),
+});
+
 export const sales = sqliteTable('sales', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   invoiceNumber: text('invoice_number').notNull().unique(), // INV-YYYY-NNNNN
@@ -286,6 +300,22 @@ export const purchaseItems = sqliteTable('purchase_items', {
   returnedQuantity: integer('returned_quantity').notNull().default(0), // supplier returns against this line
   unitCost: integer('unit_cost').notNull(), // milli-LYD
   total: integer('total').notNull(), // milli-LYD
+});
+
+export const supplierReturns = sqliteTable('supplier_returns', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  purchaseId: integer('purchase_id')
+    .notNull()
+    .references(() => purchases.id),
+  supplierId: integer('supplier_id')
+    .notNull()
+    .references(() => suppliers.id),
+  amount: integer('amount').notNull(), // milli-LYD
+  refundMethod: text('refund_method', { enum: ['debt', 'cash'] }).notNull(),
+  userId: integer('user_id')
+    .notNull()
+    .references(() => users.id),
+  createdAt: text('created_at').notNull(),
 });
 
 // Quotations never touch stock or cash; converting one applies all normal

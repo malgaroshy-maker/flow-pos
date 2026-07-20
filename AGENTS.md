@@ -8,7 +8,7 @@ An **offline-first, Arabic (RTL) sales & inventory management system** ("منظ�
 
 ## Project Status
 
-**Phases 1, 2, and 3 are complete (latest release V1.3.4, 2026-07-20).** All milestones (Refactor Gate V1.2.9, Smart Stocktaking V1.3.0, Financial Reports & Excel V1.3.1, Notification Center & Warranties V1.3.2, Full System Audit & UI Fixes V1.3.3, Security & Dependency Hardening V1.3.4) are implemented and verified by 62 Vitest tests (100% green). Current work: `docs/next-steps.md` — Milestone D (supplier statement, purchase A4 print, Playwright smoke) then Milestone E (commercial installer + offline licensing, owner-approved). See `docs/roadmap.md` for phase history.
+**Phases 1, 2, and 3, plus Milestones D and E are complete (latest release V1.4.0, 2026-07-20).** All milestones (Refactor Gate V1.2.9, Smart Stocktaking V1.3.0, Financial Reports & Excel V1.3.1, Notification Center & Warranties V1.3.2, Full System Audit & UI Fixes V1.3.3, Security & Dependency Hardening V1.3.4, Supplier Statement & Purchase A4 Print & Playwright Smoke V1.3.5, Commercial Packaging & Offline Licensing V1.4.0) are implemented and verified by 69 Vitest unit tests (100% green) and 1 Playwright E2E test. See `docs/next-steps.md` and `docs/roadmap.md` for details.
 
 ## Hard Rules (never violate)
 

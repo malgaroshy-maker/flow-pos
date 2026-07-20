@@ -3,7 +3,27 @@ import { eq } from 'drizzle-orm';
 import { settings, auditLogs, users } from '../db/schema.js';
 import { authenticateRequest } from './auth.js';
 
+import os from 'node:os';
+
 export async function settingsRoutes(app: FastifyInstance) {
+  app.get('/network/info', async (_req, reply) => {
+    const interfaces = os.networkInterfaces();
+    const ips: string[] = [];
+    for (const name of Object.keys(interfaces)) {
+      for (const iface of interfaces[name] || []) {
+        if (iface.family === 'IPv4' && !iface.internal) {
+          ips.push(iface.address);
+        }
+      }
+    }
+    const port = process.env.PORT || 3001;
+    return {
+      ips,
+      port: Number(port),
+      urls: ips.map((ip) => `http://${ip}:${port}`),
+    };
+  });
+
   app.get('/settings', async (_req, reply) => {
     const row = app.db.select().from(settings).limit(1).all()[0];
     if (!row) return reply.code(404).send({ error: 'settings_not_seeded' });

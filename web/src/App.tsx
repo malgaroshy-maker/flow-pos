@@ -10,6 +10,7 @@ import type {
   Customer,
   Quotation,
   Supplier,
+  Purchase,
 } from './types';
 
 import { useAuth } from './context/AuthContext';
@@ -35,10 +36,32 @@ import { Reports } from './screens/Reports';
 import { SettingsScreen } from './screens/Settings';
 import { StocktakingScreen } from './screens/Stocktaking';
 import { WarrantyScreen } from './screens/Warranty';
+import { LicenseActivationScreen } from './screens/LicenseActivation';
+import { NetworkConnectModal } from './components/NetworkConnectModal';
 
 export function App() {
   const { token, currentUser, logout, login, updateCurrentUser } = useAuth();
   const { triggerToast } = useToast();
+  const [showNetworkModal, setShowNetworkModal] = useState(false);
+  const [licenseInfo, setLicenseInfo] = useState<{
+    active: boolean;
+    machineCode: string;
+    customerName?: string;
+    licenseType?: string;
+    expiresAt?: string | null;
+    reason?: string;
+  } | null>(null);
+
+  const checkLicenseStatus = async () => {
+    const res: any = await apiCall('/api/license/info');
+    if (res && typeof res.active === 'boolean') {
+      setLicenseInfo(res);
+    }
+  };
+
+  useEffect(() => {
+    checkLicenseStatus();
+  }, []);
   const {
     productsList,
     salesList,
@@ -104,6 +127,9 @@ export function App() {
 
   const [showSupplierModal, setShowSupplierModal] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
+
+  const [showSupplierStatementModal, setShowSupplierStatementModal] = useState(false);
+  const [statementSupplier, setStatementSupplier] = useState<Supplier | null>(null);
 
   const [showPurchaseModal, setShowPurchaseModal] = useState(false);
   const [showReturnModal, setShowReturnModal] = useState(false);
@@ -417,6 +443,16 @@ export function App() {
     setShowPrintModal(true);
   };
 
+  const handleOpenPurchasePrint = async (purchase: Purchase) => {
+    const res = await apiCall(`/api/purchases/${purchase.id}`);
+    if (res.success) {
+      setActivePrintDocument({ type: 'purchase-a4', purchase: res.data });
+      window.print();
+    } else {
+      triggerToast(res.error || 'فشل جلب تفاصيل فاتورة المشتريات', 'alert');
+    }
+  };
+
   const handleCancelInvoice = (sale: Sale) => {
     triggerPinOverride(
       `إلغاء الفاتورة ${sale.invoiceNumber} بقيمة ${formatLYD(sale.total)} د.ل`,
@@ -559,6 +595,17 @@ export function App() {
     }
   };
 
+  // If license is unactivated or expired, block UI with LicenseActivationScreen
+  if (licenseInfo && !licenseInfo.active) {
+    return (
+      <LicenseActivationScreen
+        machineCode={licenseInfo.machineCode}
+        reason={licenseInfo.reason}
+        onActivated={checkLicenseStatus}
+      />
+    );
+  }
+
   // If not logged in, render LoginScreen
   if (!token || !currentUser) {
     return <LoginScreen />;
@@ -647,6 +694,13 @@ export function App() {
         </nav>
 
         <div className="flex flex-col gap-2 pt-2 border-t border-line">
+          <button
+            type="button"
+            onClick={() => setShowNetworkModal(true)}
+            className="flex min-h-9 items-center justify-center gap-2 rounded-xl text-xs font-bold border border-jade/30 bg-jade/10 text-jade cursor-pointer hover:bg-jade/20"
+          >
+            <span>📱 ربط الجوال (QR)</span>
+          </button>
           <button
             type="button"
             onClick={() => setThemeState(toggleTheme())}
@@ -894,11 +948,16 @@ export function App() {
               setEditingSupplier(s || null);
               setShowSupplierModal(true);
             }}
+            onOpenSupplierStatementModal={(s) => {
+              setStatementSupplier(s);
+              setShowSupplierStatementModal(true);
+            }}
             onOpenPurchaseModal={() => setShowPurchaseModal(true)}
             onOpenReturnModal={(pId) => {
               setReturnPurchaseId(pId);
               setShowReturnModal(true);
             }}
+            onPrintPurchase={handleOpenPurchasePrint}
           />
         )}
         {activeTab === 'Customers' && (
@@ -937,6 +996,7 @@ export function App() {
               setEditingUser(u);
               setShowEditUserModal(true);
             }}
+            licenseInfo={licenseInfo}
           />
         )}
       </main>
@@ -1006,6 +1066,10 @@ export function App() {
         setShowSupplierModal={setShowSupplierModal}
         editingSupplier={editingSupplier}
 
+        showSupplierStatementModal={showSupplierStatementModal}
+        setShowSupplierStatementModal={setShowSupplierStatementModal}
+        statementSupplier={statementSupplier}
+
         showPurchaseModal={showPurchaseModal}
         setShowPurchaseModal={setShowPurchaseModal}
 
@@ -1029,6 +1093,12 @@ export function App() {
         pinValue={checkoutOverridePin}
         onPinChange={setCheckoutOverridePin}
         onSubmit={handleVerifyOverridePinSubmit}
+      />
+
+      {/* Network QR Connection Modal */}
+      <NetworkConnectModal
+        isOpen={showNetworkModal}
+        onClose={() => setShowNetworkModal(false)}
       />
 
       {/* Print Root System */}

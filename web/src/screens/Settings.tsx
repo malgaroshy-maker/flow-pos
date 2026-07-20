@@ -11,6 +11,13 @@ interface SettingsProps {
   onRestoreDb: (filename: string) => void;
   onOpenCreateUserModal: () => void;
   onOpenEditUserModal: (user: User) => void;
+  licenseInfo?: {
+    active: boolean;
+    machineCode: string;
+    customerName?: string;
+    licenseType?: string;
+    expiresAt?: string | null;
+  } | null;
 }
 
 export const SettingsScreen: React.FC<SettingsProps> = ({
@@ -18,6 +25,7 @@ export const SettingsScreen: React.FC<SettingsProps> = ({
   onRestoreDb,
   onOpenCreateUserModal,
   onOpenEditUserModal,
+  licenseInfo,
 }) => {
   const { currentUser } = useAuth();
   const { settingsData, backupsList, usersList, auditLogsList, refreshAllData, loadBaseData } = useData();
@@ -175,6 +183,43 @@ export const SettingsScreen: React.FC<SettingsProps> = ({
 
         {/* User management and database backups */}
         <div className="flex flex-col gap-6">
+          {/* License Information */}
+          <div className="rounded-card border border-line bg-surface p-6 flex flex-col gap-3">
+            <h2 className="text-lg font-bold">ترخيص المنظومة وهُوية الجهاز</h2>
+            <div className="flex flex-col gap-2 text-xs">
+              <div className="flex justify-between items-center border-b border-line pb-2">
+                <span className="text-muted font-semibold">حالة الترخيص:</span>
+                <span
+                  className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                    licenseInfo?.active
+                      ? 'bg-jade/10 text-jade border border-jade/30'
+                      : 'bg-alert/10 text-alert border border-alert/30'
+                  }`}
+                >
+                  {licenseInfo?.active ? 'مفعل ونشط ✔' : 'غير مفعل ✖'}
+                </span>
+              </div>
+              <div className="flex justify-between items-center border-b border-line pb-2">
+                <span className="text-muted font-semibold">اسم المحل / العميل:</span>
+                <span className="font-bold">
+                  {licenseInfo?.customerName || settingsData?.businessName || '—'}
+                </span>
+              </div>
+              <div className="flex justify-between items-center border-b border-line pb-2">
+                <span className="text-muted font-semibold">كود الجهاز (Machine Code):</span>
+                <span className="mono font-bold text-copper">{licenseInfo?.machineCode || '—'}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-muted font-semibold">نوع الترخيص:</span>
+                <span className="font-bold">
+                  {licenseInfo?.licenseType === 'commercial'
+                    ? 'ترخيص تجاري دائم'
+                    : licenseInfo?.licenseType || 'تجاري'}
+                </span>
+              </div>
+            </div>
+          </div>
+
           {/* Backups registry */}
           <div className="rounded-card border border-line bg-surface p-6 flex flex-col gap-4">
             <h2 className="text-lg font-bold">النسخ الاحتياطي والاستعادة</h2>

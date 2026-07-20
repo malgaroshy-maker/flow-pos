@@ -74,10 +74,10 @@ All seven steps are done except the last, which gates Phase 3:
    - A4. Extract shared components (Modal, PinOverrideModal, Icons, StatusPill, MoneyInput)
    - Acceptance: `App.tsx` ≤ ~300 lines, zero behavior change, release as **V1.2.9**
 
-> **The detailed, agent-executable plan for the refactor and all of Phase 3 lives in
-> [`docs/next-steps.md`](next-steps.md)** — milestones A (refactor gate) and B1–B4
-> (stocktaking, reports & exports, notifications, warranty tickets), each with schema,
-> endpoints, UI scope, tests, and acceptance criteria.
+> **The detailed, agent-executable plan for what to build next lives in
+> [`docs/next-steps.md`](next-steps.md)** — currently milestones D (supplier statement,
+> purchase A4 print, Playwright smoke → V1.3.5) and E (commercial distribution → V1.4.0).
+> The original milestones A (refactor gate) and B1–B4 (Phase 3) were fully executed.
 
 ## Phase 3 — Intelligence: stocktaking, reports, alerts, after-sales [COMPLETED — 2026-07-20]
 
@@ -89,6 +89,19 @@ All seven steps are done except the last, which gates Phase 3:
 - [x] Slow-moving & stagnant stock report — **COMPLETED (V1.3.1, 2026-07-20)**
 - [x] Notification center: low stock, expiry approaching, overdue debts, warranty endings, expiring quotations — **COMPLETED (V1.3.2, 2026-07-20)**
 - [x] Warranty & after-sales: auto warranty per sold equipment, service tickets (fault, parts, cost, in/out warranty), full history per serial number — **COMPLETED (V1.3.2, 2026-07-20)**
+
+## Post-Phase 3 — Hardening & productization [IN PROGRESS]
+
+Quality, security, and commercial-distribution work between Phase 3 and any Phase 4 feature:
+
+- [x] **V1.3.3 (2026-07-20)** — full system audit (automated gate + Playwright walkthrough of every screen) and all 7 findings fixed: mobile/tablet nav drawer, POS grid sizing, bidi-safe dates (`web/src/lib/datetime.ts`), sales-role 403 spam, notification drawer close, Arabic file input, password/PIN input hints. Audit records in `specs/001-system-audit-fixes/`.
+- [x] **V1.3.4 (2026-07-20)** — server-side manager gates on the backup endpoints (shared `requireManager` preHandler; 62 tests) and `npm audit` down to **0 vulnerabilities** (drizzle-orm 0.45.2 SQL-injection fix, @fastify/static 10, vite 7, uuid/esbuild overrides).
+- [x] **V1.3.5 (2026-07-20)** — supplier statement of account (D1), purchase invoice A4 print view (D2), Playwright E2E smoke test (`npm run test:e2e`) (D3). 64 Vitest tests + 1 Playwright E2E test green.
+  - **✅ P0** — 7 modals dropped by the V1.2.9 App.tsx refactor restored.
+  - **✅ D1** — supplier_payments + supplier_returns tables, statement endpoint, tests, RTL A4 print.
+  - **✅ D2** — PurchaseA4.tsx print component + print button in purchases table.
+  - **✅ D3** — Playwright smoke test (`npm run test:e2e`).
+- [ ] **V1.4.0 — commercial distribution (owner-approved 2026-07-20).** The system is sold as a licensed closed product: Inno Setup Windows installer (bundled Node runtime, Windows service, firewall rule, DB in ProgramData), esbuild-bundled/minified server, offline Ed25519 license activation keyed to a machine fingerprint (vendor keygen stays outside the repo). Spec: `docs/next-steps.md` Milestone E.
 
 ## Phase 4 — Future expansion
 
