@@ -1,13 +1,14 @@
 import {
   app,
   BrowserWindow,
+  dialog,
   nativeImage,
   Menu,
   shell,
   Tray,
 } from 'electron';
 import { ChildProcess, spawn } from 'node:child_process';
-import { existsSync, mkdirSync } from 'node:fs';
+import { appendFileSync, existsSync, mkdirSync } from 'node:fs';
 import { get as httpGet } from 'node:http';
 import { join, resolve } from 'node:path';
 
@@ -104,9 +105,21 @@ function findNodeExecutable(): string {
   return 'node';
 }
 
+let serverLogBuffer = '';
+const LOG_FILE = join(DATA_DIR, 'server.log');
+
+function logServer(text: string) {
+  const line = `[${new Date().toISOString()}] ${text}\n`;
+  serverLogBuffer += line;
+  try {
+    appendFileSync(LOG_FILE, line, 'utf-8');
+  } catch {}
+}
+
 function startServer(): Promise<void> {
   return new Promise((resolve, reject) => {
     serverReady = false;
+    serverLogBuffer = '';
 
     // Ensure data directory exists
     mkdirSync(DATA_DIR, { recursive: true });
@@ -125,9 +138,9 @@ function startServer(): Promise<void> {
       BETTER_SQLITE3_DIR: join(RESOURCES_ROOT, 'server', 'node_modules', 'better-sqlite3'),
     };
 
-    console.log('[FlowPOS] Starting server:', SERVER_SCRIPT);
-    console.log('[FlowPOS] DB path:', DB_PATH);
-    console.log('[FlowPOS] Node executable:', nodeExe);
+    logServer(`Starting server: ${SERVER_SCRIPT}`);
+    logServer(`DB path: ${DB_PATH}`);
+    logServer(`Node executable: ${nodeExe}`);
 
     // When packaged, Electron's own Node runtime is used via electron --node-integration
     // We spawn with the system-resolved node (or bundled node)
@@ -138,14 +151,19 @@ function startServer(): Promise<void> {
     });
 
     serverProcess.stdout?.on('data', (chunk: Buffer) => {
-      console.log('[server]', chunk.toString().trim());
+      const msg = chunk.toString().trim();
+      logServer(`[OUT] ${msg}`);
+      console.log('[server]', msg);
     });
 
     serverProcess.stderr?.on('data', (chunk: Buffer) => {
-      console.error('[server:err]', chunk.toString().trim());
+      const msg = chunk.toString().trim();
+      logServer(`[ERR] ${msg}`);
+      console.error('[server:err]', msg);
     });
 
     serverProcess.on('exit', (code, signal) => {
+      logServer(`Server exited (code=${code} signal=${signal})`);
       console.log(`[FlowPOS] Server exited (code=${code} signal=${signal})`);
       serverReady = false;
       if (!isQuitting) {
@@ -394,8 +412,12 @@ if (!gotTheLock) {
     try {
       await startServer();
       console.log('[FlowPOS] Server ready at', SERVER_URL);
-    } catch (err) {
+    } catch (err: any) {
       console.error('[FlowPOS] Server failed to start:', err);
+      dialog.showErrorBox(
+        'خطأ في تشغيل خادم المنظومة',
+        `تعذر تشغيل الخادم المحلي على هذا الجهاز.\n\nالخطأ: ${err?.message || err}\n\nسجل الخادم:\n${serverLogBuffer.slice(-1500) || 'لا توجد مخرجات'}`
+      );
     }
 
     // Close splash and open main window

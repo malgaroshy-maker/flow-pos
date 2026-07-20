@@ -13,6 +13,7 @@
   },
   "dependencies": {},
   "devDependencies": {
+    "@electron/rebuild": "^3.7.1",
     "electron": "^36.0.0",
     "electron-builder": "^25.0.0",
     "typescript": "^5.8.3",
@@ -88,7 +89,7 @@
       "perMachine": true
     },
     "nodeGypRebuild": false,
-    "npmRebuild": false,
+    "npmRebuild": true,
     "publish": null
   }
 }
