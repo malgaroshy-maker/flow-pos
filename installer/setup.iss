@@ -42,7 +42,7 @@ Source: "..\server\drizzle\*"; DestDir: "{app}\server\drizzle"; Flags: ignorever
 Source: "..\web\dist\*"; DestDir: "{app}\web\dist"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 ; Native SQLite binary bindings & node modules
-Source: "..\server\node_modules\better-sqlite3\*"; DestDir: "{app}\server\node_modules\better-sqlite3"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "..\node_modules\better-sqlite3\*"; DestDir: "{app}\server\node_modules\better-sqlite3"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
 Name: "{group}\{#MyAppName}"; Filename: "{#MyAppURL}"
@@ -53,7 +53,7 @@ Name: "{autodesktop}\{#MyAppName}"; Filename: "{#MyAppURL}"; Tasks: desktopicon
 Filename: "netsh"; Parameters: "advfirewall firewall add rule name=""FlowPOS Server"" dir=in action=allow protocol=TCP localport=3001"; Flags: runhidden
 
 ; Open browser upon installation finish
-Filename: "explorer.exe"; Parameters: "{#MyAppURL}"; Flags: postinstall shellexec skipifsilent Description: "فتح منظومة Flow في المتصفح"
+Filename: "explorer.exe"; Parameters: "{#MyAppURL}"; Flags: postinstall shellexec skipifsilent; Description: "فتح منظومة Flow في المتصفح"
 
 [UninstallRun]
 ; Remove Windows Firewall Rule on uninstall
