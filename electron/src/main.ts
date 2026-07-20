@@ -20,8 +20,13 @@ const IS_PACKAGED = app.isPackaged;
 const APP_ROOT = app.getAppPath();
 const SERVER_SCRIPT = join(APP_ROOT, 'dist', 'server.js');
 
-// Data directory: survives upgrades, doesn't need admin to write
-const DATA_DIR = join(app.getPath('appData'), '..', 'ProgramData', 'FlowPOS', 'data');
+// Data directory: survives upgrades, doesn't need admin to write.
+// Electron's app.getPath() has no machine-wide "ProgramData" entry, so read it
+// from the environment (always set on Windows) instead of faking it off
+// getPath('appData') + '..' + 'ProgramData', which landed inside the user's own
+// C:\Users\<user>\AppData\ProgramData — a directory Windows never creates.
+const COMMON_APP_DATA = process.env.ProgramData || join(app.getPath('appData'), '..');
+const DATA_DIR = join(COMMON_APP_DATA, 'FlowPOS', 'data');
 const DB_PATH = join(DATA_DIR, 'pos.db');
 
 const PORT = 3001;

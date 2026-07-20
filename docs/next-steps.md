@@ -11,70 +11,71 @@
 
 ---
 
-## 🚨 UNRESOLVED: Electron Packaged App — Server Does Not Start (Session 2026-07-20)
+## ✅ RESOLVED: Electron Packaged App — Server Does Not Start (fixed 2026-07-21)
 
-**Symptom:** After installing `FlowPOS Setup 1.4.1.exe` from `dist-installer/`, the app
-opens but shows either an infinite loading spinner or the activation screen with machine
-code `----`. The vendor PIN activation succeeds (API responds) but then the app loops
-back to the activation screen because the server stops being reachable.
+**Root cause found in `server.log`** (which the 2026-07-20 session hadn't inspected for
+a fresh run): `Error: Can't find meta/_journal.json file` — an early crash, not a hang.
+The 60s-timeout / retry fixes from the previous session (`25ffb3f`, `bf77f75`,
+`2d96236`, `19af81f`) papered over the symptom on later attempts but didn't fix the
+actual cause, which was a second, separate bug in `DATA_DIR`.
 
-**What was tried and failed (do NOT repeat these):**
+**The real bug:** `electron/src/main.ts` computed the machine-wide data directory as
+`join(app.getPath('appData'), '..', 'ProgramData', 'FlowPOS', 'data')`. On Windows,
+`getPath('appData')` is `C:\Users\<user>\AppData\Roaming`, so `..` lands on
+`C:\Users\<user>\AppData`, and the code then appended a `ProgramData` subfolder there —
+**not** the real `C:\ProgramData`. This directory doesn't exist by default and isn't
+what any other part of the system expects, so migrations/DB paths ended up inconsistent
+between runs and installs, producing the observed flakiness (worked in one dev
+`win-unpacked` test, failed after a real install to `Program Files`).
 
-1. **Child process with `node.exe`** — `better-sqlite3` ABI mismatch: the system Node.js
-   is compiled for ABI v137 but Electron 36 uses v137 too; however `node_modules` for
-   the server were NOT inside the ASAR, so the server process couldn't find them at all.
-   Attempts to bundle `node.exe` as `extraResources` also failed.
+**Fix applied:** `DATA_DIR` now reads the real machine-wide path from
+`process.env.ProgramData` (always set on Windows), falling back to
+`app.getPath('appData') + '..'` only on non-Windows platforms:
 
-2. **`ELECTRON_RUN_AS_NODE=1` with `process.execPath`** — Electron's embedded Node
-   refused to run a CommonJS/ESM hybrid bundle (`server.js`) because `app.asar` path
-   resolution breaks when Electron is invoked as Node (no `app` module, different path
-   roots).
+```ts
+const COMMON_APP_DATA = process.env.ProgramData || join(app.getPath('appData'), '..');
+const DATA_DIR = join(COMMON_APP_DATA, 'FlowPOS', 'data');
+```
 
-3. **`extraFiles` copying `server/` directory** — Path resolution inside `server.js`
-   for `better-sqlite3` native `.node` binary was wrong; walked up and found dev
-   `node_modules` on the dev machine, failed on the user's machine with no fallback.
+(Electron's `app.getPath()` has no built-in `'commonAppData'` key — that was tried
+first and rejected by the TypeScript types.)
 
-4. **In-process `await import(SERVER_SCRIPT)`** — This is the current approach in
-   `electron/src/main.ts`. The server runs in the Electron main process directly.
-   - Works fine in `dist-installer/win-unpacked/` (the unpacked directory) as tested
-     via PowerShell (health OK, license OK, PIN activation OK).
-   - **Fails in the installed version** at `D:\Program Files\FlowPOS\` — the server
-     starts logging to `server.log` but does NOT respond to health checks within any
-     reasonable timeout. No error is logged in `server.log` after "Starting server in
-     main process..." — it just never emits the Fastify listening line.
-   - Suspect: Windows UAC / file permissions difference between the unpacked dev dir
-     and `Program Files`. The SQLite WAL mode or drizzle migrations may be failing
-     silently because of write-permission issues on `C:\ProgramData\FlowPOS\data\`.
+**Verified locally end-to-end on this machine (2026-07-21):**
+1. Uninstalled any prior FlowPOS install, wiped `C:\ProgramData\FlowPOS`,
+   `C:\Users\<user>\AppData\ProgramData\FlowPOS` (the old wrong path), and
+   `Program Files\FlowPOS`.
+2. Rebuilt server + web (`npm run build`) and the Electron app + installer
+   (`npm run dist` in `electron/`).
+3. Silent-installed the fresh `FlowPOS Setup 1.4.1.exe` (`/S`) — landed at
+   `C:\Program Files\FlowPOS` (default, since no prior custom install dir existed).
+4. Launched `FlowPOS.exe` directly (simulating a real customer double-click).
+5. `server.log` showed `DB path: C:\ProgramData\FlowPOS\data\pos.db` (correct) and no
+   errors.
+6. `GET /api/health` → `200` within seconds.
+7. `GET /api/license/info` → fresh machine code, `active: false` (correct first-run
+   state).
+8. `POST /api/license/activate-pin` with the master vendor PIN → activation succeeded.
+9. Full Vitest suite: 69/69 green.
 
-**Current state of `electron/src/main.ts`:**
-- `startServer()` uses `await import(SERVER_SCRIPT)` then polls health for up to 60s
-- `checkLicenseStatus()` in `web/src/App.tsx` retries 30 times × 800ms = 24s
-- `requestedExecutionLevel` is `asInvoker` (not requireAdministrator)
-- Install dir: `D:\Program Files\FlowPOS\` (perMachine NSIS)
-- Data dir: `C:\Users\masal\AppData\ProgramData\FlowPOS\data\` (from server.log)
-- `server.log` is written at `C:\Users\masal\AppData\ProgramData\FlowPOS\data\server.log`
+**Historical symptom (kept for context — do NOT re-attempt these):**
 
-**Most likely root cause to investigate:**
+After installing an older build, the app opened but showed either an infinite loading
+spinner or the activation screen with machine code `----`, because the server crashed
+on the wrong `DATA_DIR` path before ever binding to the port.
 
-The `C:\Users\masal\AppData\ProgramData\` path is WRONG — `ProgramData` is a
-root-level directory (`C:\ProgramData\`), NOT inside `AppData`. The code probably
-uses `app.getPath('appData')` which returns `C:\Users\masal\AppData\Roaming\`, and
-then appends `ProgramData\FlowPOS\data`. But the correct path for machine-wide data
-should be either `C:\ProgramData\FlowPOS\` (via `app.getPath('commonAppData')`) or
-just hardcoded. Check `electron/src/main.ts` around `DATA_DIR` / `DB_PATH` constants.
+**What was tried and failed in the prior session (do NOT repeat these — the eventual
+fix kept the current approach, #4 below, and just corrected the data path):**
 
-**Recommended fix approach:**
-
-1. Open `electron/src/main.ts` and find the `DATA_DIR` constant (near top of file)
-2. Change it to use `app.getPath('commonAppData')` which returns `C:\ProgramData`
-   correctly on all Windows machines: `join(app.getPath('commonAppData'), 'FlowPOS', 'data')`
-3. Make sure `mkdirSync(DATA_DIR, { recursive: true })` runs with proper permissions
-4. Add explicit error handling in the import: wrap the `await import(SERVER_SCRIPT)` in
-   a try/catch that logs the full stack to `server.log` (currently errors are swallowed)
-5. Test: install, then open `C:\ProgramData\FlowPOS\data\server.log` to see if Fastify
-   logs "Server listening at http://0.0.0.0:3001" — if not, the error will be there.
-6. Alternative: switch to `requestedExecutionLevel: requireAdministrator` in `package.json`
-   so the installer and app both run elevated, eliminating all permission issues.
+1. **Child process with `node.exe`** — `better-sqlite3` ABI mismatch and missing
+   `node_modules` next to a standalone `node.exe`.
+2. **`ELECTRON_RUN_AS_NODE=1` with `process.execPath`** — `app.asar` path resolution
+   breaks when Electron is invoked as plain Node.
+3. **`extraFiles` copying `server/` directory** — wrong `better-sqlite3` native
+   binary path resolution outside the dev machine.
+4. **In-process `await import(SERVER_SCRIPT)`** — kept; this was never actually the
+   problem. The server runs in the Electron main process directly, and
+   electron-builder's smart-unpack correctly puts `better-sqlite3`'s native `.node`
+   binary in `app.asar.unpacked` automatically (confirmed via `npx asar list`).
 
 ---
 
