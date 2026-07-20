@@ -11,6 +11,73 @@
 
 ---
 
+## 🚨 UNRESOLVED: Electron Packaged App — Server Does Not Start (Session 2026-07-20)
+
+**Symptom:** After installing `FlowPOS Setup 1.4.1.exe` from `dist-installer/`, the app
+opens but shows either an infinite loading spinner or the activation screen with machine
+code `----`. The vendor PIN activation succeeds (API responds) but then the app loops
+back to the activation screen because the server stops being reachable.
+
+**What was tried and failed (do NOT repeat these):**
+
+1. **Child process with `node.exe`** — `better-sqlite3` ABI mismatch: the system Node.js
+   is compiled for ABI v137 but Electron 36 uses v137 too; however `node_modules` for
+   the server were NOT inside the ASAR, so the server process couldn't find them at all.
+   Attempts to bundle `node.exe` as `extraResources` also failed.
+
+2. **`ELECTRON_RUN_AS_NODE=1` with `process.execPath`** — Electron's embedded Node
+   refused to run a CommonJS/ESM hybrid bundle (`server.js`) because `app.asar` path
+   resolution breaks when Electron is invoked as Node (no `app` module, different path
+   roots).
+
+3. **`extraFiles` copying `server/` directory** — Path resolution inside `server.js`
+   for `better-sqlite3` native `.node` binary was wrong; walked up and found dev
+   `node_modules` on the dev machine, failed on the user's machine with no fallback.
+
+4. **In-process `await import(SERVER_SCRIPT)`** — This is the current approach in
+   `electron/src/main.ts`. The server runs in the Electron main process directly.
+   - Works fine in `dist-installer/win-unpacked/` (the unpacked directory) as tested
+     via PowerShell (health OK, license OK, PIN activation OK).
+   - **Fails in the installed version** at `D:\Program Files\FlowPOS\` — the server
+     starts logging to `server.log` but does NOT respond to health checks within any
+     reasonable timeout. No error is logged in `server.log` after "Starting server in
+     main process..." — it just never emits the Fastify listening line.
+   - Suspect: Windows UAC / file permissions difference between the unpacked dev dir
+     and `Program Files`. The SQLite WAL mode or drizzle migrations may be failing
+     silently because of write-permission issues on `C:\ProgramData\FlowPOS\data\`.
+
+**Current state of `electron/src/main.ts`:**
+- `startServer()` uses `await import(SERVER_SCRIPT)` then polls health for up to 60s
+- `checkLicenseStatus()` in `web/src/App.tsx` retries 30 times × 800ms = 24s
+- `requestedExecutionLevel` is `asInvoker` (not requireAdministrator)
+- Install dir: `D:\Program Files\FlowPOS\` (perMachine NSIS)
+- Data dir: `C:\Users\masal\AppData\ProgramData\FlowPOS\data\` (from server.log)
+- `server.log` is written at `C:\Users\masal\AppData\ProgramData\FlowPOS\data\server.log`
+
+**Most likely root cause to investigate:**
+
+The `C:\Users\masal\AppData\ProgramData\` path is WRONG — `ProgramData` is a
+root-level directory (`C:\ProgramData\`), NOT inside `AppData`. The code probably
+uses `app.getPath('appData')` which returns `C:\Users\masal\AppData\Roaming\`, and
+then appends `ProgramData\FlowPOS\data`. But the correct path for machine-wide data
+should be either `C:\ProgramData\FlowPOS\` (via `app.getPath('commonAppData')`) or
+just hardcoded. Check `electron/src/main.ts` around `DATA_DIR` / `DB_PATH` constants.
+
+**Recommended fix approach:**
+
+1. Open `electron/src/main.ts` and find the `DATA_DIR` constant (near top of file)
+2. Change it to use `app.getPath('commonAppData')` which returns `C:\ProgramData`
+   correctly on all Windows machines: `join(app.getPath('commonAppData'), 'FlowPOS', 'data')`
+3. Make sure `mkdirSync(DATA_DIR, { recursive: true })` runs with proper permissions
+4. Add explicit error handling in the import: wrap the `await import(SERVER_SCRIPT)` in
+   a try/catch that logs the full stack to `server.log` (currently errors are swallowed)
+5. Test: install, then open `C:\ProgramData\FlowPOS\data\server.log` to see if Fastify
+   logs "Server listening at http://0.0.0.0:3001" — if not, the error will be there.
+6. Alternative: switch to `requestedExecutionLevel: requireAdministrator` in `package.json`
+   so the installer and app both run elevated, eliminating all permission issues.
+
+---
+
 ## Milestone C — V1.3.4: Security hardening, dependencies, doc sync
 
 ### C1. Server-side role gates (security)
