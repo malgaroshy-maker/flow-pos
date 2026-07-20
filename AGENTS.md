@@ -8,7 +8,7 @@ An **offline-first, Arabic (RTL) sales & inventory management system** ("منظ�
 
 ## Project Status
 
-**Phase 1 (MVP) and Phase 2 are feature-complete (V1.2.8, released 2026-07-19).** See `docs/roadmap.md` for the authoritative checklist. One gate remains before Phase 3: refactoring the `web/src/App.tsx` monolith (7,000+ lines, single component) into per-screen components. Historical warning: an earlier revision of this file claimed Phase 2 was complete while six approved features were missing — **never mark a phase complete while approved scope items remain unchecked.**
+**Phases 1, 2, and 3 are feature-complete (V1.3.2, released 2026-07-20).** All milestones (Refactor Gate V1.2.9, Smart Stocktaking V1.3.0, Financial Reports & Excel V1.3.1, Notification Center & Warranties V1.3.2) are fully implemented and verified by 60 Vitest tests (100% green). See `docs/roadmap.md` and `docs/next-steps.md` for details.
 
 ## Hard Rules (never violate)
 

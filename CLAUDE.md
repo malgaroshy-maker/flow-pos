@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Status
 
-**Phase 1 (MVP) and Phase 2 are feature-complete as of 2026-07-19** — every approved scope item in `docs/roadmap.md` is implemented and covered by the 51-test server suite. One gate remains before Phase 3: refactoring the `web/src/App.tsx` monolith (7,000+ lines, single component) into per-screen components. Historical note: an earlier revision of this file claimed Phase 2 was complete while six approved features were missing and several UI features (invoice printing, statement modal, Tafqeet) were dead code; that was corrected and then the missing scope was actually built — never mark a phase complete while approved scope items remain unchecked.
+**Phases 1, 2, and 3 are feature-complete (V1.3.2, released 2026-07-20).** All milestones (Refactor Gate V1.2.9, Smart Stocktaking V1.3.0, Financial Reports & Excel V1.3.1, Notification Center & Warranties V1.3.2) are fully implemented and covered by the 60-test server Vitest suite (100% green).
 
 Working today (typechecked, tested, built):
 

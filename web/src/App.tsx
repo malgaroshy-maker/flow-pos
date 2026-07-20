@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { currentTheme, toggleTheme, type Theme } from './theme';
 import { formatLYD, parseLYDOrZero } from './lib/money';
 import type {
@@ -7,7 +7,6 @@ import type {
   Sale,
   User,
   Customer,
-  SpecialPrice,
   Quotation,
   Supplier,
 } from './types';
@@ -15,11 +14,11 @@ import type {
 import { useAuth } from './context/AuthContext';
 import { useToast } from './context/ToastContext';
 import { useData } from './context/DataContext';
-import { apiCall, uploadProductImage } from './lib/api';
+import { apiCall } from './lib/api';
 
 import { Icons } from './components/Icons';
 import { PinOverrideModal } from './components/PinOverrideModal';
-import { Modal } from './components/Modal';
+import { AppModals } from './components/AppModals';
 import { PrintRoot, type PrintDocument } from './print/PrintRoot';
 
 import { Home } from './screens/Home';
@@ -33,9 +32,11 @@ import { PurchasesScreen } from './screens/Purchases';
 import { CustomersScreen } from './screens/Customers';
 import { Reports } from './screens/Reports';
 import { SettingsScreen } from './screens/Settings';
+import { StocktakingScreen } from './screens/Stocktaking';
+import { WarrantyScreen } from './screens/Warranty';
 
 export function App() {
-  const { token, currentUser, logout, updateCurrentUser } = useAuth();
+  const { token, currentUser, logout, login, updateCurrentUser } = useAuth();
   const { triggerToast } = useToast();
   const {
     productsList,
@@ -43,7 +44,6 @@ export function App() {
     shiftsList,
     expensesList,
     usersList,
-    backupsList,
     activeShift,
     settingsData,
     auditLogsList,
@@ -71,103 +71,43 @@ export function App() {
   const [posDepositId, setPosDepositId] = useState<number | null>(null);
   const [posSpecialPrices, setPosSpecialPrices] = useState<Map<number, number>>(new Map());
 
-  // Stock Movements Modal
-  const [showMovementsModal, setShowMovementsModal] = useState(false);
-  const [movementsProduct, setMovementsProduct] = useState<Product | null>(null);
-  const [stockMovementsForProduct, setStockMovementsForProduct] = useState<any[]>([]);
+  // Modal Visibility States
+  const [showUserPinModal, setShowUserPinModal] = useState(false);
+  const [showPrintModal, setShowPrintModal] = useState(false);
+  const [printingSale, setPrintingSale] = useState<Sale | null>(null);
 
-  // Customer Modals
-  const [showCustomerModal, setShowCustomerModal] = useState(false);
-  const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
-  const [customerForm, setCustomerForm] = useState({
-    name: '',
-    phone: '',
-    address: '',
-    notes: '',
-    tier: 'retail' as 'retail' | 'wholesale',
-    creditLimit: '0.000',
-  });
-  const [showSpecialPricesModal, setShowSpecialPricesModal] = useState(false);
-  const [specialPricesCustomer, setSpecialPricesCustomer] = useState<Customer | null>(null);
-  const [specialPricesList, setSpecialPricesList] = useState<SpecialPrice[]>([]);
-  const [specialPriceForm, setSpecialPriceForm] = useState({ productId: '', price: '0.000' });
-  const [showCustomerPaymentModal, setShowCustomerPaymentModal] = useState(false);
-  const [payingCustomer, setPayingCustomer] = useState<Customer | null>(null);
-  const [customerPaymentAmount, setCustomerPaymentAmount] = useState('0.000');
-  const [showCustomerStatementModal, setShowCustomerStatementModal] = useState(false);
-  const [statementCustomer, setStatementCustomer] = useState<Customer | null>(null);
-  const [statementData, setStatementData] = useState<any | null>(null);
-  const [statementLoading, setStatementLoading] = useState(false);
-  const [statementFilterStart, setStatementFilterStart] = useState('');
-  const [statementFilterEnd, setStatementFilterEnd] = useState('');
-
-  // Supplier & Purchase Modals
-  const [showSupplierModal, setShowSupplierModal] = useState(false);
-  const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
-  const [supplierForm, setSupplierForm] = useState({ name: '', phone: '', address: '', notes: '' });
-  const [showPurchaseModal, setShowPurchaseModal] = useState(false);
-  const [purchaseForm, setPurchaseForm] = useState({
-    supplierId: '',
-    supplierName: '',
-    items: [{ productId: '', quantity: '1', unitCost: '0.000' }],
-    paid: '0.000',
-    notes: '',
-  });
-  const [showReturnModal, setShowReturnModal] = useState(false);
-  const [returnPurchase, setReturnPurchase] = useState<any | null>(null);
-  const [returnQuantities, setReturnQuantities] = useState<Record<number, string>>({});
-  const [returnRefundMethod, setReturnRefundMethod] = useState<'debt' | 'cash'>('debt');
-
-  // Product CRUD Modal
   const [showProductModal, setShowProductModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  const [productImageFile, setProductImageFile] = useState<File | null>(null);
-  const [productForm, setProductForm] = useState({
-    name: '',
-    type: 'consumable' as 'equipment' | 'consumable',
-    category: '',
-    baseUnit: 'piece',
-    barcode: '',
-    costPrice: '0.000',
-    retailPrice: '0.000',
-    wholesalePrice: '0.000',
-    quantity: '0',
-    reorderPoint: '0',
-    serialNumber: '',
-    warrantyMonths: '0',
-    batchNo: '',
-    expiryDate: '',
-    taxExempt: false,
-  });
-  const [productUnitsForm, setProductUnitsForm] = useState<
-    Array<{ unitName: string; conversionFactor: string; price: string }>
-  >([]);
-  const [productComponentsForm, setProductComponentsForm] = useState<
-    Array<{ componentProductId: string; quantity: string }>
-  >([]);
 
-  // Adjust Stock & Shift Modals
   const [showAdjustModal, setShowAdjustModal] = useState(false);
   const [adjustingProduct, setAdjustingProduct] = useState<Product | null>(null);
-  const [adjustForm, setAdjustForm] = useState({ quantity: '0', reason: '' });
-  const [showExpenseModal, setShowExpenseModal] = useState(false);
-  const [expenseForm, setExpenseForm] = useState({ amount: '0.000', reason: '', category: 'supplies' });
-  const [showOpenShiftModal, setShowOpenShiftModal] = useState(false);
-  const [openShiftForm, setOpenShiftForm] = useState({ openingCash: '0.000' });
-  const [showCloseShiftModal, setShowCloseShiftModal] = useState(false);
-  const [closeShiftForm, setCloseShiftForm] = useState({ actualCash: '0.000' });
 
-  // Users Modals
-  const [showUserPinModal, setShowUserPinModal] = useState(false);
-  const [switchPinValue, setSwitchPinValue] = useState('');
+  const [showMovementsModal, setShowMovementsModal] = useState(false);
+  const [movementsProduct, setMovementsProduct] = useState<Product | null>(null);
+
+  const [showExpenseModal, setShowExpenseModal] = useState(false);
+  const [showOpenShiftModal, setShowOpenShiftModal] = useState(false);
+  const [showCloseShiftModal, setShowCloseShiftModal] = useState(false);
+
+  const [showCustomerModal, setShowCustomerModal] = useState(false);
+  const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
+
+  const [showCustomerPaymentModal, setShowCustomerPaymentModal] = useState(false);
+  const [payingCustomer, setPayingCustomer] = useState<Customer | null>(null);
+
+  const [showCustomerStatementModal, setShowCustomerStatementModal] = useState(false);
+  const [statementCustomer, setStatementCustomer] = useState<Customer | null>(null);
+
+  const [showSpecialPricesModal, setShowSpecialPricesModal] = useState(false);
+  const [specialPricesCustomer, setSpecialPricesCustomer] = useState<Customer | null>(null);
+
+  const [showSupplierModal, setShowSupplierModal] = useState(false);
+  const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
+
+  const [showPurchaseModal, setShowPurchaseModal] = useState(false);
+  const [showReturnModal, setShowReturnModal] = useState(false);
+
   const [showCreateUserModal, setShowCreateUserModal] = useState(false);
-  const [createUserForm, setCreateUserForm] = useState({
-    username: '',
-    password: '',
-    pin: '',
-    role: 'sales' as 'manager' | 'sales',
-  });
-  const [editingUser, setEditingUser] = useState<User | null>(null);
   const [showEditUserModal, setShowEditUserModal] = useState(false);
   const [editUserForm, setEditUserForm] = useState({
     password: '',
@@ -175,6 +115,27 @@ export function App() {
     role: 'sales' as 'manager' | 'sales',
     active: true,
   });
+  const [editingUser, setEditingUser] = useState<User | null>(null);
+
+  // Notification Center State
+  const [notificationsList, setNotificationsList] = useState<any[]>([]);
+  const [showNotificationsDrawer, setShowNotificationsDrawer] = useState(false);
+
+  const fetchNotifications = async () => {
+    if (!token) return;
+    const res = await apiCall('/api/notifications');
+    if (res.success) {
+      setNotificationsList(res.data);
+    }
+  };
+
+  useEffect(() => {
+    if (token) {
+      fetchNotifications();
+      const interval = setInterval(fetchNotifications, 60000);
+      return () => clearInterval(interval);
+    }
+  }, [token]);
 
   // PIN Override Modal
   const [showOverrideModal, setShowOverrideModal] = useState(false);
@@ -184,15 +145,9 @@ export function App() {
 
   // Print Document State
   const [activePrintDocument, setActivePrintDocument] = useState<PrintDocument | null>(null);
-  const [showPrintModal, setShowPrintModal] = useState(false);
-  const [printingSale, setPrintingSale] = useState<Sale | null>(null);
-  const [printMode, setPrintMode] = useState<'a4' | 'thermal'>('a4');
-  const [overrideCustomerName, setOverrideCustomerName] = useState('');
-  const [overrideWarrantyNotes, setOverrideWarrantyNotes] = useState('');
-  const [overrideStampTitle, setOverrideStampTitle] = useState('');
 
   // Special Prices Resolution
-  const fetchSpecialPrices = async (customerId: number): Promise<SpecialPrice[]> => {
+  const fetchSpecialPrices = async (customerId: number) => {
     const res = await apiCall(`/api/customers/${customerId}/special-prices`);
     return res.success ? res.data : [];
   };
@@ -219,7 +174,7 @@ export function App() {
       let specials = new Map<number, number>();
       if (posCustomerId) {
         const list = await fetchSpecialPrices(posCustomerId);
-        specials = new Map(list.map((sp) => [sp.productId, sp.price]));
+        specials = new Map(list.map((sp: any) => [sp.productId, sp.price]));
       }
       if (cancelled) return;
       setPosSpecialPrices(specials);
@@ -237,28 +192,6 @@ export function App() {
       cancelled = true;
     };
   }, [posCustomerId]);
-
-  // Handlers
-  const handlePinSwitch = async (pinStr: string) => {
-    try {
-      const r = await fetch('/api/auth/pin-switch', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pin: pinStr }),
-      });
-      const res = await r.json();
-      if (!r.ok) {
-        triggerToast(res.message || 'رمز PIN غير صحيح', 'alert');
-        return;
-      }
-      updateCurrentUser(res.user);
-      setShowUserPinModal(false);
-      setSwitchPinValue('');
-      triggerToast(`تم التبديل إلى: ${res.user.username}`);
-    } catch {
-      triggerToast('فشل الاتصال بالخادم', 'alert');
-    }
-  };
 
   const triggerPinOverride = (reason: string, callback: (pin: string) => void) => {
     setOverrideModalReason(reason);
@@ -431,6 +364,43 @@ export function App() {
     }
   };
 
+  const handleSaveQuotation = async () => {
+    if (cart.length === 0) {
+      triggerToast('سلة المبيعات فارغة', 'alert');
+      return;
+    }
+    const discountMillis = parseLYDOrZero(posDiscount);
+    const items = cart.map((i) => ({
+      productId: i.product.id,
+      quantity: i.quantity,
+      unitPrice: i.unitPrice,
+      unitId: i.unitId,
+    }));
+    const selectedCustomer = customersList.find((c) => c.id === posCustomerId);
+    const payload = {
+      items,
+      discount: discountMillis,
+      customerId: posCustomerId || undefined,
+      customerName: selectedCustomer?.name,
+    };
+    const res = await apiCall('/api/quotations', 'POST', payload);
+    if (res.success) {
+      triggerToast(`تم حفظ عرض السعر بنجاح: ${res.data.quoteNumber}`);
+      setCart([]);
+      setPosDiscount('0');
+      setPosCustomerId(null);
+      refreshAllData();
+
+      const quoRes = await apiCall(`/api/quotations/${res.data.id}`);
+      if (quoRes.success) {
+        setActivePrintDocument({ type: 'quotation-a4', quotation: quoRes.data });
+        window.print();
+      }
+    } else {
+      triggerToast(res.error || 'فشل حفظ عرض السعر', 'alert');
+    }
+  };
+
   const openInvoicePrint = async (sale: Sale) => {
     const res = await apiCall(`/api/sales/${sale.id}`);
     if (!res.success) {
@@ -593,6 +563,8 @@ export function App() {
     { id: 'Dashboard', label: 'لوحة التحكم', icon: Icons.Dashboard, managerOnly: true },
     { id: 'POS', label: 'نقطة البيع', icon: Icons.POS, managerOnly: false },
     { id: 'Products', label: 'المنتجات والمخزون', icon: Icons.Products, managerOnly: false },
+    { id: 'Stocktaking', label: 'الجرد الذكي', icon: Icons.Reports, managerOnly: false },
+    { id: 'Warranty', label: 'الضمان والصيانة', icon: Icons.Settings, managerOnly: false },
     { id: 'Shifts', label: 'التوكة والخزينة', icon: Icons.Shifts, managerOnly: false },
     { id: 'Quotations', label: 'عروض الأسعار', icon: Icons.Receipt, managerOnly: false },
     { id: 'Purchases', label: 'المشتريات والموردين', icon: Icons.Truck, managerOnly: true },
@@ -627,9 +599,8 @@ export function App() {
           <div className="flex items-center justify-between mb-2">
             <span className="text-[11px] font-semibold text-muted">المستخدم الحالي</span>
             <span
-              className={`rounded-full px-2 py-0.5 text-[10px] font-black ${
-                currentUser.role === 'manager' ? 'bg-jade/10 text-jade' : 'bg-copper/10 text-copper'
-              }`}
+              className={`rounded-full px-2 py-0.5 text-[10px] font-black ${currentUser.role === 'manager' ? 'bg-jade/10 text-jade' : 'bg-copper/10 text-copper'
+                }`}
             >
               {currentUser.role === 'manager' ? '★ مدير' : 'كاشير'}
             </span>
@@ -637,7 +608,6 @@ export function App() {
           <div className="font-display text-base font-black mb-3">{currentUser.username}</div>
           <button
             onClick={() => {
-              setSwitchPinValue('');
               setShowUserPinModal(true);
             }}
             className="w-full py-2 text-xs font-bold rounded-xl border border-line bg-surface hover:bg-surface-2 cursor-pointer"
@@ -649,9 +619,8 @@ export function App() {
         <nav className="flex flex-col gap-1 text-sm flex-1">
           <button
             onClick={() => setActiveTab('Home')}
-            className={`flex items-center gap-3 min-h-10 rounded-xl px-3.5 py-2 transition-all cursor-pointer text-right mb-2 font-bold text-xs ${
-              activeTab === 'Home' ? 'bg-jade/10 text-jade border border-jade/30' : 'text-muted'
-            }`}
+            className={`flex items-center gap-3 min-h-10 rounded-xl px-3.5 py-2 transition-all cursor-pointer text-right mb-2 font-bold text-xs ${activeTab === 'Home' ? 'bg-jade/10 text-jade border border-jade/30' : 'text-muted'
+              }`}
           >
             <Icons.Home />
             <span>القائمة الرئيسية</span>
@@ -661,9 +630,8 @@ export function App() {
             <button
               key={item.id}
               onClick={() => setActiveTab(item.id)}
-              className={`flex items-center gap-3 min-h-10 rounded-xl px-3.5 py-2 transition-all cursor-pointer text-right text-xs font-semibold ${
-                activeTab === item.id ? 'bg-surface-2 text-jade font-bold border border-line' : 'text-muted'
-              }`}
+              className={`flex items-center gap-3 min-h-10 rounded-xl px-3.5 py-2 transition-all cursor-pointer text-right text-xs font-semibold ${activeTab === item.id ? 'bg-surface-2 text-jade font-bold border border-line' : 'text-muted'
+                }`}
             >
               <item.icon />
               <span>{item.label}</span>
@@ -708,18 +676,68 @@ export function App() {
             </div>
           </div>
 
-          <div className="hidden sm:flex items-center gap-2">
-            {activeShift ? (
-              <div className="flex items-center gap-2 rounded-full bg-jade/10 text-jade border border-jade/30 px-3.5 py-1 text-xs font-bold">
-                <span className="h-2 w-2 rounded-full bg-jade animate-pulse" />
-                <span>التوكة مفتوحة: #{activeShift.id}</span>
-              </div>
-            ) : (
-              <div className="flex items-center gap-2 rounded-full bg-alert/10 text-alert border border-alert/30 px-3.5 py-1 text-xs font-bold">
-                <span className="h-2 w-2 rounded-full bg-alert" />
-                <span>التوكة مغلقة</span>
-              </div>
-            )}
+          <div className="flex items-center gap-3">
+            {/* Notification Bell Center */}
+            <div className="relative">
+              <button
+                onClick={() => setShowNotificationsDrawer(!showNotificationsDrawer)}
+                className="relative p-2 rounded-xl border border-line bg-surface hover:bg-surface-2 cursor-pointer flex items-center justify-center text-sm"
+                title="مركز التنبيهات والإشعارات"
+              >
+                <span>🔔</span>
+                {notificationsList.length > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 bg-alert text-white text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center border-2 border-surface animate-pulse">
+                    {notificationsList.length}
+                  </span>
+                )}
+              </button>
+
+              {/* Dropdown Drawer */}
+              {showNotificationsDrawer && (
+                <div className="absolute left-0 top-11 w-80 max-h-96 bg-surface border border-line rounded-card shadow-2xl z-50 p-3 overflow-y-auto flex flex-col gap-2">
+                  <div className="flex justify-between items-center pb-2 border-b border-line">
+                    <span className="font-bold text-xs">مركز التنبيهات والإشعارات</span>
+                    <span className="text-[10px] mono font-bold text-muted">{notificationsList.length} تنبيهات</span>
+                  </div>
+                  {notificationsList.map((n) => (
+                    <button
+                      key={n.id}
+                      onClick={() => {
+                        setActiveTab(n.tab);
+                        setShowNotificationsDrawer(false);
+                      }}
+                      className={`p-2.5 rounded-control text-right flex flex-col gap-0.5 border transition-all cursor-pointer ${n.severity === 'alert'
+                          ? 'bg-alert/10 border-alert/30 text-alert hover:bg-alert/20'
+                          : n.severity === 'warning'
+                            ? 'bg-copper/10 border-copper/30 text-copper hover:bg-copper/20'
+                            : 'bg-surface-2 border-line text-text hover:bg-border'
+                        }`}
+                    >
+                      <span className="font-bold text-xs">{n.title}</span>
+                      <span className="text-[11px] text-muted leading-snug">{n.message}</span>
+                    </button>
+                  ))}
+
+                  {notificationsList.length === 0 && (
+                    <div className="p-4 text-center text-muted text-xs">لا توجد تنبيهات جديدة حالياً.</div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div className="hidden sm:flex items-center gap-2">
+              {activeShift ? (
+                <div className="flex items-center gap-2 rounded-full bg-jade/10 text-jade border border-jade/30 px-3.5 py-1 text-xs font-bold">
+                  <span className="h-2 w-2 rounded-full bg-jade animate-pulse" />
+                  <span>التوكة مفتوحة: #{activeShift.id}</span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 rounded-full bg-alert/10 text-alert border border-alert/30 px-3.5 py-1 text-xs font-bold">
+                  <span className="h-2 w-2 rounded-full bg-alert" />
+                  <span>التوكة مغلقة</span>
+                </div>
+              )}
+            </div>
           </div>
         </header>
 
@@ -760,13 +778,13 @@ export function App() {
             onCustomerChange={setPosCustomerId}
             onPaymentTypeChange={setPosPaymentType}
             onPaymentMethodChange={setPosPaymentMethod}
+            onDepositChange={setPosDepositId}
             onAddToCart={addToCart}
             onUpdateCartQuantity={updateCartQuantity}
             onChangeCartUnit={changeCartUnit}
             onRemoveFromCart={removeFromCart}
-            onSaveQuotation={() => {
-              /* quotation logic */
-            }}
+            onClearCart={() => setCart([])}
+            onSaveQuotation={handleSaveQuotation}
             onCheckout={handleCheckout}
           />
         )}
@@ -787,6 +805,12 @@ export function App() {
             }}
           />
         )}
+        {activeTab === 'Stocktaking' && (
+          <StocktakingScreen
+            onOpenPinOverride={(reason, callback) => triggerPinOverride(reason, callback)}
+          />
+        )}
+        {activeTab === 'Warranty' && <WarrantyScreen />}
         {activeTab === 'Shifts' && (
           <ShiftsScreen
             onOpenShiftModal={() => setShowOpenShiftModal(true)}
@@ -810,7 +834,7 @@ export function App() {
             }}
             onOpenPurchaseModal={() => setShowPurchaseModal(true)}
             onOpenReturnModal={(pId) => {
-              /* return modal logic */
+              setShowReturnModal(true);
             }}
           />
         )}
@@ -853,6 +877,85 @@ export function App() {
           />
         )}
       </main>
+
+      {/* Orchestrated App Modals */}
+      <AppModals
+        token={token}
+        currentUser={currentUser}
+        settingsData={settingsData}
+        productsList={productsList}
+        customersList={customersList}
+        suppliersList={suppliersList}
+        usersList={usersList}
+        activeShift={activeShift}
+        triggerToast={triggerToast}
+        refreshAllData={refreshAllData}
+        loadBaseData={loadBaseData}
+        login={login}
+
+        showUserPinModal={showUserPinModal}
+        setShowUserPinModal={setShowUserPinModal}
+
+        showPrintModal={showPrintModal}
+        setShowPrintModal={setShowPrintModal}
+        printingSale={printingSale}
+        setActivePrintDocument={setActivePrintDocument}
+
+        showProductModal={showProductModal}
+        setShowProductModal={setShowProductModal}
+        editingProduct={editingProduct}
+        setEditingProduct={setEditingProduct}
+
+        showAdjustModal={showAdjustModal}
+        setShowAdjustModal={setShowAdjustModal}
+        adjustingProduct={adjustingProduct}
+
+        showMovementsModal={showMovementsModal}
+        setShowMovementsModal={setShowMovementsModal}
+        movementsProduct={movementsProduct}
+
+        showExpenseModal={showExpenseModal}
+        setShowExpenseModal={setShowExpenseModal}
+
+        showOpenShiftModal={showOpenShiftModal}
+        setShowOpenShiftModal={setShowOpenShiftModal}
+
+        showCloseShiftModal={showCloseShiftModal}
+        setShowCloseShiftModal={setShowCloseShiftModal}
+
+        showCustomerModal={showCustomerModal}
+        setShowCustomerModal={setShowCustomerModal}
+        editingCustomer={editingCustomer}
+
+        showCustomerPaymentModal={showCustomerPaymentModal}
+        setShowCustomerPaymentModal={setShowCustomerPaymentModal}
+        payingCustomer={payingCustomer}
+
+        showCustomerStatementModal={showCustomerStatementModal}
+        setShowCustomerStatementModal={setShowCustomerStatementModal}
+        statementCustomer={statementCustomer}
+
+        showSpecialPricesModal={showSpecialPricesModal}
+        setShowSpecialPricesModal={setShowSpecialPricesModal}
+        specialPricesCustomer={specialPricesCustomer}
+
+        showSupplierModal={showSupplierModal}
+        setShowSupplierModal={setShowSupplierModal}
+        editingSupplier={editingSupplier}
+
+        showPurchaseModal={showPurchaseModal}
+        setShowPurchaseModal={setShowPurchaseModal}
+
+        showReturnModal={showReturnModal}
+        setShowReturnModal={setShowReturnModal}
+
+        showCreateUserModal={showCreateUserModal}
+        setShowCreateUserModal={setShowCreateUserModal}
+
+        showEditUserModal={showEditUserModal}
+        setShowEditUserModal={setShowEditUserModal}
+        editingUser={editingUser}
+      />
 
       {/* PIN Override Modal */}
       <PinOverrideModal

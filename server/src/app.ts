@@ -17,6 +17,10 @@ import { supplierRoutes } from './routes/suppliers.js';
 import { purchaseRoutes } from './routes/purchases.js';
 import { quotationRoutes } from './routes/quotations.js';
 import { depositRoutes } from './routes/deposits.js';
+import { stocktakingRoutes } from './routes/stocktaking.js';
+import { reportRoutes } from './routes/reports.js';
+import { notificationRoutes } from './routes/notifications.js';
+import { warrantyRoutes } from './routes/warranties.js';
 
 declare module 'fastify' {
   interface FastifyInstance {
@@ -74,6 +78,10 @@ export function buildApp(sqlite: Database.Database) {
   app.register(purchaseRoutes, { prefix: '/api' });
   app.register(quotationRoutes, { prefix: '/api' });
   app.register(depositRoutes, { prefix: '/api' });
+  app.register(stocktakingRoutes, { prefix: '/api' });
+  app.register(reportRoutes, { prefix: '/api' });
+  app.register(notificationRoutes, { prefix: '/api' });
+  app.register(warrantyRoutes, { prefix: '/api' });
 
   // In production the server serves the built SPA; in dev, Vite serves it with a proxy.
   const webDist = join(here, '..', '..', 'web', 'dist');

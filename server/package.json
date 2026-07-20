@@ -20,6 +20,7 @@
     "bcryptjs": "^3.0.3",
     "better-sqlite3": "^12.2.0",
     "drizzle-orm": "^0.44.2",
+    "exceljs": "^4.4.0",
     "fastify": "^5.3.3"
   },
   "devDependencies": {

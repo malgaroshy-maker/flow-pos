@@ -15,6 +15,7 @@ import {
   productUnits,
   productComponents,
   deposits,
+  warranties,
 } from '../db/schema.js';
 import { authenticateRequest } from './auth.js';
 import { applyPermille, lineTotal } from '../lib/money.js';
@@ -522,7 +523,7 @@ export async function saleRoutes(app: FastifyInstance) {
           }
 
           // Create sale items (quantity in the sold unit + unit snapshot)
-          app.db
+          const insertedItem = app.db
             .insert(saleItems)
             .values({
               saleId,
@@ -535,6 +536,30 @@ export async function saleRoutes(app: FastifyInstance) {
               serialNumber: item.serialNumber || null,
             })
             .run();
+
+          // Auto-create warranty record for equipment items with serial number
+          const itemProduct = app.db.select().from(products).where(eq(products.id, item.productId)).get();
+          if (itemProduct && itemProduct.type === 'equipment' && item.serialNumber) {
+            const months = itemProduct.warrantyMonths || 12;
+            const startDate = now.slice(0, 10);
+            const endDateObj = new Date(now);
+            endDateObj.setMonth(endDateObj.getMonth() + months);
+            const endDate = endDateObj.toISOString().slice(0, 10);
+
+            app.db
+              .insert(warranties)
+              .values({
+                saleItemId: Number(insertedItem.lastInsertRowid),
+                saleId,
+                serialNumber: item.serialNumber,
+                productName: itemProduct.name,
+                startDate,
+                months,
+                endDate,
+                createdAt: now,
+              })
+              .run();
+          }
         }
 
         // Cash flow movement (only for cash payments; net of applied deposit

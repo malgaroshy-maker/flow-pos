@@ -79,16 +79,16 @@ All seven steps are done except the last, which gates Phase 3:
 > (stocktaking, reports & exports, notifications, warranty tickets), each with schema,
 > endpoints, UI scope, tests, and acceptance criteria.
 
-## Phase 3 — Intelligence: stocktaking, reports, alerts, after-sales
+## Phase 3 — Intelligence: stocktaking, reports, alerts, after-sales [COMPLETED — 2026-07-20]
 
 **Goal:** insight and control on top of the operational data.
 
-- Smart stocktaking: barcode count sessions (camera or USB), priority by value/turnover, automatic variance report, one-click conversion to adjustments (manager approval)
-- Reports with charts: sales, profit, stock, receivables; period comparison; daily dashboard
-- Exports: Excel / HTML / PDF for every report
-- Slow-moving & stagnant stock report
-- Notification center: low stock, expiry approaching, overdue debts, warranty endings, expiring quotations
-- Warranty & after-sales: auto warranty per sold equipment, service tickets (fault, parts, cost, in/out warranty), full history per serial number
+- [x] Smart stocktaking: barcode count sessions, automatic variance report, blind count for sales role, one-click conversion to adjustments (manager approval) — **COMPLETED (V1.3.0, 2026-07-20)**
+- [x] Reports with charts: sales, profit, stock, receivables; period comparison; daily dashboard — **COMPLETED (V1.3.1, 2026-07-20)**
+- [x] Exports: Excel (.xlsx via exceljs) / CSV / A4 print for every report — **COMPLETED (V1.3.1, 2026-07-20)**
+- [x] Slow-moving & stagnant stock report — **COMPLETED (V1.3.1, 2026-07-20)**
+- [x] Notification center: low stock, expiry approaching, overdue debts, warranty endings, expiring quotations — **COMPLETED (V1.3.2, 2026-07-20)**
+- [x] Warranty & after-sales: auto warranty per sold equipment, service tickets (fault, parts, cost, in/out warranty), full history per serial number — **COMPLETED (V1.3.2, 2026-07-20)**
 
 ## Phase 4 — Future expansion
 

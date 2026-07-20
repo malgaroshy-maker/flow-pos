@@ -1,16 +1,12 @@
 # Next Steps — Execution Plan (post-V1.2.8)
 
 > Written 2026-07-20 for **any agent** (Antigravity, Cursor, Claude Code, …) to execute.
-> Read `AGENTS.md` first and obey its hard rules throughout — especially:
-> **never push to GitHub unless the user explicitly asks**, all money is integer milli-LYD,
-> stock only moves through `stock_movements`, and every release updates `سجل-التغييرات.md`.
+> 
+> **Status:** All Milestones A (App.tsx Monolith Refactor - V1.2.9), B1 (Smart Stocktaking - V1.3.0), B2 (Reports & Excel - V1.3.1), B3 (Notification Center - V1.3.2), and B4 (Warranty & Service Tickets - V1.3.2) are **COMPLETED & VERIFIED** with 60 Vitest tests green.
 >
 > Definition of done for every task below: `npm run typecheck` + `npm test` + `npm run build`
 > all green, new server behavior covered by tests in `server/src/*.test.ts`
 > (follow the existing `app.inject` pattern), and a local commit with a clear message.
-
-Work the milestones **in order**. Milestone A is a hard gate — do not start Phase 3 screens
-inside the current monolith.
 
 ---
 

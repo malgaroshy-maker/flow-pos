@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import type { Product, CartItem, Customer, Deposit, Quotation } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
@@ -22,10 +22,12 @@ interface PosProps {
   onCustomerChange: (id: number | null) => void;
   onPaymentTypeChange: (type: 'cash' | 'credit') => void;
   onPaymentMethodChange: (method: 'cash' | 'card' | 'transfer') => void;
+  onDepositChange: (depositId: number | null) => void;
   onAddToCart: (product: Product) => void;
   onUpdateCartQuantity: (productId: number, qty: number) => void;
   onChangeCartUnit: (productId: number, unitIdVal: string) => void;
   onRemoveFromCart: (productId: number) => void;
+  onClearCart: () => void;
   onSaveQuotation: () => void;
   onCheckout: () => void;
 }
@@ -47,10 +49,12 @@ export const PosScreen: React.FC<PosProps> = ({
   onCustomerChange,
   onPaymentTypeChange,
   onPaymentMethodChange,
+  onDepositChange,
   onAddToCart,
   onUpdateCartQuantity,
   onChangeCartUnit,
   onRemoveFromCart,
+  onClearCart,
   onSaveQuotation,
   onCheckout,
 }) => {
@@ -58,11 +62,33 @@ export const PosScreen: React.FC<PosProps> = ({
   const { productsList, customersList, depositsList, quotationsList, settingsData, activeShift } = useData();
   const searchInputRef = useRef<HTMLInputElement>(null);
 
+  // Cash Change Calculator State
+  const [givenCash, setGivenCash] = useState<string>('');
+
   useEffect(() => {
     if (searchInputRef.current) {
       searchInputRef.current.focus();
     }
   }, []);
+
+  // Keyboard shortcut listener (F10 checkout, F2 search)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'F10') {
+        e.preventDefault();
+        if (cart.length > 0 && activeShift) {
+          onCheckout();
+        }
+      } else if (e.key === 'F2') {
+        e.preventDefault();
+        if (searchInputRef.current) {
+          searchInputRef.current.focus();
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [cart, activeShift, onCheckout]);
 
   const resolveClientPrice = (product: Product): number => {
     if (posCustomerId) {
@@ -99,13 +125,25 @@ export const PosScreen: React.FC<PosProps> = ({
   const cartTax = isTaxEnabled
     ? Math.round(((cartSubtotal - discountMillis) * taxRatePermille) / 1000)
     : 0;
-  const cartTotal = cartSubtotal + cartTax - discountMillis;
+
+  // Active Customer held deposits
+  const customerHeldDeposits = posCustomerId
+    ? depositsList.filter((d) => d.customerId === posCustomerId && d.status === 'held')
+    : [];
+
+  const activeDeposit = depositsList.find((d) => d.id === posDepositId);
+  const depositDeduction = activeDeposit ? activeDeposit.amount : 0;
+
+  const cartTotal = Math.max(0, cartSubtotal + cartTax - discountMillis - depositDeduction);
+
+  // Given cash & change calculation
+  const givenCashMillis = parseLYDOrZero(givenCash);
+  const changeDueMillis = givenCashMillis > cartTotal ? givenCashMillis - cartTotal : 0;
 
   const activeQuotation = quotationsList.find((q) => q.id === posQuotationId);
-  const activeDeposit = depositsList.find((d) => d.id === posDepositId);
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-6 h-full" dir="rtl">
+    <div className="grid grid-cols-1 lg:grid-cols-[1fr_420px] gap-6 h-full" dir="rtl">
       {/* Products Grid Column */}
       <div className="flex flex-col gap-4">
         {/* Search & Category Filter */}
@@ -116,7 +154,7 @@ export const PosScreen: React.FC<PosProps> = ({
               type="text"
               value={posSearch}
               onChange={(e) => onSearchChange(e.target.value)}
-              placeholder="امسح الباركد أو ابحث عن المنتج..."
+              placeholder="امسح الباركد أو ابحث عن المنتج... (اضغط F2)"
               className="w-full h-10 pr-10 pl-3 rounded-control border border-line bg-surface text-sm focus-visible:outline-none focus:border-jade"
             />
             <div className="absolute right-3 top-2.5">
@@ -184,20 +222,31 @@ export const PosScreen: React.FC<PosProps> = ({
       </div>
 
       {/* Cart Column */}
-      <div className="flex flex-col rounded-card border border-line bg-surface p-5 shadow-lg justify-between">
+      <div className="flex flex-col rounded-card border border-line bg-surface p-5 shadow-lg justify-between overflow-y-auto">
         <div>
           <div className="flex justify-between items-center pb-3 border-b border-line mb-3">
             <h2 className="font-display font-black text-base flex items-center gap-2">
               <Icons.ShoppingCart className="h-5 w-5 text-jade" />
               <span>سلة المبيعات الحالية</span>
             </h2>
-            <span className="text-xs mono font-bold text-muted">{cart.length} صنف</span>
+            <div className="flex items-center gap-3">
+              <span className="text-xs mono font-bold text-muted">{cart.length} صنف</span>
+              {cart.length > 0 && (
+                <button
+                  onClick={onClearCart}
+                  className="text-xs text-alert hover:underline font-bold cursor-pointer"
+                  title="إفراغ السلة بالكامل"
+                >
+                  إفراغ السلة 🗑️
+                </button>
+              )}
+            </div>
           </div>
 
-          {/* Customer & Payment Type Selectors */}
+          {/* Customer, Payment Type & Method Selectors */}
           <div className="flex flex-col gap-2 mb-3 bg-surface-2 p-3 rounded-control border border-border">
             <div>
-              <label className="text-[11px] font-bold text-muted mb-1 block">العميل</label>
+              <label className="text-[11px] font-bold text-muted mb-1 block">العميل المستهدف</label>
               <select
                 value={posCustomerId || ''}
                 onChange={(e) =>
@@ -214,6 +263,30 @@ export const PosScreen: React.FC<PosProps> = ({
               </select>
             </div>
 
+            {/* Held Deposit selector if available for customer */}
+            {customerHeldDeposits.length > 0 && (
+              <div>
+                <label className="text-[11px] font-bold text-copper mb-1 block">
+                  عربون / حجز مسبق متاح للعميل
+                </label>
+                <select
+                  value={posDepositId || ''}
+                  onChange={(e) =>
+                    onDepositChange(e.target.value ? Number(e.target.value) : null)
+                  }
+                  className="w-full h-9 rounded-control border border-copper/40 bg-copper/5 text-copper font-bold px-2 text-xs focus-visible:outline-none"
+                >
+                  <option value="">— عدم خصم عربون —</option>
+                  {customerHeldDeposits.map((d) => (
+                    <option key={d.id} value={d.id}>
+                      عربون #{d.id} ({formatLYD(d.amount)} د.ل) — {d.productName || 'عام'}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {/* Payment Type: Cash vs Credit */}
             <div className="grid grid-cols-2 gap-2 mt-1">
               <button
                 type="button"
@@ -238,9 +311,48 @@ export const PosScreen: React.FC<PosProps> = ({
                 بيع آجل (دين)
               </button>
             </div>
+
+            {/* Payment Method Selector when Cash Payment */}
+            {posPaymentType === 'cash' && (
+              <div className="grid grid-cols-3 gap-1.5 mt-1 pt-2 border-t border-line/60">
+                <button
+                  type="button"
+                  onClick={() => onPaymentMethodChange('cash')}
+                  className={`py-1 rounded-control text-[11px] font-bold transition-colors cursor-pointer ${
+                    posPaymentMethod === 'cash'
+                      ? 'bg-jade/20 text-jade border border-jade/40'
+                      : 'bg-surface border border-border text-muted'
+                  }`}
+                >
+                  💵 كاش
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onPaymentMethodChange('card')}
+                  className={`py-1 rounded-control text-[11px] font-bold transition-colors cursor-pointer ${
+                    posPaymentMethod === 'card'
+                      ? 'bg-purple-600/20 text-purple-600 border border-purple-600/40'
+                      : 'bg-surface border border-border text-muted'
+                  }`}
+                >
+                  💳 بطاقة
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onPaymentMethodChange('transfer')}
+                  className={`py-1 rounded-control text-[11px] font-bold transition-colors cursor-pointer ${
+                    posPaymentMethod === 'transfer'
+                      ? 'bg-blue-600/20 text-blue-600 border border-blue-600/40'
+                      : 'bg-surface border border-border text-muted'
+                  }`}
+                >
+                  🏦 حوالة
+                </button>
+              </div>
+            )}
           </div>
 
-          {/* Active Quotation / Deposit Notifications */}
+          {/* Active Quotation Notification */}
           {activeQuotation && (
             <div className="mb-2 p-2 bg-copper/10 border border-copper/30 text-copper text-xs rounded-control font-bold flex justify-between items-center">
               <span>تحويل عرض السعر: #{activeQuotation.quoteNumber}</span>
@@ -248,7 +360,7 @@ export const PosScreen: React.FC<PosProps> = ({
           )}
 
           {/* Cart Items List */}
-          <div className="flex flex-col gap-2 overflow-y-auto max-h-[300px] mb-4">
+          <div className="flex flex-col gap-2 overflow-y-auto max-h-[260px] mb-4">
             {cart.map((item) => (
               <div
                 key={item.product.id}
@@ -256,8 +368,24 @@ export const PosScreen: React.FC<PosProps> = ({
               >
                 <div className="flex-1 min-w-0">
                   <div className="font-bold truncate">{item.product.name}</div>
-                  <div className="mono text-muted text-[10px]">
-                    {formatLYD(item.unitPrice)} د.ل
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className="mono text-muted text-[10px]">
+                      {formatLYD(item.unitPrice)} د.ل
+                    </span>
+                    {item.product.units && item.product.units.length > 0 && (
+                      <select
+                        value={item.unitId || ''}
+                        onChange={(e) => onChangeCartUnit(item.product.id, e.target.value)}
+                        className="h-6 rounded border border-border bg-surface px-1 text-[10px] font-semibold focus-visible:outline-none"
+                      >
+                        <option value="">{item.product.baseUnit} (أساسية)</option>
+                        {item.product.units.map((u) => (
+                          <option key={u.id} value={u.id}>
+                            {u.unitName} ({u.conversionFactor}×)
+                          </option>
+                        ))}
+                      </select>
+                    )}
                   </div>
                 </div>
 
@@ -296,6 +424,29 @@ export const PosScreen: React.FC<PosProps> = ({
           </div>
         </div>
 
+        {/* Given Cash & Change Calculator (Cash sales only) */}
+        {posPaymentType === 'cash' && posPaymentMethod === 'cash' && cart.length > 0 && (
+          <div className="mb-3 p-2.5 rounded-control bg-surface-2 border border-line flex flex-col gap-2">
+            <div className="flex justify-between items-center text-xs">
+              <span className="font-bold text-muted">المبلغ المستلم من الزبون (د.ل):</span>
+              <input
+                type="text"
+                inputMode="decimal"
+                value={givenCash}
+                onChange={(e) => setGivenCash(e.target.value)}
+                placeholder={(cartTotal / 1000).toFixed(3)}
+                className="w-28 h-7 text-left rounded border border-border bg-surface px-2 mono text-xs font-bold focus-visible:outline-none focus:border-jade"
+              />
+            </div>
+            <div className="flex justify-between items-center text-xs font-bold">
+              <span>الباقي للزبون:</span>
+              <span className={`mono text-sm ${changeDueMillis > 0 ? 'text-copper' : 'text-muted'}`}>
+                {formatLYD(changeDueMillis)} د.ل
+              </span>
+            </div>
+          </div>
+        )}
+
         {/* Totals & Checkout Actions */}
         <div className="border-t border-line pt-3 flex flex-col gap-3">
           <div className="flex justify-between items-center text-xs">
@@ -308,6 +459,13 @@ export const PosScreen: React.FC<PosProps> = ({
               className="w-24 h-7 text-left rounded border border-border bg-surface px-2 mono text-xs focus-visible:outline-none"
             />
           </div>
+
+          {activeDeposit && (
+            <div className="flex justify-between items-center text-xs text-copper font-bold">
+              <span>خصم عربون حجز:</span>
+              <span className="mono">-{formatLYD(depositDeduction)} د.ل</span>
+            </div>
+          )}
 
           <div className="flex justify-between items-center text-base font-extrabold">
             <span>الإجمالي النهائي:</span>
@@ -325,9 +483,10 @@ export const PosScreen: React.FC<PosProps> = ({
             <button
               onClick={onCheckout}
               disabled={cart.length === 0 || !activeShift}
-              className="py-2.5 bg-jade text-white font-bold text-sm rounded-control hover:bg-jade-2 transition-colors cursor-pointer disabled:opacity-50"
+              className="py-2.5 bg-jade text-white font-bold text-sm rounded-control hover:bg-jade-2 transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1"
             >
-              تأكيد البيع (F10)
+              <span>تأكيد البيع</span>
+              <span className="text-[10px] opacity-80">(F10)</span>
             </button>
           </div>
         </div>

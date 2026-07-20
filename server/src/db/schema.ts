@@ -358,3 +358,74 @@ export const auditLogs = sqliteTable('audit_logs', {
   details: text('details'),
   createdAt: text('created_at').notNull(),
 });
+
+export const stocktakeSessions = sqliteTable('stocktake_sessions', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  status: text('status', { enum: ['open', 'closed', 'applied'] })
+    .notNull()
+    .default('open'),
+  userId: integer('user_id')
+    .notNull()
+    .references(() => users.id),
+  username: text('username').notNull(),
+  notes: text('notes'),
+  createdAt: text('created_at').notNull(),
+  closedAt: text('closed_at'),
+  appliedAt: text('applied_at'),
+});
+
+export const stocktakeItems = sqliteTable('stocktake_items', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  sessionId: integer('session_id')
+    .notNull()
+    .references(() => stocktakeSessions.id),
+  productId: integer('product_id')
+    .notNull()
+    .references(() => products.id),
+  productName: text('product_name').notNull(),
+  barcode: text('barcode'),
+  expectedQty: integer('expected_qty').notNull(),
+  countedQty: integer('counted_qty').notNull(),
+  variance: integer('variance').notNull(),
+  updatedAt: text('updated_at').notNull(),
+});
+
+export const warranties = sqliteTable('warranties', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  saleItemId: integer('sale_item_id').references(() => saleItems.id),
+  saleId: integer('sale_id').references(() => sales.id),
+  serialNumber: text('serial_number').notNull(),
+  productName: text('product_name').notNull(),
+  startDate: text('start_date').notNull(),
+  months: integer('months').notNull(),
+  endDate: text('end_date').notNull(),
+  createdAt: text('created_at').notNull(),
+});
+
+export const serviceTickets = sqliteTable('service_tickets', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  ticketNumber: text('ticket_number').notNull().unique(), // SRV-YYYY-NNNNN
+  warrantyId: integer('warranty_id').references(() => warranties.id),
+  serialNumber: text('serial_number').notNull(),
+  productName: text('product_name').notNull(),
+  customerId: integer('customer_id').references(() => customers.id),
+  customerName: text('customer_name'),
+  customerPhone: text('customer_phone'),
+  faultDescription: text('fault_description').notNull(),
+  diagnosis: text('diagnosis'),
+  parts: text('parts'),
+  inWarranty: integer('in_warranty', { mode: 'boolean' }).notNull().default(true),
+  laborCost: integer('labor_cost').notNull().default(0), // milli-LYD
+  partsCost: integer('parts_cost').notNull().default(0), // milli-LYD
+  totalCost: integer('total_cost').notNull().default(0), // milli-LYD
+  status: text('status', { enum: ['open', 'repairing', 'done', 'delivered'] })
+    .notNull()
+    .default('open'),
+  userId: integer('user_id')
+    .notNull()
+    .references(() => users.id),
+  createdAt: text('created_at').notNull(),
+  completedAt: text('completed_at'),
+});
+
+
