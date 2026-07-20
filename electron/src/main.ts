@@ -29,8 +29,14 @@ const DB_PATH = join(DATA_DIR, 'pos.db');
 
 const PORT = 3001;
 const SERVER_URL = `http://localhost:${PORT}`;
-const TRAY_ICON_PATH = join(__dirname, '..', 'assets', 'tray-icon.png');
-const APP_ICON_PATH = join(__dirname, '..', 'assets', 'icon.ico');
+
+// app.getAppPath() returns the path to the app directory in both dev and packaged mode.
+// Assets are placed in assets/ relative to the app root.
+const APP_ROOT = app.getAppPath();
+const ASSETS_DIR = join(APP_ROOT, 'assets');
+
+const TRAY_ICON_PATH = join(ASSETS_DIR, 'tray-icon.png');
+const APP_ICON_PATH = join(ASSETS_DIR, 'icon.ico');
 
 // ─── State ────────────────────────────────────────────────────────────────────
 
@@ -43,7 +49,10 @@ let isQuitting = false;
 
 // ─── Splash Screen ────────────────────────────────────────────────────────────
 
-const SPLASH_HTML_PATH = join(__dirname, '..', 'assets', 'splash.html');
+// Splash is placed in resources/ via extraFiles in packaged mode
+const SPLASH_HTML_PATH = IS_PACKAGED
+  ? join(process.resourcesPath, 'splash.html')
+  : join(APP_ROOT, 'assets', 'splash.html');
 
 function createSplashWindow() {
   const iconPath = existsSync(APP_ICON_PATH) ? APP_ICON_PATH : undefined;

@@ -2,6 +2,7 @@
   "name": "flowpos-desktop",
   "version": "1.4.1",
   "description": "منظومة Flow — نافذة سطح المكتب",
+  "author": "Flow Dev — Intelligent Software Solutions",
   "main": "dist/main.js",
   "private": true,
   "scripts": {
@@ -18,9 +19,23 @@
     "@types/node": "^24.0.0"
   },
   "build": {
-    "appId": "com.flowpos.desktop",
+    "appId": "com.flowdev.flowpos",
     "productName": "FlowPOS",
-    "copyright": "Copyright © 2026 Flow POS Solutions",
+    "copyright": "Copyright © 2026 Flow Dev Solutions",
+    "files": [
+      "dist/**/*",
+      "assets/**/*"
+    ],
+    "extraFiles": [
+      {
+        "from": "assets/splash.html",
+        "to": "resources/splash.html"
+      },
+      {
+        "from": "assets/logo.png",
+        "to": "resources/logo.png"
+      }
+    ],
     "directories": {
       "output": "../dist-installer"
     },
@@ -40,6 +55,14 @@
       {
         "from": "../web/dist",
         "to": "web/dist"
+      },
+      {
+        "from": "assets/splash.html",
+        "to": "splash.html"
+      },
+      {
+        "from": "assets/logo.png",
+        "to": "logo.png"
       }
     ],
     "win": {
@@ -62,12 +85,10 @@
       "createStartMenuShortcut": true,
       "shortcutName": "منظومة Flow",
       "differentialPackage": false,
-      "installerLanguages": ["ar", "en"],
-      "language": "1025",
       "perMachine": true
     },
-    "bundledNodeVersion": "24",
     "nodeGypRebuild": false,
-    "npmRebuild": false
+    "npmRebuild": false,
+    "publish": null
   }
 }
