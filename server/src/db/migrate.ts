@@ -4,11 +4,21 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import type Database from 'better-sqlite3';
 import { createDb, openDatabase } from './index.js';
 
+import { existsSync } from 'node:fs';
+
 const here = dirname(fileURLToPath(import.meta.url));
+
+export function resolveMigrationsFolder(): string {
+  // Production compiled bundle: server/dist → server/drizzle
+  const prodPath = join(here, '..', 'drizzle');
+  if (existsSync(prodPath)) return prodPath;
+  // Dev mode: server/src/db → server/drizzle
+  return join(here, '..', '..', 'drizzle');
+}
 
 export function runMigrations(sqlite: Database.Database) {
   const db = createDb(sqlite);
-  migrate(db, { migrationsFolder: join(here, '..', '..', 'drizzle') });
+  migrate(db, { migrationsFolder: resolveMigrationsFolder() });
 }
 
 // Run directly: npm run db:migrate
