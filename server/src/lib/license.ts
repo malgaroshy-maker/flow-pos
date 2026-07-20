@@ -234,7 +234,7 @@ export function activateLicense(
   };
 }
 
-const DEFAULT_VENDOR_PIN = process.env.VENDOR_PIN || '88889999';
+const DEFAULT_VENDOR_PIN = process.env.VENDOR_PIN || '1391997';
 
 export function activateWithVendorPin(
   vendorPin: string,
