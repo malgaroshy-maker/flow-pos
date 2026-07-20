@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { useData } from '../context/DataContext';
 import { apiCall } from '../lib/api';
+import { formatDate, formatDateTime } from '../lib/datetime';
 import { Icons } from '../components/Icons';
 import { Modal } from '../components/Modal';
 
@@ -195,7 +196,7 @@ export const StocktakingScreen: React.FC<{
                   </span>
                 </div>
                 <div className="text-[11px] text-muted">
-                  بواسطة: {s.username} — {new Date(s.createdAt).toLocaleDateString('ar-LY')}
+                  بواسطة: {s.username} — <span className="mono">{formatDate(s.createdAt)}</span>
                 </div>
                 {s.notes && <div className="text-[11px] text-muted italic">"{s.notes}"</div>}
               </button>
@@ -233,7 +234,7 @@ export const StocktakingScreen: React.FC<{
                     </span>
                   </div>
                   <div className="text-xs text-muted mt-0.5">
-                    تاريخ البدء: {new Date(activeSession.createdAt).toLocaleString('ar-LY')} — القائم بالجرد: {activeSession.username}
+                    تاريخ البدء: <span className="mono">{formatDateTime(activeSession.createdAt)}</span> — القائم بالجرد: {activeSession.username}
                   </div>
                 </div>
 

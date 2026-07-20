@@ -1,6 +1,7 @@
 import React from 'react';
 import { useData } from '../context/DataContext';
 import { formatLYD } from '../lib/money';
+import { formatDateTime } from '../lib/datetime';
 import { Icons } from '../components/Icons';
 
 interface ShiftsProps {
@@ -66,7 +67,7 @@ export const ShiftsScreen: React.FC<ShiftsProps> = ({
             <div className="p-4 rounded-control bg-surface-2 border border-border">
               <span className="text-xs text-muted block mb-1">تاريخ ووقت الفتح</span>
               <span className="mono text-sm font-bold block mt-2">
-                {new Date(activeShift.openedAt).toLocaleString('ar-LY')}
+                {formatDateTime(activeShift.openedAt)}
               </span>
             </div>
           </div>
@@ -89,7 +90,7 @@ export const ShiftsScreen: React.FC<ShiftsProps> = ({
                 <div>
                   <div className="font-bold text-sm">{exp.reason}</div>
                   <div className="text-muted text-[10px]">
-                    التصنيف: {exp.category} — {new Date(exp.createdAt).toLocaleString('ar-LY')}
+                    التصنيف: {exp.category} — <span className="mono">{formatDateTime(exp.createdAt)}</span>
                   </div>
                 </div>
                 <div className="mono font-extrabold text-alert text-sm">

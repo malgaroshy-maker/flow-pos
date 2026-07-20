@@ -663,6 +663,8 @@ export const AppModals: React.FC<AppModalsProps> = ({
               type="password"
               maxLength={4}
               autoFocus
+              autoComplete="off"
+              inputMode="numeric"
               value={switchPinValue}
               onChange={(e) => setSwitchPinValue(e.target.value)}
               className="w-full h-12 rounded-control border border-line bg-surface text-center mono text-2xl tracking-widest focus-visible:outline-none focus:border-jade"
@@ -935,12 +937,20 @@ export const AppModals: React.FC<AppModalsProps> = ({
 
           <div>
             <label className="font-bold text-muted mb-1 block">صورة المنتج</label>
-            <input
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              onChange={(e) => setProductImageFile(e.target.files?.[0] || null)}
-              className="w-full text-xs text-muted"
-            />
+            <label className="flex items-center gap-2 h-9 rounded-control border border-line bg-surface px-2.5 text-xs cursor-pointer hover:border-jade transition-colors">
+              <span className="px-2.5 py-1 rounded-lg bg-surface-2 border border-line font-bold text-text whitespace-nowrap">
+                اختر صورة…
+              </span>
+              <span className="text-muted truncate">
+                {productImageFile ? productImageFile.name : 'لم يتم اختيار ملف (JPG/PNG/WebP)'}
+              </span>
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                onChange={(e) => setProductImageFile(e.target.files?.[0] || null)}
+                className="hidden"
+              />
+            </label>
           </div>
 
           <div className="flex justify-end gap-3 pt-3 border-t border-line">

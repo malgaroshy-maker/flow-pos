@@ -1,6 +1,7 @@
 import React from 'react';
 import type { Sale, Settings } from '../types';
 import { formatLYD } from '../lib/money';
+import { formatDateTime } from '../lib/datetime';
 import { tafqeetLYD } from '../lib/tafqeet';
 
 interface InvoiceA4Props {
@@ -62,7 +63,7 @@ export const InvoiceA4: React.FC<InvoiceA4Props> = ({
       <div className="grid grid-cols-2 gap-x-8 gap-y-1 text-[11px] mb-3">
         <div>
           <span className="font-bold">التاريخ: </span>
-          <span className="mono">{new Date(sale.createdAt).toLocaleString('ar-LY')}</span>
+          <span className="mono">{formatDateTime(sale.createdAt)}</span>
         </div>
         <div>
           <span className="font-bold">نوع الفاتورة: </span>

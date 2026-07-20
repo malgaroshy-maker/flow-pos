@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { useData } from '../context/DataContext';
 import { formatLYD } from '../lib/money';
+import { formatDateTime } from '../lib/datetime';
 import { apiCall } from '../lib/api';
 import { Icons } from '../components/Icons';
 
@@ -345,7 +346,7 @@ export const Reports: React.FC<ReportsProps> = ({
                   </span>
                 </span>
                 <span className="mono">
-                  {new Date(sale.createdAt).toLocaleString('ar-LY')}
+                  {formatDateTime(sale.createdAt)}
                 </span>
               </div>
 

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { currentTheme, toggleTheme, type Theme } from './theme';
 import { formatLYD, parseLYDOrZero } from './lib/money';
+import { formatDateTime } from './lib/datetime';
 import type {
   Product,
   CartItem,
@@ -120,6 +121,9 @@ export function App() {
   // Notification Center State
   const [notificationsList, setNotificationsList] = useState<any[]>([]);
   const [showNotificationsDrawer, setShowNotificationsDrawer] = useState(false);
+
+  // Mobile navigation drawer (<901px, design.md §8)
+  const [showMobileNav, setShowMobileNav] = useState(false);
 
   const fetchNotifications = async () => {
     if (!token) return;
@@ -434,7 +438,7 @@ export function App() {
       headers = ['رقم الفاتورة', 'تاريخ البيع', 'المسؤول', 'طريقة الدفع', 'حالة الفاتورة', 'الخصم (د.ل)', 'الضريبة (د.ل)', 'الإجمالي (د.ل)'];
       rows = salesList.map((s) => [
         s.invoiceNumber,
-        new Date(s.createdAt).toLocaleString('ar-LY'),
+        formatDateTime(s.createdAt),
         s.username,
         s.paymentMethod === 'cash' ? 'كاش' : s.paymentMethod === 'card' ? 'بطاقة مصرفية' : 'حوالة مصرفية',
         s.status === 'completed' ? 'مدفوعة' : 'ملغاة',
@@ -460,7 +464,7 @@ export function App() {
       rows = shiftsList.map((s) => [
         `#${s.id}`,
         s.openedByUsername || '—',
-        new Date(s.openedAt).toLocaleString('ar-LY'),
+        formatDateTime(s.openedAt),
         formatLYD(s.openingCash),
         formatLYD(s.expectedCash),
         s.actualCash ? formatLYD(s.actualCash) : '—',
@@ -573,13 +577,14 @@ export function App() {
     { id: 'Settings', label: 'الإعدادات العامة', icon: Icons.Settings, managerOnly: true },
   ].filter((item) => !item.managerOnly || currentUser.role === 'manager');
 
-  return (
-    <div className="grid min-h-dvh grid-cols-[272px_1fr] max-[900px]:grid-cols-1" dir="rtl">
-      {/* Sidebar Navigation */}
-      <aside
-        className="sticky top-0 hidden h-dvh flex-col gap-5 border-e p-5 min-[901px]:flex overflow-y-auto"
-        style={{ background: 'var(--gradient-sidebar)', borderColor: 'var(--border)' }}
-      >
+  // Shared sidebar/drawer content (desktop aside + mobile drawer)
+  const renderNavContent = (onNavigate?: () => void) => {
+    const go = (tab: string) => {
+      setActiveTab(tab);
+      onNavigate?.();
+    };
+    return (
+      <>
         <div className="flex items-center gap-3 pt-1">
           <div
             className="flex h-11 w-11 items-center justify-center rounded-xl font-mono text-sm font-black text-white shadow-md flex-shrink-0"
@@ -609,6 +614,7 @@ export function App() {
           <button
             onClick={() => {
               setShowUserPinModal(true);
+              onNavigate?.();
             }}
             className="w-full py-2 text-xs font-bold rounded-xl border border-line bg-surface hover:bg-surface-2 cursor-pointer"
           >
@@ -618,7 +624,7 @@ export function App() {
 
         <nav className="flex flex-col gap-1 text-sm flex-1">
           <button
-            onClick={() => setActiveTab('Home')}
+            onClick={() => go('Home')}
             className={`flex items-center gap-3 min-h-10 rounded-xl px-3.5 py-2 transition-all cursor-pointer text-right mb-2 font-bold text-xs ${activeTab === 'Home' ? 'bg-jade/10 text-jade border border-jade/30' : 'text-muted'
               }`}
           >
@@ -629,7 +635,7 @@ export function App() {
           {navItems.map((item) => (
             <button
               key={item.id}
-              onClick={() => setActiveTab(item.id)}
+              onClick={() => go(item.id)}
               className={`flex items-center gap-3 min-h-10 rounded-xl px-3.5 py-2 transition-all cursor-pointer text-right text-xs font-semibold ${activeTab === item.id ? 'bg-surface-2 text-jade font-bold border border-line' : 'text-muted'
                 }`}
             >
@@ -655,12 +661,60 @@ export function App() {
             <span>تسجيل الخروج</span>
           </button>
         </div>
+      </>
+    );
+  };
+
+  return (
+    <div className="grid min-h-dvh grid-cols-[272px_1fr] max-[900px]:grid-cols-1" dir="rtl">
+      {/* Sidebar Navigation (desktop ≥901px) */}
+      <aside
+        className="sticky top-0 hidden h-dvh flex-col gap-5 border-e p-5 min-[901px]:flex overflow-y-auto"
+        style={{ background: 'var(--gradient-sidebar)', borderColor: 'var(--border)' }}
+      >
+        {renderNavContent()}
       </aside>
+
+      {/* Mobile drawer navigation (<901px, design.md §8) */}
+      {showMobileNav && (
+        <div className="fixed inset-0 z-50 min-[901px]:hidden">
+          <div
+            className="absolute inset-0 bg-black/40"
+            onClick={() => setShowMobileNav(false)}
+            aria-hidden="true"
+          />
+          <aside
+            className="absolute inset-y-0 right-0 flex w-72 max-w-[85vw] flex-col gap-5 border-e p-5 overflow-y-auto shadow-2xl"
+            style={{ background: 'var(--gradient-sidebar)', borderColor: 'var(--border)' }}
+            role="dialog"
+            aria-label="قائمة التنقل"
+          >
+            <button
+              onClick={() => setShowMobileNav(false)}
+              className="self-start rounded-xl border border-line bg-surface px-3 py-1.5 text-xs font-bold text-muted cursor-pointer"
+            >
+              إغلاق ✕
+            </button>
+            {renderNavContent(() => setShowMobileNav(false))}
+          </aside>
+        </div>
+      )}
 
       {/* Main Content Area */}
       <main className="p-6 md:p-8 bg-bg min-h-dvh flex flex-col gap-6 overflow-y-auto">
         <header className="sticky top-0 z-30 flex items-center justify-between border border-line bg-surface/95 backdrop-blur-md p-4 rounded-card shadow-sm">
           <div className="flex items-center gap-3">
+            {/* Mobile menu button (<901px) */}
+            <button
+              onClick={() => setShowMobileNav(true)}
+              className="flex h-9 w-9 items-center justify-center rounded-[8px] border border-line bg-surface-2 text-text cursor-pointer min-[901px]:hidden"
+              aria-label="فتح قائمة التنقل"
+              title="القائمة"
+            >
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
             <div className="flex h-9 w-9 items-center justify-center rounded-[8px] bg-gradient-to-tr from-jade to-copper font-mono text-xs font-bold text-white shadow-sm border border-line">
               FD
             </div>
@@ -694,7 +748,13 @@ export function App() {
 
               {/* Dropdown Drawer */}
               {showNotificationsDrawer && (
-                <div className="absolute left-0 top-11 w-80 max-h-96 bg-surface border border-line rounded-card shadow-2xl z-50 p-3 overflow-y-auto flex flex-col gap-2">
+                <>
+                  <div
+                    className="fixed inset-0 z-40"
+                    onClick={() => setShowNotificationsDrawer(false)}
+                    aria-hidden="true"
+                  />
+                  <div className="absolute left-0 top-11 w-80 max-w-[calc(100vw-2rem)] max-h-96 bg-surface border border-line rounded-card shadow-2xl z-50 p-3 overflow-y-auto flex flex-col gap-2">
                   <div className="flex justify-between items-center pb-2 border-b border-line">
                     <span className="font-bold text-xs">مركز التنبيهات والإشعارات</span>
                     <span className="text-[10px] mono font-bold text-muted">{notificationsList.length} تنبيهات</span>
@@ -721,7 +781,8 @@ export function App() {
                   {notificationsList.length === 0 && (
                     <div className="p-4 text-center text-muted text-xs">لا توجد تنبيهات جديدة حالياً.</div>
                   )}
-                </div>
+                  </div>
+                </>
               )}
             </div>
 

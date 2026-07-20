@@ -3,6 +3,7 @@ import type { Purchase, Supplier } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
 import { formatLYD } from '../lib/money';
+import { formatDate } from '../lib/datetime';
 import { Icons } from '../components/Icons';
 
 interface PurchasesProps {
@@ -99,7 +100,7 @@ export const PurchasesScreen: React.FC<PurchasesProps> = ({
                       <td className="p-3 mono font-bold text-jade">{p.invoiceNumber}</td>
                       <td className="p-3 font-semibold">{p.supplierName || '—'}</td>
                       <td className="p-3 mono text-muted">
-                        {new Date(p.createdAt).toLocaleDateString('ar-LY')}
+                        {formatDate(p.createdAt)}
                       </td>
                       <td className="p-3 mono font-bold">{formatLYD(p.total)} د.ل</td>
                       <td className="p-3 mono text-jade">{formatLYD(p.paid)} د.ل</td>

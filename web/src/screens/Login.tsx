@@ -151,6 +151,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onSuccess }) => {
               <input
                 type="password"
                 required
+                autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full h-11 rounded-control border border-line bg-surface px-3 text-sm focus-visible:outline-none focus:border-jade"

@@ -180,7 +180,7 @@ export const PosScreen: React.FC<PosProps> = ({
         </div>
 
         {/* Products Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 overflow-y-auto max-h-[calc(100vh-230px)]">
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-3 overflow-y-auto max-h-[calc(100vh-230px)]">
           {filteredProducts.map((product) => {
             const price = resolveClientPrice(product);
             const isOutOfStock = product.quantity <= 0;

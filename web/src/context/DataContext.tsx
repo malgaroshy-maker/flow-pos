@@ -77,12 +77,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return res.success ? res.data : [];
     };
 
+    const isManager = currentUser?.role === 'manager';
+
     fetchArray('/api/products').then(setProductsList);
     fetchArray('/api/sales').then(setSalesList);
-    fetchArray('/api/shifts').then(setShiftsList);
     fetchArray('/api/expenses').then(setExpensesList);
-    fetchArray('/api/users').then(setUsersList);
-    fetchArray('/api/backup/list').then(setBackupsList);
     fetchArray('/api/customers').then(setCustomersList);
     fetchArray('/api/suppliers').then(setSuppliersList);
     fetchArray('/api/purchases').then(setPurchasesList);
@@ -93,8 +92,18 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setActiveShift(res.success ? res.data?.active ?? null : null);
     });
 
-    if (currentUser?.role === 'manager') {
+    // Manager-only data: skip for sales role (server 403s /api/shifts; the
+    // rest is only consumed by manager-only screens anyway)
+    if (isManager) {
+      fetchArray('/api/shifts').then(setShiftsList);
+      fetchArray('/api/users').then(setUsersList);
+      fetchArray('/api/backup/list').then(setBackupsList);
       fetchArray('/api/audit-logs').then(setAuditLogsList);
+    } else {
+      setShiftsList([]);
+      setUsersList([]);
+      setBackupsList([]);
+      setAuditLogsList([]);
     }
   }, [token, currentUser, logout]);
 

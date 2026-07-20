@@ -41,6 +41,8 @@ export const PinOverrideModal: React.FC<PinOverrideModalProps> = ({
               type="password"
               maxLength={4}
               autoFocus
+              autoComplete="off"
+              inputMode="numeric"
               value={pinValue}
               onChange={(e) => onPinChange(e.target.value)}
               className="w-full h-12 rounded-control border border-line bg-surface text-center mono text-2xl tracking-widest focus-visible:outline-none focus:border-jade"

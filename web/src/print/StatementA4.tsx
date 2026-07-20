@@ -1,6 +1,7 @@
 import React from 'react';
 import type { Customer, Settings } from '../types';
 import { formatLYD } from '../lib/money';
+import { formatDateTime } from '../lib/datetime';
 
 interface StatementA4Props {
   customer: Customer;
@@ -58,7 +59,7 @@ export const StatementA4: React.FC<StatementA4Props> = ({
         </div>
         <div className="text-left">
           <h2 className="font-extrabold text-base">كشف حساب عميل</h2>
-          <p className="mono text-[10px]">{new Date().toLocaleString('ar-LY')}</p>
+          <p className="mono text-[10px]">{formatDateTime(new Date())}</p>
         </div>
       </div>
 

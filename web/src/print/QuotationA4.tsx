@@ -1,6 +1,7 @@
 import React from 'react';
 import type { Quotation, Settings } from '../types';
 import { formatLYD } from '../lib/money';
+import { formatDateTime } from '../lib/datetime';
 import { tafqeetLYD } from '../lib/tafqeet';
 
 interface QuotationA4Props {
@@ -67,7 +68,7 @@ export const QuotationA4: React.FC<QuotationA4Props> = ({ quotation, settings, q
         <div>
           <span className="font-bold">التاريخ: </span>
           <span className="mono">
-            {new Date(quotation.createdAt).toLocaleString('ar-LY')}
+            {formatDateTime(quotation.createdAt)}
           </span>
         </div>
         <div>

@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
 import { useToast } from '../context/ToastContext';
 import { apiCall } from '../lib/api';
+import { formatDateTime } from '../lib/datetime';
 
 interface SettingsProps {
   onTriggerBackup: () => void;
@@ -322,7 +323,7 @@ export const SettingsScreen: React.FC<SettingsProps> = ({
                 auditLogsList.map((log) => (
                   <tr key={log.id} className="hover:bg-surface-2/40 transition-colors">
                     <td className="p-3 mono font-semibold text-muted">
-                      {new Date(log.createdAt).toLocaleString('ar-LY')}
+                      {formatDateTime(log.createdAt)}
                     </td>
                     <td className="p-3 font-bold text-text">
                       {log.username || 'نظام تلقائي'}

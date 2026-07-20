@@ -1,6 +1,7 @@
 import React from 'react';
 import type { Sale, Settings } from '../types';
 import { formatLYD } from '../lib/money';
+import { formatDateTime } from '../lib/datetime';
 
 interface ThermalReceiptProps {
   sale: Sale;
@@ -27,7 +28,7 @@ export const ThermalReceipt: React.FC<ThermalReceiptProps> = ({ sale, settings }
       </div>
       <div className="flex justify-between mono text-[10px] mb-1">
         <span>{sale.invoiceNumber}</span>
-        <span>{new Date(sale.createdAt).toLocaleString('ar-LY')}</span>
+        <span className="mono">{formatDateTime(sale.createdAt)}</span>
       </div>
       <div className="border-b border-dashed border-black/60 mb-1" />
       {sale.items?.map((item) => (
