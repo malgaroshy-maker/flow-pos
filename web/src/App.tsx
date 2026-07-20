@@ -634,12 +634,11 @@ export function App() {
     return (
       <>
         <div className="flex items-center gap-3 pt-1">
-          <div
-            className="flex h-11 w-11 items-center justify-center rounded-xl font-mono text-sm font-black text-white shadow-md flex-shrink-0"
-            style={{ background: 'var(--gradient-jade)', boxShadow: 'var(--shadow-jade)' }}
-          >
-            POS
-          </div>
+          <img
+            src="/logo.png"
+            alt="Flow Dev"
+            className="h-12 w-12 object-contain rounded-xl flex-shrink-0 drop-shadow-md"
+          />
           <div className="min-w-0">
             <div className="font-display text-sm font-extrabold leading-tight truncate">
               {settingsData?.businessName ?? 'فلو ديف للمستلزمات'}
@@ -770,9 +769,11 @@ export function App() {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
               </svg>
             </button>
-            <div className="flex h-9 w-9 items-center justify-center rounded-[8px] bg-gradient-to-tr from-jade to-copper font-mono text-xs font-bold text-white shadow-sm border border-line">
-              FD
-            </div>
+            <img
+              src="/logo.png"
+              alt="Flow Dev"
+              className="h-9 w-9 object-contain rounded-lg flex-shrink-0"
+            />
             <div className="flex flex-col">
               <span className="font-display font-bold text-sm leading-tight">
                 {settingsData?.businessName ?? 'فلو ديف للمستلزمات'}

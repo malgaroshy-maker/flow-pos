@@ -12,6 +12,8 @@
     "dev:server": "npm run dev -w server",
     "dev:web": "npm run dev -w web",
     "build": "npm run build -w server && npm run build -w web",
+    "build:electron": "npm run build && cd electron && npm run build",
+    "package": "npm run build:electron && cd electron && npm run dist",
     "test": "npm run test -w server",
     "test:e2e": "playwright test",
     "typecheck": "npm run typecheck -w server && npm run typecheck -w web",

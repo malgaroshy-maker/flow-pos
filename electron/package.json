@@ -1,0 +1,73 @@
+{
+  "name": "flowpos-desktop",
+  "version": "1.4.1",
+  "description": "منظومة Flow — نافذة سطح المكتب",
+  "main": "dist/main.js",
+  "private": true,
+  "scripts": {
+    "build": "tsc",
+    "start": "electron .",
+    "dist": "npm run build && electron-builder",
+    "dist:dir": "npm run build && electron-builder --dir"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "electron": "^36.0.0",
+    "electron-builder": "^25.0.0",
+    "typescript": "^5.8.3",
+    "@types/node": "^24.0.0"
+  },
+  "build": {
+    "appId": "com.flowpos.desktop",
+    "productName": "FlowPOS",
+    "copyright": "Copyright © 2026 Flow POS Solutions",
+    "directories": {
+      "output": "../dist-installer"
+    },
+    "extraResources": [
+      {
+        "from": "../server/dist",
+        "to": "server/dist"
+      },
+      {
+        "from": "../server/drizzle",
+        "to": "server/drizzle"
+      },
+      {
+        "from": "../node_modules/better-sqlite3",
+        "to": "server/node_modules/better-sqlite3"
+      },
+      {
+        "from": "../web/dist",
+        "to": "web/dist"
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "assets/icon.ico",
+      "requestedExecutionLevel": "requireAdministrator"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "installerIcon": "assets/icon.ico",
+      "uninstallerIcon": "assets/icon.ico",
+      "installerHeaderIcon": "assets/icon.ico",
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "منظومة Flow",
+      "differentialPackage": false,
+      "installerLanguages": ["ar", "en"],
+      "language": "1025",
+      "perMachine": true
+    },
+    "bundledNodeVersion": "24",
+    "nodeGypRebuild": false,
+    "npmRebuild": false
+  }
+}

@@ -1,0 +1,408 @@
+import {
+  app,
+  BrowserWindow,
+  nativeImage,
+  Menu,
+  shell,
+  Tray,
+} from 'electron';
+import { ChildProcess, spawn } from 'node:child_process';
+import { existsSync, mkdirSync } from 'node:fs';
+import { get as httpGet } from 'node:http';
+import { join, resolve } from 'node:path';
+
+// ─── Paths ───────────────────────────────────────────────────────────────────
+
+const IS_PACKAGED = app.isPackaged;
+
+// In packaged app, extra resources live at process.resourcesPath
+// In dev mode, resources are relative to the repo root
+const RESOURCES_ROOT = IS_PACKAGED
+  ? process.resourcesPath
+  : resolve(__dirname, '..', '..'); // electron/dist/main.js → repo root
+
+const SERVER_SCRIPT = join(RESOURCES_ROOT, 'server', 'dist', 'server.js');
+
+// Data directory: survives upgrades, doesn't need admin to write
+const DATA_DIR = join(app.getPath('appData'), '..', 'ProgramData', 'FlowPOS', 'data');
+const DB_PATH = join(DATA_DIR, 'pos.db');
+
+const PORT = 3001;
+const SERVER_URL = `http://localhost:${PORT}`;
+const TRAY_ICON_PATH = join(__dirname, '..', 'assets', 'tray-icon.png');
+const APP_ICON_PATH = join(__dirname, '..', 'assets', 'icon.ico');
+
+// ─── State ────────────────────────────────────────────────────────────────────
+
+let tray: Tray | null = null;
+let mainWindow: BrowserWindow | null = null;
+let splashWindow: BrowserWindow | null = null;
+let serverProcess: ChildProcess | null = null;
+let serverReady = false;
+let isQuitting = false;
+
+// ─── Splash Screen ────────────────────────────────────────────────────────────
+
+const SPLASH_HTML_PATH = join(__dirname, '..', 'assets', 'splash.html');
+
+function createSplashWindow() {
+  const iconPath = existsSync(APP_ICON_PATH) ? APP_ICON_PATH : undefined;
+
+  splashWindow = new BrowserWindow({
+    width: 480,
+    height: 520,
+    frame: false,
+    transparent: true,
+    resizable: false,
+    center: true,
+    skipTaskbar: true,
+    alwaysOnTop: true,
+    icon: iconPath,
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+    },
+  });
+
+  splashWindow.loadFile(SPLASH_HTML_PATH);
+  splashWindow.on('closed', () => { splashWindow = null; });
+}
+
+function closeSplashWindow() {
+  if (splashWindow && !splashWindow.isDestroyed()) {
+    splashWindow.close();
+  }
+  splashWindow = null;
+}
+
+// ─── Server Management ────────────────────────────────────────────────────────
+
+function findNodeExecutable(): string {
+  if (IS_PACKAGED) {
+    // electron-builder bundles Node.js next to the executable
+    const candidates = [
+      join(process.execPath, '..', 'resources', 'node', 'node.exe'),
+      join(process.execPath, '..', 'node.exe'),
+      join(process.resourcesPath, 'node', 'node.exe'),
+    ];
+    for (const p of candidates) {
+      if (existsSync(p)) return p;
+    }
+    // Fallback: use the embedded Node.js from Electron itself (runs Node scripts)
+    return process.execPath; // Electron can run Node scripts with --version flag for sanity
+  }
+  // Dev mode: use system node
+  return 'node';
+}
+
+function startServer(): Promise<void> {
+  return new Promise((resolve, reject) => {
+    serverReady = false;
+
+    // Ensure data directory exists
+    mkdirSync(DATA_DIR, { recursive: true });
+
+    const nodeExe = findNodeExecutable();
+
+    // In packaged mode, use electron's bundled node via --require trick
+    // We pass the server script as an argument
+    const env: NodeJS.ProcessEnv = {
+      ...process.env,
+      POS_DB_PATH: DB_PATH,
+      POS_PORT: String(PORT),
+      POS_HOST: '0.0.0.0',
+      NODE_ENV: 'production',
+      // Tell better-sqlite3 where its native binding is
+      BETTER_SQLITE3_DIR: join(RESOURCES_ROOT, 'server', 'node_modules', 'better-sqlite3'),
+    };
+
+    console.log('[FlowPOS] Starting server:', SERVER_SCRIPT);
+    console.log('[FlowPOS] DB path:', DB_PATH);
+    console.log('[FlowPOS] Node executable:', nodeExe);
+
+    // When packaged, Electron's own Node runtime is used via electron --node-integration
+    // We spawn with the system-resolved node (or bundled node)
+    serverProcess = spawn(nodeExe, [SERVER_SCRIPT], {
+      env,
+      stdio: ['ignore', 'pipe', 'pipe'],
+      // Detach is false — we want it as a child process
+    });
+
+    serverProcess.stdout?.on('data', (chunk: Buffer) => {
+      console.log('[server]', chunk.toString().trim());
+    });
+
+    serverProcess.stderr?.on('data', (chunk: Buffer) => {
+      console.error('[server:err]', chunk.toString().trim());
+    });
+
+    serverProcess.on('exit', (code, signal) => {
+      console.log(`[FlowPOS] Server exited (code=${code} signal=${signal})`);
+      serverReady = false;
+      if (!isQuitting) {
+        updateTrayMenu();
+      }
+    });
+
+    // Poll until server responds
+    waitForServer(resolve, reject);
+  });
+}
+
+function waitForServer(
+  resolve: () => void,
+  reject: (err: Error) => void,
+  attempt = 0
+) {
+  const MAX_ATTEMPTS = 60; // 30 seconds total
+  if (attempt >= MAX_ATTEMPTS) {
+    reject(new Error('Server did not start within 30 seconds'));
+    return;
+  }
+
+  const probe = httpGet(`${SERVER_URL}/api/health`, (res) => {
+    // 200 = healthy, 401 = server up but auth required — either means it's running
+    if (res.statusCode === 200 || res.statusCode === 401) {
+      serverReady = true;
+      updateTrayMenu();
+      resolve();
+    } else {
+      setTimeout(() => waitForServer(resolve, reject, attempt + 1), 500);
+    }
+    res.resume(); // Consume response data to free up memory
+  });
+
+  probe.on('error', () => {
+    setTimeout(() => waitForServer(resolve, reject, attempt + 1), 500);
+  });
+  probe.end();
+}
+
+function stopServer(): Promise<void> {
+  return new Promise((resolve) => {
+    if (!serverProcess || serverProcess.exitCode !== null) {
+      resolve();
+      return;
+    }
+    serverProcess.once('exit', () => resolve());
+    serverProcess.kill('SIGTERM');
+    // Force kill after 5s
+    setTimeout(() => {
+      if (serverProcess && serverProcess.exitCode === null) {
+        serverProcess.kill('SIGKILL');
+      }
+      resolve();
+    }, 5000);
+  });
+}
+
+async function restartServer() {
+  console.log('[FlowPOS] Restarting server...');
+  serverReady = false;
+  updateTrayMenu();
+  await stopServer();
+  try {
+    await startServer();
+    mainWindow?.reload();
+    updateTrayMenu();
+  } catch (err) {
+    console.error('[FlowPOS] Server restart failed:', err);
+  }
+}
+
+// ─── Window ───────────────────────────────────────────────────────────────────
+
+function createMainWindow() {
+  const iconPath = existsSync(APP_ICON_PATH) ? APP_ICON_PATH : undefined;
+
+  mainWindow = new BrowserWindow({
+    width: 1400,
+    height: 900,
+    minWidth: 1024,
+    minHeight: 640,
+    title: 'منظومة Flow للمبيعات والمخزون',
+    icon: iconPath,
+    webPreferences: {
+      preload: join(__dirname, 'preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: false,
+    },
+    // Show a clean loading state
+    show: false,
+    backgroundColor: '#0f172a',
+  });
+
+  // Remove default menu bar
+  mainWindow.setMenuBarVisibility(false);
+  mainWindow.removeMenu();
+
+  // Open DevTools only in dev mode
+  if (!IS_PACKAGED) {
+    mainWindow.webContents.openDevTools({ mode: 'detach' });
+  }
+
+  mainWindow.once('ready-to-show', () => {
+    mainWindow!.show();
+    mainWindow!.focus();
+  });
+
+  // Prevent window from being destroyed on close — minimize to tray instead
+  mainWindow.on('close', (e) => {
+    if (!isQuitting) {
+      e.preventDefault();
+      mainWindow!.hide();
+      tray?.displayBalloon({
+        title: 'منظومة Flow',
+        content: 'المنظومة لا تزال تعمل في شريط النظام. انقر على الأيقونة للعودة.',
+        iconType: 'info',
+      });
+    }
+  });
+
+  mainWindow.on('closed', () => {
+    mainWindow = null;
+  });
+
+  // Open external links in the default browser
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    shell.openExternal(url);
+    return { action: 'deny' };
+  });
+
+  mainWindow.loadURL(SERVER_URL);
+}
+
+function openOrFocusWindow() {
+  if (mainWindow) {
+    if (mainWindow.isMinimized()) mainWindow.restore();
+    if (!mainWindow.isVisible()) mainWindow.show();
+    mainWindow.focus();
+  } else {
+    createMainWindow();
+  }
+}
+
+// ─── Tray ─────────────────────────────────────────────────────────────────────
+
+function buildTrayMenu(): Menu {
+  const statusLabel = serverReady ? '● الخادم يعمل' : '○ الخادم متوقف';
+
+  return Menu.buildFromTemplate([
+    {
+      label: 'فتح منظومة Flow',
+      click: openOrFocusWindow,
+      type: 'normal',
+    },
+    { type: 'separator' },
+    {
+      label: statusLabel,
+      enabled: false,
+    },
+    {
+      label: 'إعادة تشغيل الخادم',
+      click: () => restartServer(),
+    },
+    { type: 'separator' },
+    {
+      label: 'فتح مجلد البيانات',
+      click: () => shell.openPath(DATA_DIR),
+    },
+    { type: 'separator' },
+    {
+      label: 'إغلاق منظومة Flow',
+      click: quitApp,
+    },
+  ]);
+}
+
+function updateTrayMenu() {
+  if (tray) {
+    tray.setContextMenu(buildTrayMenu());
+    tray.setToolTip(
+      serverReady
+        ? 'منظومة Flow — تعمل على المنفذ 3001'
+        : 'منظومة Flow — الخادم متوقف'
+    );
+  }
+}
+
+function createTray() {
+  let icon: Electron.NativeImage;
+
+  if (existsSync(TRAY_ICON_PATH)) {
+    icon = nativeImage.createFromPath(TRAY_ICON_PATH);
+  } else {
+    // Fallback: create a minimal 16×16 colored icon programmatically
+    icon = nativeImage.createFromDataURL(
+      // 16x16 green circle as base64 PNG
+      'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAABmJLR0QA/wD/AP+gvaeTAAAAf0lEQVQ4jWNgGAWjAAiA+P9RgAEI/kMZDAyMWDlgYGCQxVc' +
+      'gJSWlRLCCgYGBBRMYGBgYGHBhFgYGBgyYGBgYGDJgYGCQwMDAIA8TMzAweGBiMDBgYGDAgIGBAQMGBgYMDAwMGBgYGDAwMGBgYGBgYmBgwMCAgYEBAwMDAwBQTxAbCqSoOwAAAABJRU5ErkJggg=='
+    );
+  }
+
+  tray = new Tray(icon);
+  tray.setToolTip('منظومة Flow — جاري التشغيل...');
+  tray.setContextMenu(buildTrayMenu());
+
+  // Double-click opens the window
+  tray.on('double-click', openOrFocusWindow);
+}
+
+// ─── App Lifecycle ────────────────────────────────────────────────────────────
+
+function quitApp() {
+  isQuitting = true;
+  mainWindow?.destroy();
+  stopServer().then(() => app.quit());
+}
+
+app.whenReady().then(async () => {
+  // Auto-start with Windows on login
+  if (IS_PACKAGED) {
+    app.setLoginItemSettings({
+      openAtLogin: true,
+      name: 'FlowPOS',
+    });
+  }
+
+  // Show splash screen immediately while server starts
+  createSplashWindow();
+
+  // Create tray so user sees something even during startup
+  createTray();
+
+  // Start the Fastify server
+  try {
+    await startServer();
+    console.log('[FlowPOS] Server ready at', SERVER_URL);
+  } catch (err) {
+    console.error('[FlowPOS] Server failed to start:', err);
+  }
+
+  // Close splash and open main window
+  closeSplashWindow();
+  createMainWindow();
+  updateTrayMenu();
+});
+
+// Prevent app from quitting when all windows are closed (we live in the tray)
+app.on('window-all-closed', () => {
+  // On macOS this is normal; on Windows/Linux we stay in tray
+  if (!isQuitting) {
+    // Do nothing — app continues via system tray
+  }
+});
+
+app.on('activate', () => {
+  openOrFocusWindow();
+});
+
+app.on('before-quit', () => {
+  isQuitting = true;
+});
+
+// Handle unexpected exits gracefully
+process.on('uncaughtException', (err) => {
+  console.error('[FlowPOS] Uncaught exception:', err);
+});

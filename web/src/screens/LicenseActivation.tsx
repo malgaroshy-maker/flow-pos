@@ -63,12 +63,11 @@ export const LicenseActivationScreen: React.FC<LicenseActivationProps> = ({
       <div className="w-full max-w-lg rounded-card border border-line bg-surface p-8 shadow-xl flex flex-col gap-6">
         {/* Brand Header */}
         <div className="flex flex-col items-center text-center gap-2 border-b border-line pb-6">
-          <div
-            className="flex h-16 w-16 items-center justify-center rounded-2xl font-mono text-2xl font-black text-white mb-2"
-            style={{ background: 'var(--gradient-jade)', boxShadow: 'var(--shadow-jade)' }}
-          >
-            POS
-          </div>
+          <img
+            src="/logo.png"
+            alt="Flow Dev Logo"
+            className="h-24 w-24 object-contain mb-1 drop-shadow-lg"
+          />
           <h1 className="text-2xl font-extrabold font-display">منظومة Flow</h1>
           <p className="text-xs text-muted">نظام إدارة المبيعات والمخزون — نسخة غير مفعلة</p>
         </div>

@@ -51,12 +51,11 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onSuccess }) => {
           }}
         />
         <div className="relative z-10">
-          <div
-            className="flex h-16 w-16 items-center justify-center rounded-2xl font-mono text-2xl font-black text-white mb-8"
-            style={{ background: 'var(--gradient-jade)', boxShadow: 'var(--shadow-jade)' }}
-          >
-            POS
-          </div>
+          <img
+            src="/logo.png"
+            alt="Flow Dev Logo"
+            className="h-24 w-24 object-contain mb-6 drop-shadow-xl"
+          />
           <h1
             className="text-4xl font-black leading-tight mb-4"
             style={{ color: '#F0EBE0', fontFamily: 'Cairo, sans-serif' }}
@@ -105,13 +104,12 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onSuccess }) => {
         style={{ background: 'var(--bg)' }}
       >
         <div className="w-full max-w-[400px]">
-          <div className="lg:hidden flex justify-center mb-8">
-            <div
-              className="flex h-14 w-14 items-center justify-center rounded-2xl font-mono text-xl font-black text-white"
-              style={{ background: 'var(--gradient-jade)', boxShadow: 'var(--shadow-jade)' }}
-            >
-              POS
-            </div>
+          <div className="lg:hidden flex justify-center mb-6">
+            <img
+              src="/logo.png"
+              alt="Flow Dev Logo"
+              className="h-20 w-20 object-contain drop-shadow-lg"
+            />
           </div>
 
           <div className="mb-8">
