@@ -1,4 +1,4 @@
-import { createHash, verify, generateKeyPairSync } from 'node:crypto';
+import { createHash, verify, sign, generateKeyPairSync } from 'node:crypto';
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { cpus, hostname, arch, platform, networkInterfaces } from 'node:os';
 import { dirname, join } from 'node:path';
@@ -25,6 +25,17 @@ export function getDefaultVendorKeys(): { publicKeyPem: string; privateKeyPem: s
     };
   }
   return defaultKeysCache;
+}
+
+export function signLicense(
+  payload: LicensePayload,
+  privateKeyPem = getDefaultVendorKeys().privateKeyPem
+): string {
+  const payloadJsonStr = JSON.stringify(payload);
+  const payloadB64 = Buffer.from(payloadJsonStr, 'utf-8').toString('base64');
+  const signature = sign(null, Buffer.from(payloadJsonStr), privateKeyPem);
+  const sigB64 = signature.toString('base64');
+  return `${payloadB64}.${sigB64}`;
 }
 
 export interface LicensePayload {
@@ -221,4 +232,27 @@ export function activateLicense(
       licenseType: res.payload.licenseType,
     },
   };
+}
+
+const DEFAULT_VENDOR_PIN = process.env.VENDOR_PIN || '88889999';
+
+export function activateWithVendorPin(
+  vendorPin: string,
+  customerName: string
+): { success: boolean; error?: string; info?: LicenseInfo } {
+  if (!vendorPin || vendorPin.trim() !== DEFAULT_VENDOR_PIN) {
+    return { success: false, error: 'رمز الموزع المعتمد غير صحيح' };
+  }
+  const machineCode = getMachineCode();
+  const keys = getDefaultVendorKeys();
+  const payload: LicensePayload = {
+    machineCode,
+    customerName: customerName.trim() || 'عميل محلي',
+    issuedAt: new Date().toISOString(),
+    expiresAt: null, // Lifetime commercial license
+    licenseType: 'commercial',
+  };
+
+  const licenseKey = signLicense(payload, keys.privateKeyPem);
+  return activateLicense(licenseKey, keys.publicKeyPem);
 }
