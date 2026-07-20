@@ -111,6 +111,17 @@ function logServer(text: string) {
   } catch {}
 }
 
+function isPortInUse(port: number): Promise<boolean> {
+  return new Promise((resolve) => {
+    const probe = httpGet(`http://localhost:${port}/api/health`, (res) => {
+      res.resume();
+      resolve(res.statusCode === 200 || (res.statusCode !== undefined && res.statusCode < 500));
+    });
+    probe.on('error', () => resolve(false));
+    probe.end();
+  });
+}
+
 function startServer(): Promise<void> {
   return new Promise(async (resolve, reject) => {
     serverReady = false;
@@ -128,9 +139,18 @@ function startServer(): Promise<void> {
     logServer(`DB path: ${DB_PATH}`);
 
     try {
+      // Check if server is already running (e.g., from a previous instance)
+      const alreadyRunning = await isPortInUse(PORT);
+      if (alreadyRunning) {
+        logServer(`Port ${PORT} already in use — reusing existing server`);
+        waitForServer(resolve, reject);
+        return;
+      }
+
       // Import and execute the compiled Fastify server bundle inside Electron main process
       await import(SERVER_SCRIPT);
-      waitForServer(resolve, reject);
+      // Give Fastify a moment to bind before polling
+      setTimeout(() => waitForServer(resolve, reject), 500);
     } catch (err: any) {
       logServer(`Server start error: ${err?.stack || err}`);
       reject(err);
