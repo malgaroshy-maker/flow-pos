@@ -390,11 +390,19 @@ function ensurePrintDialogRegistered() {
 
 // Triggered from the renderer's window.flowpos.print() (preload.ts) instead of
 // window.print() — see the comment there for why.
-ipcMain.handle('flowpos:print', async (event) => {
+ipcMain.handle('flowpos:print', async (event, kind?: 'a4' | 'thermal') => {
   const win = BrowserWindow.fromWebContents(event.sender);
   if (!win) return { success: false, reason: 'no_window' };
+  // The print dialog otherwise defaults to landscape, which squeezes the
+  // portrait A4 invoice/quotation/statement layout into the top-left corner.
+  // Thermal receipts print on whatever the roll printer's own driver
+  // provides, so no page size is forced for them.
+  const options =
+    kind === 'thermal'
+      ? { silent: false, printBackground: true, landscape: false }
+      : { silent: false, printBackground: true, landscape: false, pageSize: 'A4' as const };
   return new Promise<{ success: boolean; reason?: string }>((resolvePrint) => {
-    win.webContents.print({ silent: false, printBackground: true }, (success, reason) => {
+    win.webContents.print(options, (success, reason) => {
       resolvePrint({ success, reason });
     });
   });

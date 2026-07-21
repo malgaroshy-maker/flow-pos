@@ -888,7 +888,7 @@ export const AppModals: React.FC<AppModalsProps> = ({
 
             <div className="flex gap-3 pt-3 border-t border-line">
               <button
-                onClick={() => triggerPrint()}
+                onClick={() => triggerPrint(printMode)}
                 className="flex-1 py-3 bg-jade text-white font-bold rounded-control hover:bg-jade-2 transition-colors cursor-pointer text-sm shadow-md flex items-center justify-center gap-2"
               >
                 <Icons.Printer className="h-4 w-4" />

@@ -5,5 +5,5 @@ contextBridge.exposeInMainWorld('flowpos', {
   // Prints via the main process (webContents.print), not the renderer's
   // window.print() — Windows' modern print dialog can spawn with no visible
   // window when triggered from a sandboxed renderer under contextIsolation.
-  print: () => ipcRenderer.invoke('flowpos:print'),
+  print: (kind?: 'a4' | 'thermal') => ipcRenderer.invoke('flowpos:print', kind),
 });
