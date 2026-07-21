@@ -52,10 +52,7 @@ export interface LicenseInfo {
   reason?: string;
 }
 
-/**
- * Generate a deterministic 16-character machine fingerprint (XXXX-XXXX-XXXX-XXXX).
- */
-export function getMachineCode(): string {
+function computeMachineCode(): string {
   const cpuModel = cpus()[0]?.model || 'generic-cpu';
   const cpuCount = cpus().length;
   const sysArch = arch();
@@ -78,6 +75,51 @@ export function getMachineCode(): string {
 
   // Format as 4 groups of 4 characters: XXXX-XXXX-XXXX-XXXX
   return `${hash.slice(0, 4)}-${hash.slice(4, 8)}-${hash.slice(8, 12)}-${hash.slice(12, 16)}`;
+}
+
+export function getMachineCodeFilePath(): string {
+  if (process.env.POS_MACHINE_CODE_PATH) return process.env.POS_MACHINE_CODE_PATH;
+  const dbPath = resolveDbPath();
+  return join(dirname(dbPath), 'machine-id.txt');
+}
+
+const MACHINE_CODE_FORMAT = /^[A-F0-9]{4}-[A-F0-9]{4}-[A-F0-9]{4}-[A-F0-9]{4}$/;
+
+/**
+ * Returns this machine's fingerprint (XXXX-XXXX-XXXX-XXXX), computed once and
+ * cached to disk from then on.
+ *
+ * Regression fix: the fingerprint used to be recomputed from scratch on every
+ * call, including every active network adapter's MAC address. That list is
+ * NOT stable on a real machine — WiFi radios cycle on sleep/wake, VPN and
+ * virtual adapters (Hyper-V, WSL, Bluetooth PAN, USB tethering) can appear or
+ * disappear between boots — so the exact same physical machine could compute
+ * a different code hours after activation, and a perfectly valid license
+ * would suddenly fail "machine code does not match this computer". Caching
+ * the first computed value to disk (same pattern as the vendor keypair and
+ * session persistence fixes) makes it stable for the lifetime of the install
+ * regardless of what changes on the network side afterward.
+ */
+export function getMachineCode(): string {
+  const filePath = getMachineCodeFilePath();
+  if (existsSync(filePath)) {
+    try {
+      const cached = readFileSync(filePath, 'utf-8').trim();
+      if (MACHINE_CODE_FORMAT.test(cached)) return cached;
+    } catch {
+      // Corrupt/unreadable file — fall through and recompute below.
+    }
+  }
+
+  const computed = computeMachineCode();
+  try {
+    mkdirSync(dirname(filePath), { recursive: true });
+    writeFileSync(filePath, computed, 'utf-8');
+  } catch {
+    // Best-effort persistence — if the disk write fails, this call still
+    // returns a correct value; the next call will just recompute again.
+  }
+  return computed;
 }
 
 /**

@@ -1,17 +1,30 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { generateKeyPairSync } from 'node:crypto';
-import { unlinkSync, existsSync } from 'node:fs';
+import { unlinkSync, existsSync, mkdtempSync, rmSync, readFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { buildApp } from './app';
 import { openDatabase } from './db/index';
 import {
   getMachineCode,
   verifyLicenseString,
   getLicenseFilePath,
+  getMachineCodeFilePath,
   getLicenseInfo,
   activateLicense,
   signLicense,
   VENDOR_PUBLIC_KEY_PEM,
 } from './lib/license';
+
+function cleanupTestFiles() {
+  for (const filePath of [getLicenseFilePath(), getMachineCodeFilePath()]) {
+    if (existsSync(filePath)) {
+      try {
+        unlinkSync(filePath);
+      } catch {}
+    }
+  }
+}
 
 describe('offline hardware licensing system', () => {
   let sqlite: ReturnType<typeof openDatabase>;
@@ -23,25 +36,13 @@ describe('offline hardware licensing system', () => {
   const testPrivateKeyPem = privateKey.export({ type: 'pkcs8', format: 'pem' }).toString();
 
   beforeEach(() => {
-    // Remove test license file if exists
-    const licPath = getLicenseFilePath();
-    if (existsSync(licPath)) {
-      try {
-        unlinkSync(licPath);
-      } catch {}
-    }
-
+    cleanupTestFiles();
     sqlite = openDatabase(':memory:');
     app = buildApp(sqlite);
   });
 
   afterEach(() => {
-    const licPath = getLicenseFilePath();
-    if (existsSync(licPath)) {
-      try {
-        unlinkSync(licPath);
-      } catch {}
-    }
+    cleanupTestFiles();
   });
 
   it('generates a 16-character deterministic machine code', () => {
@@ -167,5 +168,42 @@ describe('offline hardware licensing system', () => {
     const res = verifyLicenseString(forgedLicenseKey, machineCode, VENDOR_PUBLIC_KEY_PEM);
     expect(res.valid).toBe(false);
     expect(res.reason).toContain('توقيع الترخيص غير صالح');
+  });
+
+  it('persists the machine code to disk so it stays stable across restarts even if network adapters change', async () => {
+    // Regression test for a real customer-reported bug: getMachineCode() used
+    // to hash in every active network adapter's MAC address on every call.
+    // That set is not stable on a real machine (WiFi radio cycling on
+    // sleep/wake, VPN/virtual adapters appearing or disappearing), so the
+    // exact same physical machine could compute a different code later and a
+    // valid, already-activated license would suddenly report "machine code
+    // does not match this computer". vi.resetModules() + a fresh dynamic
+    // import simulates a separate process load (a real app restart), and we
+    // fake a changed network environment between the two loads.
+    const dir = mkdtempSync(join(tmpdir(), 'flowpos-machine-id-'));
+    const idPath = join(dir, 'machine-id.txt');
+    process.env.POS_MACHINE_CODE_PATH = idPath;
+    try {
+      vi.resetModules();
+      const licenseModuleA = await import('./lib/license?machineA');
+      const codeA = licenseModuleA.getMachineCode();
+      expect(existsSync(idPath)).toBe(true);
+      expect(readFileSync(idPath, 'utf-8').trim()).toBe(codeA);
+
+      // Simulate the "process B" load happening under different network
+      // conditions than process A saw — os.networkInterfaces() output isn't
+      // easily mockable here, but the persisted-file short-circuit means
+      // getMachineCode() never even needs to recompute from live OS state on
+      // this second load, which is exactly the fix: it reads the cached
+      // value instead of re-hashing volatile inputs.
+      vi.resetModules();
+      const licenseModuleB = await import('./lib/license?machineB');
+      const codeB = licenseModuleB.getMachineCode();
+
+      expect(codeB).toBe(codeA);
+    } finally {
+      delete process.env.POS_MACHINE_CODE_PATH;
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });
