@@ -280,21 +280,39 @@ design.md itself):
   isolation on all numerics; §13 contrast pairs on any token added since.
 - `prefers-reduced-motion` disables the stamp press and receipt-line animation.
 
-### I3. Documentation truth pass
+### I3. Documentation truth pass — partially done (2026-07-21)
 
-- `docs/plan.md`: update the status header (still says V1.2.8); close §5 open decisions
-  with the H3/H4/H5 outcomes.
-- `docs/roadmap.md`: add V1.4.2–V1.4.6 to the post-Phase-3 list; add milestones F–I.
-- Delete `installer/setup.iss` (superseded by electron-builder NSIS) or move it under a
-  clearly-marked `attic/`.
-- Re-sync `AGENTS.md` ↔ `CLAUDE.md` (they have drifted beyond the status line).
-- `تقرير-مميزات-المنظومة.html` + `دليل-مميزات-منظومة-Flow.docx`: reflect V1.4.x desktop
-  features; remove/adjust any claim the audit found untrue (encryption, camera scanning)
-  until built.
-- `docs/prd.md` §12: renumber the "still open" list (currently 3,4,5,6 after two struck
-  items) and fold in the decisions made in H3–H5.
+Done as part of V1.5.5 (Milestone H6, see above — a bigger doc pass than originally
+scoped here happened alongside it):
 
-**Release as V1.5.2** (changelog: تحسينات واجهة / توثيق).
+- `docs/plan.md`: status header updated; §5 open decisions closed with the H3/H4/H5
+  outcomes.
+- `docs/roadmap.md`: V1.4.2–V1.5.5 all present in the post-Phase-3 list; Milestones F–I
+  (this file) referenced.
+- `installer/setup.iss` moved to `attic/setup.iss.superseded-by-electron-builder-nsis`
+  (kept, not deleted, in case anyone wants the history — but never used by any build
+  script; the real installer config lives in `electron/package.json`'s `build.nsis`).
+- `AGENTS.md` ↔ `CLAUDE.md`: status line, migration reference, and Source-of-Truth doc
+  list re-synced (they had drifted past just the status line — the two files keep
+  different internal structure by design, `AGENTS.md`'s own header says so, but the
+  substantive facts now match).
+- `docs/prd.md` §12: renumbered and closed out, including two items that were already
+  answered by Phase 2's shipped implementation (credit limits, multi-unit opt-in) but
+  had never been marked resolved; folded in the H3–H5 decisions.
+
+**Not done — bigger than a doc-sync pass, needs its own session:**
+
+- `تقرير-مميزات-المنظومة.html` (customer-facing features brochure, Arabic) is stuck at
+  "الإصدار V1.3.2" and "51 اختباراً" — it doesn't claim anything false (no DB-encryption
+  or camera-scanning claims found), but it's missing all of V1.4.0 onward: commercial
+  licensing, the Electron desktop app, print reliability fixes, the idle lock, sale
+  returns, automatic backups, the firewall fix — a real content-writing task in the
+  brochure's established Arabic tone, not a mechanical sync. Write a new "الجديد في
+  الإصدارات V1.4–V1.5" section before the next customer-facing handoff.
+- `دليل-مميزات-منظومة-Flow.docx` (binary Word doc) — same gap. `scripts/generate-report-docx.mjs`
+  builds it from its own independently hardcoded Arabic content (not parsed from the
+  HTML report), so fixing the HTML report does **not** fix the docx — both need their
+  own content update, in whatever order is convenient.
 
 ---
 
