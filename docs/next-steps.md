@@ -11,6 +11,42 @@
 
 ---
 
+## ✅ RESOLVED: QR "connect a cashier device" showed multiple confusing addresses (2026-07-21, shipped as V1.4.6)
+
+**User-reported:** "why there are more than one address that may not work and confuse the
+users" — the QR modal listed 3 addresses (`192.168.56.1`, `192.168.1.70`, `192.168.1.16`),
+only one of which (the real Wi-Fi adapter) is actually reachable from a phone.
+
+**Root cause:** `os.networkInterfaces()` only exposes Windows' generic per-connection name
+("Ethernet 3"), never the real driver identity. On this dev machine, "Ethernet 3" turned
+out to be a VirtualBox host-only adapter and "Ethernet 2" a Siemens PLCSIM industrial
+simulator — both indistinguishable from a real NIC by name alone. An earlier attempt at
+name-based filtering (matching `/virtualbox|vmware|.../i` against the interface name)
+looked correct in a hand-written test but did nothing on the real machine, because the
+name itself carries no vendor information.
+
+**Fix:** `server/src/routes/settings.ts` now calls `Get-NetAdapter | Select-Object Name,
+InterfaceDescription` via PowerShell (Windows only, 30s in-memory cache) and filters based
+on the real `InterfaceDescription` ("VirtualBox Host-Only Ethernet Adapter", "Siemens
+PLCSIM Virtual Ethernet Adapter", …), falling back to matching the interface's own name
+when no description is available (non-Windows, or the PowerShell call fails) — which is
+also what the test suite exercises, since `getWindowsAdapterDescriptions()` is a deliberate
+no-op under `NODE_ENV=test` (shelling out during tests is both slow and environment-
+dependent; an earlier attempt to `vi.spyOn` it out didn't work — ESM same-module function
+calls bind directly, not through the exports object, so the "mocked" version silently fell
+through to a real, slow PowerShell call that only passed because it coincidentally matched
+this dev machine's real adapters).
+
+`web/src/components/NetworkConnectModal.tsx` also no longer opens with a dropdown of every
+candidate — it leads with the server's `recommendedUrl` (Wi-Fi preferred, then Ethernet)
+and only reveals the "try another address" picker on demand.
+
+**Verified:** `npm run build` (typecheck clean) + Vitest 72/72 green, and confirmed for
+real on this machine via the actual packaged build — `GET /api/network/info` now returns
+only `192.168.1.16`, both virtual adapters correctly excluded.
+
+---
+
 ## ✅ RESOLVED: License re-activation required on every app restart (2026-07-21, shipped as V1.4.5)
 
 **Symptom (user-reported):** "do i have to register the program everytime i open it, i always

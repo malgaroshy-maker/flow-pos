@@ -14,18 +14,25 @@ export const NetworkConnectModal: React.FC<NetworkConnectModalProps> = ({ isOpen
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string>('');
   const [copied, setCopied] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [showOtherAddresses, setShowOtherAddresses] = useState(false);
 
   useEffect(() => {
     if (!isOpen) return;
+    setShowOtherAddresses(false);
 
     const fetchNetworkInfo = async () => {
       setLoading(true);
       try {
         const res: any = await apiCall('/api/network/info');
-        const urls = res?.success ? res.data?.urls : undefined;
-        if (Array.isArray(urls) && urls.length > 0) {
+        const data = res?.success ? res.data : undefined;
+        const urls: string[] = Array.isArray(data?.urls) ? data.urls : [];
+        if (urls.length > 0) {
           setNetworkUrls(urls);
-          setSelectedUrl(urls[0]);
+          // The server already filters out virtual adapters (VirtualBox,
+          // VPNs, Docker…) and picks the most likely real LAN address —
+          // lead with that instead of showing every candidate up front,
+          // which just confuses whoever is scanning the code.
+          setSelectedUrl(data.recommendedUrl && urls.includes(data.recommendedUrl) ? data.recommendedUrl : urls[0]);
         } else {
           const fallback = `http://${window.location.hostname}:3001`;
           setNetworkUrls([fallback]);
@@ -91,23 +98,6 @@ export const NetworkConnectModal: React.FC<NetworkConnectModalProps> = ({ isOpen
             </div>
           ) : null}
 
-          {networkUrls.length > 1 && (
-            <div className="w-full text-right">
-              <label className="text-[11px] font-bold text-muted mb-1 block">عنوان بطاقة الشبكة:</label>
-              <select
-                value={selectedUrl}
-                onChange={(e) => setSelectedUrl(e.target.value)}
-                className="w-full h-9 rounded-control border border-line bg-surface-2 px-3 text-xs mono font-bold focus:outline-none"
-              >
-                {networkUrls.map((u) => (
-                  <option key={u} value={u}>
-                    {u}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-
           <div className="w-full rounded-xl bg-surface-2 p-3 border border-line space-y-2">
             <div className="text-[11px] font-bold text-muted">العنوان المباشر في المتصفح:</div>
             <div className="flex items-center justify-between gap-2">
@@ -121,6 +111,37 @@ export const NetworkConnectModal: React.FC<NetworkConnectModalProps> = ({ isOpen
               </button>
             </div>
           </div>
+
+          {networkUrls.length > 1 && (
+            <div className="w-full text-right">
+              {!showOtherAddresses ? (
+                <button
+                  type="button"
+                  onClick={() => setShowOtherAddresses(true)}
+                  className="text-[11px] font-bold text-muted hover:text-jade cursor-pointer"
+                >
+                  الرمز لا يعمل على الجوال؟ جرّب عنواناً آخر ▾
+                </button>
+              ) : (
+                <>
+                  <label className="text-[11px] font-bold text-muted mb-1 block">
+                    هذا الجهاز متصل بأكثر من شبكة — اختر العنوان الصحيح:
+                  </label>
+                  <select
+                    value={selectedUrl}
+                    onChange={(e) => setSelectedUrl(e.target.value)}
+                    className="w-full h-9 rounded-control border border-line bg-surface-2 px-3 text-xs mono font-bold focus:outline-none"
+                  >
+                    {networkUrls.map((u) => (
+                      <option key={u} value={u}>
+                        {u}
+                      </option>
+                    ))}
+                  </select>
+                </>
+              )}
+            </div>
+          )}
         </div>
 
         <button

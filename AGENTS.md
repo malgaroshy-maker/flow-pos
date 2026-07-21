@@ -8,7 +8,7 @@ An **offline-first, Arabic (RTL) sales & inventory management system** ("منظ�
 
 ## Project Status
 
-**Phases 1, 2, and 3, plus Milestones D and E are complete (latest release V1.4.5, 2026-07-21).** All milestones (Refactor Gate V1.2.9, Smart Stocktaking V1.3.0, Financial Reports & Excel V1.3.1, Notification Center & Warranties V1.3.2, Full System Audit & UI Fixes V1.3.3, Security & Dependency Hardening V1.3.4, Supplier Statement & Purchase A4 Print & Playwright Smoke V1.3.5, Commercial Packaging & Offline Licensing V1.4.0, Electron Desktop App & Instant Master Vendor PIN V1.4.1, Installer Data-Path Fix V1.4.2, QR Network Link & Print Reliability Fix V1.4.3, Silent Printing & In-App Preview V1.4.4, License Persistence Fix V1.4.5) are implemented and verified by 70 Vitest unit tests (100% green) and 1 Playwright E2E test. See `docs/next-steps.md` and `docs/roadmap.md` for details.
+**Phases 1, 2, and 3, plus Milestones D and E are complete (latest release V1.4.6, 2026-07-21).** All milestones (Refactor Gate V1.2.9, Smart Stocktaking V1.3.0, Financial Reports & Excel V1.3.1, Notification Center & Warranties V1.3.2, Full System Audit & UI Fixes V1.3.3, Security & Dependency Hardening V1.3.4, Supplier Statement & Purchase A4 Print & Playwright Smoke V1.3.5, Commercial Packaging & Offline Licensing V1.4.0, Electron Desktop App & Instant Master Vendor PIN V1.4.1, Installer Data-Path Fix V1.4.2, QR Network Link & Print Reliability Fix V1.4.3, Silent Printing & In-App Preview V1.4.4, License Persistence Fix V1.4.5, QR Network Address Filtering V1.4.6) are implemented and verified by 72 Vitest unit tests (100% green) and 1 Playwright E2E test. See `docs/next-steps.md` and `docs/roadmap.md` for details.
 
 ## Hard Rules (never violate)
 
