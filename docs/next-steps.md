@@ -144,12 +144,28 @@ retention count. Tests (`autoBackup.test.ts`, 3): idempotent same-day calls, dis
 0, and pruning respects the count while leaving manual/shift-close backups untouched.
 84/84 total green.
 
-### G4. Arabic-normalized customer & supplier search
+### G4. Arabic-normalized customer & supplier search — descoped, finding corrected (2026-07-21)
 
-- Apply `server/src/lib/arabic.ts` normalization (already used for products) to customer
-  and supplier name search — same shadow-column + index approach the products table uses
-  (schema change + migration + backfill in the migration).
-- Tests: أ/إ/آ/ا, ة/ه, ى/ي equivalences match for customers and suppliers.
+The original audit assumed a search box exists for customers/suppliers that just needs
+normalization (matching products, which filters in-memory with `normalizeArabic()` — no
+shadow column or index actually exists anywhere in this codebase, unlike what plan.md §2
+originally described; correct that expectation in future audits). On inspection: **no
+such search box exists**. `Customers.tsx` and `Purchases.tsx`/Suppliers render full
+tables with no filter input; the POS credit-customer picker (`Pos.tsx`) is a plain
+native `<select>`, which has no meaningful "normalize the query" hook to attach to.
+
+This is not a contained bug fix — it requires designing new search UI (a text filter for
+the two tables, and probably a searchable combobox to replace the native `<select>` for
+real usability once the customer list grows past a couple dozen names). Re-scope as a
+small UX feature if wanted:
+
+- Add a debounced text filter above the Customers and Suppliers tables, filtering
+  client-side with `normalizeArabic()` (matches the products precedent — no server
+  round-trip needed at this data scale).
+- Replace the POS customer `<select>` with a searchable combobox (type-to-filter,
+  same normalization) — the highest-value spot, since finding a credit customer
+  mid-sale is the actual daily friction point.
+- Tests: أ/إ/آ/ا, ة/ه, ى/ي equivalences match in the new filter.
 
 **Release as V1.5.0** (changelog: ميزات جديدة / تحسينات).
 
