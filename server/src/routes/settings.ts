@@ -123,6 +123,7 @@ export async function settingsRoutes(app: FastifyInstance) {
       taxEnabled?: boolean;
       taxRatePermille?: number;
       discountCapPercent?: number;
+      idleLockMinutes?: number;
     };
 
     if (
@@ -149,6 +150,18 @@ export async function settingsRoutes(app: FastifyInstance) {
       });
     }
 
+    if (
+      body.idleLockMinutes !== undefined &&
+      (!Number.isSafeInteger(body.idleLockMinutes) ||
+        body.idleLockMinutes < 0 ||
+        body.idleLockMinutes > 120)
+    ) {
+      return reply.code(400).send({
+        error: 'invalid_idleLockMinutes',
+        message: 'مدة القفل التلقائي يجب أن تكون عدداً صحيحاً بين 0 و 120 دقيقة',
+      });
+    }
+
     const row = app.db.select().from(settings).limit(1).all()[0];
     if (!row) {
       return reply.code(404).send({ error: 'settings_not_seeded' });
@@ -172,6 +185,8 @@ export async function settingsRoutes(app: FastifyInstance) {
           body.taxRatePermille !== undefined ? body.taxRatePermille : row.taxRatePermille,
         discountCapPercent:
           body.discountCapPercent !== undefined ? body.discountCapPercent : row.discountCapPercent,
+        idleLockMinutes:
+          body.idleLockMinutes !== undefined ? body.idleLockMinutes : row.idleLockMinutes,
       })
       .where(eq(settings.id, row.id))
       .run();

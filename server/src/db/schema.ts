@@ -18,6 +18,8 @@ export const settings = sqliteTable('settings', {
   taxRatePermille: integer('tax_rate_permille').notNull().default(0),
   // Max discount % of subtotal the sales role may apply without a manager PIN.
   discountCapPercent: integer('discount_cap_percent').notNull().default(10),
+  // Minutes of inactivity before the UI locks to the PIN screen; 0 = disabled.
+  idleLockMinutes: integer('idle_lock_minutes').notNull().default(5),
   currency: text('currency').notNull().default('LYD'),
   themeDefault: text('theme_default', { enum: ['light', 'dark'] })
     .notNull()

@@ -20,6 +20,7 @@ import { apiCall } from './lib/api';
 
 import { Icons } from './components/Icons';
 import { PinOverrideModal } from './components/PinOverrideModal';
+import { IdleLockOverlay } from './components/IdleLockOverlay';
 import { AppModals } from './components/AppModals';
 import { PrintRoot, type PrintDocument } from './print/PrintRoot';
 import { PrintPreviewModal } from './print/PrintPreviewModal';
@@ -110,6 +111,11 @@ export function App() {
   const [posDepositId, setPosDepositId] = useState<number | null>(null);
   const [posSpecialPrices, setPosSpecialPrices] = useState<Map<number, number>>(new Map());
 
+  // Idle lock: locks the UI to a PIN screen after inactivity (Settings-configurable,
+  // 0 = disabled). The in-progress POS cart survives — this is an overlay on top of
+  // the still-mounted app, not a navigation or logout.
+  const [isLocked, setIsLocked] = useState(false);
+
   // Modal Visibility States
   const [showUserPinModal, setShowUserPinModal] = useState(false);
   const [showPrintModal, setShowPrintModal] = useState(false);
@@ -182,6 +188,27 @@ export function App() {
       return () => clearInterval(interval);
     }
   }, [token]);
+
+  // Idle lock: reset a timeout on any user activity; lock the UI when it fires.
+  useEffect(() => {
+    const idleMinutes = settingsData?.idleLockMinutes ?? 5;
+    if (!token || !idleMinutes || idleMinutes <= 0) return;
+
+    let timer: ReturnType<typeof setTimeout>;
+    const resetTimer = () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => setIsLocked(true), idleMinutes * 60 * 1000);
+    };
+
+    const activityEvents = ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll'];
+    activityEvents.forEach((evt) => window.addEventListener(evt, resetTimer));
+    resetTimer();
+
+    return () => {
+      clearTimeout(timer);
+      activityEvents.forEach((evt) => window.removeEventListener(evt, resetTimer));
+    };
+  }, [token, settingsData?.idleLockMinutes]);
 
   // PIN Override Modal
   const [showOverrideModal, setShowOverrideModal] = useState(false);
@@ -758,6 +785,20 @@ export function App() {
   };
 
   return (
+    <>
+      {isLocked && (
+        <IdleLockOverlay
+          currentUsername={currentUser.username}
+          onUnlock={(newToken, newUser) => {
+            login(newToken, newUser);
+            setIsLocked(false);
+          }}
+          onLogout={() => {
+            setIsLocked(false);
+            logout();
+          }}
+        />
+      )}
     <div className="grid min-h-dvh grid-cols-[272px_1fr] max-[900px]:grid-cols-1" dir="rtl">
       {/* Sidebar Navigation (desktop ≥901px) */}
       <aside
@@ -1153,5 +1194,6 @@ export function App() {
         />
       )}
     </div>
+    </>
   );
 }

@@ -72,16 +72,18 @@ activates with a signed license file issued by the external vendor tool
 (`D:\flowpos-vendor-keygen\keygen.mjs`) for their specific machine code — matches
 the original E3 design intent.
 
-### F3. Idle lock → PIN screen (next)
+### F3. Idle lock → PIN screen — ✅ DONE (V1.4.9, 2026-07-21)
 
-- Configurable idle timeout (Settings, default ~5 min; 0 = disabled) after which the UI
-  locks to the PIN fast-switch screen. The in-progress POS cart **must survive** the lock
-  (design §9) — lock is a UI overlay, not a logout; the session token stays valid.
-- Unlock via the existing PIN switch endpoint (any active user may unlock as themselves —
-  this is also the shift-change fast-switch pattern).
-- Web-only change + one Settings field; test the Settings field server-side.
-
-**Release as V1.4.7** (changelog: أمان).
+`idleLockMinutes` added to `settings` (migration `0015_aromatic_tomas.sql`, default 5,
+0 = disabled, validated 0–120), editable in the Settings screen. `App.tsx` tracks
+activity (`mousemove`/`mousedown`/`keydown`/`touchstart`/`scroll`) and shows
+`IdleLockOverlay` as a sibling on top of the still-mounted app after the configured
+timeout — the in-progress POS cart is untouched since nothing unmounts. Unlocks via the
+existing `/api/auth/pin-switch` endpoint (any active user's PIN), same as shift-change
+fast switching; a "تسجيل الخروج بدلاً من ذلك" link falls through to a real logout.
+Verified end-to-end on this machine with a real 1-minute timeout: locks after the idle
+window with no synthetic activity, unlocks with the manager PIN, POS state intact.
+75/75 tests green (3 new: valid/invalid `idleLockMinutes`, sales-role rejected).
 
 ---
 

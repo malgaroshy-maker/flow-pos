@@ -1,0 +1,1 @@
+ALTER TABLE `settings` ADD `idle_lock_minutes` integer DEFAULT 5 NOT NULL;

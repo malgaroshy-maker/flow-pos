@@ -200,6 +200,30 @@ export const SettingsScreen: React.FC<SettingsProps> = ({
               </div>
             </div>
 
+            <div className="border-t border-line my-2 pt-4">
+              <h3 className="font-bold text-sm mb-3">القفل التلقائي عند عدم الاستخدام</h3>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted">قفل الشاشة بعد (دقائق، 0 = تعطيل):</span>
+                <input
+                  type="number"
+                  min={0}
+                  max={120}
+                  value={formSettings?.idleLockMinutes ?? 5}
+                  onChange={(e) =>
+                    setFormSettings(
+                      formSettings
+                        ? { ...formSettings, idleLockMinutes: Number(e.target.value) }
+                        : null
+                    )
+                  }
+                  className="w-20 text-left h-8 rounded border border-border bg-surface px-2 mono text-xs focus-visible:outline-none"
+                />
+                <span className="text-xs text-muted">
+                  يعود المستخدم لشاشة PIN؛ السلة الحالية في نقطة البيع تبقى كما هي
+                </span>
+              </div>
+            </div>
+
             <button
               type="submit"
               className="w-40 py-2.5 bg-jade text-white text-xs font-bold rounded-control hover:bg-jade-2 transition-colors cursor-pointer text-center"
