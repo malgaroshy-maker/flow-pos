@@ -1,429 +1,263 @@
-# Next Steps — Execution Plan (V1.4.1 Complete)
+# Next Steps — Execution Plan (post-V1.4.6 full re-audit, 2026-07-21)
 
-> Written 2026-07-20 for **any agent** (Antigravity, Cursor, Claude Code, …) to execute.
+> Written 2026-07-21 for **any agent** (Antigravity, Cursor, Claude Code, …) to execute.
 >
-> **Context:** Phases 1–3 and Phase 4 Milestones D and E (V1.4.0 & V1.4.1) are complete. V1.4.1 (Electron Native Desktop Application, Commercial Packaging, Ed25519 Hardware Licensing Engine, Instant Master Vendor PIN Activation `1391997`, Flow Dev Branding `logo.png`, System Tray, Splash Screen, Single-file NSIS Installer `FlowPOS Setup 1.4.1.exe`) is fully implemented, verified, and tested locally. All 69 Vitest unit tests, local packaged binary launch with in-process Fastify server + health check, and 1 Playwright E2E smoke test are 100% green. Production server (esbuild bundle), client (Vite bundle), and Electron main app build cleanly.
+> **Context:** V1.4.6 is released; Phases 1–3, Milestones D and E, and five rounds of
+> desktop-app fixes (V1.4.1 → V1.4.6) are done. 72 Vitest unit tests + 1 Playwright E2E
+> test green. This plan is the result of a **full re-analysis of the project** (PRD, plan,
+> roadmap, design system, and code) that compared everything the docs promised against
+> what the code actually does. Findings are grouped into milestones F–I below, ordered by
+> severity. The condensed lessons from the V1.4.x bug-fix rounds are archived at the
+> bottom — read them before touching Electron, printing, licensing, or `apiCall()`.
 >
-> Definition of done for every task below: `npm run typecheck` + `npm test` + `npm run build`
-> all green, new server behavior covered by tests in `server/src/*.test.ts`
-> (follow the existing `app.inject` pattern), a V1.x.y Arabic changelog section in
-> `سجل-التغييرات.md`, and a local commit. **Never push.**
+> Definition of done for every task: `npm run typecheck` + `npm test` + `npm run build`
+> all green, new server behavior covered by tests in `server/src/*.test.ts` (follow the
+> existing `app.inject` pattern), a V1.x.y Arabic changelog section in `سجل-التغييرات.md`,
+> and a local commit. **Never push.**
 
 ---
 
-## ✅ RESOLVED: QR "connect a cashier device" showed multiple confusing addresses (2026-07-21, shipped as V1.4.6)
+## Audit summary — what the re-analysis found
 
-**User-reported:** "why there are more than one address that may not work and confuse the
-users" — the QR modal listed 3 addresses (`192.168.56.1`, `192.168.1.70`, `192.168.1.16`),
-only one of which (the real Wi-Fi adapter) is actually reachable from a phone.
-
-**Root cause:** `os.networkInterfaces()` only exposes Windows' generic per-connection name
-("Ethernet 3"), never the real driver identity. On this dev machine, "Ethernet 3" turned
-out to be a VirtualBox host-only adapter and "Ethernet 2" a Siemens PLCSIM industrial
-simulator — both indistinguishable from a real NIC by name alone. An earlier attempt at
-name-based filtering (matching `/virtualbox|vmware|.../i` against the interface name)
-looked correct in a hand-written test but did nothing on the real machine, because the
-name itself carries no vendor information.
-
-**Fix:** `server/src/routes/settings.ts` now calls `Get-NetAdapter | Select-Object Name,
-InterfaceDescription` via PowerShell (Windows only, 30s in-memory cache) and filters based
-on the real `InterfaceDescription` ("VirtualBox Host-Only Ethernet Adapter", "Siemens
-PLCSIM Virtual Ethernet Adapter", …), falling back to matching the interface's own name
-when no description is available (non-Windows, or the PowerShell call fails) — which is
-also what the test suite exercises, since `getWindowsAdapterDescriptions()` is a deliberate
-no-op under `NODE_ENV=test` (shelling out during tests is both slow and environment-
-dependent; an earlier attempt to `vi.spyOn` it out didn't work — ESM same-module function
-calls bind directly, not through the exports object, so the "mocked" version silently fell
-through to a real, slow PowerShell call that only passed because it coincidentally matched
-this dev machine's real adapters).
-
-`web/src/components/NetworkConnectModal.tsx` also no longer opens with a dropdown of every
-candidate — it leads with the server's `recommendedUrl` (Wi-Fi preferred, then Ethernet)
-and only reveals the "try another address" picker on demand.
-
-**Verified:** `npm run build` (typecheck clean) + Vitest 72/72 green, and confirmed for
-real on this machine via the actual packaged build — `GET /api/network/info` now returns
-only `192.168.1.16`, both virtual adapters correctly excluded.
+| # | Finding | Severity | Milestone |
+|---|---------|----------|-----------|
+| 1 | Licensing is self-defeating: the Ed25519 **private signing key is generated and stored on the customer's machine** (`vendor-keys.json` next to `license.lic`), so anyone can forge a valid license. The embedded `VENDOR_PUBLIC_KEY_PEM` constant is an invalid placeholder and is never used by default. | Critical (commercial) | F1 |
+| 2 | Master vendor PIN `1391997` is a hardcoded string in the shipped binary (trivially extractable with `strings`), and `POST /api/license/activate-pin` has **no rate limiting** (unlike login/PIN auth). | High (commercial) | F2 |
+| 3 | `scripts/keygen.ts` lives **inside this repo**, violating Milestone E3's own rule ("keygen tool and private signing key live outside this repo and never ship"). | High (commercial) | F1 |
+| 4 | **No idle session lock in the UI.** PRD NFR "idle session lock" and design §9 ("idle lock returns to the PIN screen; the in-progress cart survives the lock") were never built — only the server's 12h token idle expiry exists. | High | F3 |
+| 5 | **Customer sale returns are missing.** plan.md §2 design rule: "Customer sale returns (after the day of sale, full or partial): reversing document that restores stock and takes cash from the *current* shift's drawer; manager permission; never edits the original invoice" (`RET-` numbering reserved in plan §2). Only full same-invoice cancellation exists. | High (business) | G1 |
+| 6 | **`warranty_ending` notifications are declared but never generated** — the type exists in `server/src/routes/notifications.ts` line 14's union, but no generator emits it. PRD Phase 3 explicitly lists "expiring warranties" in the notification center. | Medium | G2 |
+| 7 | **No automatic daily backup.** PRD NFR: "Automatic daily local backup"; plan architecture diagram shows a "daily job". Reality: manual manager-triggered backup + auto-backup on shift close only. No retention/pruning policy either. | Medium | G3 |
+| 8 | **Arabic-normalized search covers products only** (`server/src/lib/arabic.ts`). Customer and supplier search does not normalize hamza/ta-marbuta/alef-maqsura forms — plan §2 requires it for "product/customer search". | Medium | G4 |
+| 9 | **No Windows Firewall rule** is created by the NSIS installer, and the server binds `0.0.0.0` from inside `FlowPOS.exe`. LAN cashier devices (the whole point of the QR-connect feature) fail silently if the user dismisses/never sees Windows' one-time firewall prompt. | High (deployment) | H1 |
+| 10 | **Sessions are in-memory** (`sessions = new Map()` in `server/src/routes/auth.ts`). Every desktop-app restart or PC reboot logs out every cashier device mid-shift. | Medium | H2 |
+| 11 | **The server only runs while the desktop app runs.** The original E1 plan was a Windows service (auto-start on boot, restart on crash). `openAtLogin: true` only covers user login; closing the tray app kills the server for all LAN devices. Needs a product decision + at minimum ops-guide documentation. | Medium (deployment) | H3 |
+| 12 | **DB encryption was never decided or implemented.** PRD NFR "encrypted local DB"; plan §5 open decision #1 ("decide during scaffolding") was never closed. | Medium — needs decision | H4 |
+| 13 | **Camera barcode scanning is absent** (PRD stocktake: "camera or USB scanner") along with its prerequisite from plan §2: HTTPS on the LAN origin for `getUserMedia` ("solved in slice 1, not discovered in slice 5" — it never was). USB-scanner-as-keyboard works. | Medium — needs decision | H5 |
+| 14 | **E4 non-technical deliverables missing**: ops guide (static IP, UPS, Africa/Tripoli timezone/drift, firewall, browser kiosk mode for silent thermal print on non-Electron cashier devices), release checklist, per-customer license contract template. | Medium (commercial) | H6 |
+| 15 | **Design-system drift**: design §6 density modes (`data-density="touch|compact"`) are not implemented (0 occurrences in `web/src`); role-permission checks are 45 hard-coded `role !== 'manager'`-style conditions across 13 route files instead of the plan §2 permission table ("adding Storekeeper later is data, not code"). | Low–Medium | I1, I2 |
+| 16 | **Doc drift**: `docs/plan.md` header still says "feature-complete as of V1.2.8"; `docs/roadmap.md` post-Phase-3 section stops at V1.4.0/V1.4.1 (missing V1.4.2–V1.4.6); `installer/setup.iss` (Inno Setup) is dead code superseded by electron-builder NSIS; `AGENTS.md` and `CLAUDE.md` have drifted in length/content beyond the status line. | Low | I3 |
 
 ---
 
-## ✅ RESOLVED: License re-activation required on every app restart (2026-07-21, shipped as V1.4.5)
+## Milestone F — V1.4.7: Licensing & security integrity
 
-**Symptom (user-reported):** "do i have to register the program everytime i open it, i always
-see the license screen when i re open the system."
+> The product is being sold on the strength of "Ed25519 offline licensing". Today that
+> protection is cosmetic (finding #1). This milestone makes it real. **Requires the
+> owner's vendor machine once** to generate the real keypair.
 
-**Root cause:** `getDefaultVendorKeys()` in `server/src/lib/license.ts` generated a random
-Ed25519 keypair and cached it **only in memory** (`defaultKeysCache`, a module-level
-variable). Every real app restart starts a brand-new Node process, so that cache is empty
-again — the function silently generated a **different** random keypair each time. A
-license file signed with process N's private key can never verify against process N+1's
-freshly-generated public key, so `getLicenseInfo()` reported the signature invalid and the
-activation screen reappeared, even though the license itself was never actually wiped.
+### F1. Real vendor keypair, embedded public key
 
-**Fix:** the keypair is now persisted to `<DATA_DIR>/vendor-keys.json` (same directory as
-`license.lic`), generated once on first use and reloaded on every subsequent call —
-including across process restarts.
+- Generate the production Ed25519 keypair **once, outside this repo** (e.g. in a private
+  `flowpos-keygen` folder the owner keeps). Move `scripts/keygen.ts` out of this repo into
+  that tool and delete it here.
+- Replace the placeholder `VENDOR_PUBLIC_KEY_PEM` in `server/src/lib/license.ts` with the
+  real public key, and make it the **only** verification key: delete
+  `getDefaultVendorKeys()`, the `vendor-keys.json` persistence, and every code path that
+  signs a license on the customer machine.
+- Migration for existing installs (all licenses so far are self-signed under per-machine
+  keys and will fail verification): on startup, if `license.lic` fails signature
+  verification but a `vendor-keys.json` exists and the license verifies under *that*
+  key, show the activation screen with a clear Arabic message ("يجب إعادة تفعيل الترخيص
+  بعد التحديث") — same one-time-reactivation pattern already documented for V1.4.5.
+- Tests: valid signature under embedded key passes; self-signed/forged license fails;
+  machine-code mismatch fails; expiry honored. (Tests may inject a test keypair via the
+  existing `publicKeyPem` parameters — keep those parameter seams.)
 
-**Verified:**
-- New regression test in `server/src/license.test.ts` — uses `vi.resetModules()` + a
-  differently-queried dynamic import of `./lib/license` to simulate two separate process
-  loads against the same on-disk key file, and confirms a license signed under the first
-  "process" verifies under the second.
-- Real end-to-end test on this machine using the actual packaged build
-  (`dist-installer/win-unpacked/FlowPOS.exe`): activated via vendor PIN, then killed and
-  relaunched the process three times in a row (a genuine restart, not a page reload) —
-  `GET /api/license/info` returned `active: true` every time with no reactivation needed.
-- `npm run build` (typecheck clean) + Vitest 70/70 green.
+### F2. Vendor-PIN activation hardening
 
-**Important for anyone who activated under V1.4.4 or earlier:** that license was signed
-with a since-lost in-memory key and will fail to verify once — activate one more time
-after upgrading to V1.4.5, and it will then stay active permanently across restarts.
+Decision needed from the owner first — the PIN activation as designed cannot be made
+cryptographically secure (any secret in the binary is extractable). Options:
 
----
+1. **Remove PIN activation** — vendor issues a signed license file per machine code
+   (the E3 design). Most secure; adds friction at install time.
+2. **Keep PIN as a convenience** but: read it from an env/config the vendor sets at
+   install time (never a hardcoded default), rate-limit
+   `POST /api/license/activate-pin` with the same lockout mechanism as
+   `authFailures` in `auth.ts`, and log every attempt to the audit log. With F1 done,
+   a PIN-activated machine still needs the vendor because signing happens vendor-side —
+   so option 2 actually requires an online step or a challenge/response flow. Flag this
+   honestly to the owner before building.
 
-## ✅ RESOLVED (round 4): Switched printing to silent (no dialog) + real in-app preview (2026-07-21, shipped as V1.4.4)
+Either way: rate-limit and audit-log the license endpoints (they are deliberately
+pre-auth, so they are the most exposed surface on the LAN).
 
-After the V1.4.3 landscape-orientation fix, the user tested again with a real
-printed invoice: the dialog still defaulted to Landscape, and separately showed
-"This app doesn't support print preview." Both are the same root cause — Electron
-on Windows drives the *interactive* print dialog through the legacy GDI print
-path, which doesn't reliably honor `landscape`/`pageSize` options and has no
-preview capability at all. This is a platform limitation, confirmed by two
-rounds of testing, not something fixable by passing different options.
+### F3. Idle lock → PIN screen
 
-**Fix, agreed with the user via AskUserQuestion:** switched to silent printing
-end to end.
+- Configurable idle timeout (Settings, default ~5 min; 0 = disabled) after which the UI
+  locks to the PIN fast-switch screen. The in-progress POS cart **must survive** the lock
+  (design §9) — lock is a UI overlay, not a logout; the session token stays valid.
+- Unlock via the existing PIN switch endpoint (any active user may unlock as themselves —
+  this is also the shift-change fast-switch pattern).
+- Web-only change + one Settings field; test the Settings field server-side.
 
-- `electron/src/main.ts`: `flowpos:print` now calls `webContents.print()` with
-  `silent: true` (plus `landscape: false`, `pageSize: 'A4'` for documents) —
-  no OS dialog, so orientation/size are fully under the app's control and the
-  earlier windowless-dialog bug (`ensurePrintDialogRegistered`) can't recur
-  either way. Printer choice persists per-machine in
-  `<DATA_DIR>/print-config.json` via new `flowpos:list-printers` /
-  `flowpos:get-print-config` / `flowpos:set-print-config` IPC handlers.
-- `web/src/screens/Settings.tsx`: new "طابعات الفواتير والإيصالات" card (only
-  rendered when `window.flowpos` exists, i.e. inside Electron) to pick a
-  separate A4 printer and thermal 80mm printer, defaulting to Windows' own
-  default printer when left unset.
-- `web/src/print/PrintPreviewFrame.tsx` (new): scaled on-screen wrapper reusing
-  the *actual* print components (`InvoiceA4`, `ThermalReceipt`, `QuotationA4`,
-  `PurchaseA4`) so what you see is exactly what prints.
-- `web/src/print/PrintPreviewModal.tsx` (new): generic preview+print modal for
-  quotations and purchase invoices, which previously printed instantly with no
-  preview at all. `App.tsx`'s `handleSaveQuotation`, `handleOpenQuotationPrint`,
-  `handleOpenPurchasePrint` now open this instead of calling `triggerPrint()`
-  directly.
-- The existing sale invoice/thermal print modal in `AppModals.tsx` (which
-  already had override-editing fields for customer name/stamp/warranty notes)
-  now also renders a live `PrintPreviewFrame` instead of just the form.
-- Customer/supplier statement print buttons already rendered `StatementA4`
-  inline as their own preview before this — left as is, just benefits from
-  silent printing now.
-
-**Verified:** `npm run build` (typecheck clean, both server and web), Electron
-`tsc --noEmit` clean, Vitest 69/69 green, `dist-installer\FlowPOS Setup
-1.4.4.exe` built successfully. **Not yet verified end-to-end through the
-installed app** — pushed at the user's request while they were away; when back,
-install `FlowPOS Setup 1.4.4.exe`, print an invoice and confirm no dialog
-appears and the PDF/paper comes out correct, and check the new printer
-dropdowns in Settings list real printers.
+**Release as V1.4.7** (changelog: أمان).
 
 ---
 
-## ✅ RESOLVED (round 3): QR network link showed `localhost`; printing produced blank/stale pages (fixed 2026-07-21, shipped as V1.4.3)
+## Milestone G — V1.5.0: Missing approved features
 
-Reported after V1.4.2 was installed and both earlier issues confirmed fixed. Two
-unrelated bugs, found by direct investigation on this machine (not guesswork):
+### G1. Customer sale returns (المرتجعات)
 
-**1. QR "connect a cashier device" modal always showed `http://localhost:3001`.**
-`web/src/components/NetworkConnectModal.tsx` read `res.urls` directly off the
-return value of `apiCall()`. But `apiCall()` always wraps successful responses as
-`{ success: true, data: <body> }` — so `res.urls` was always `undefined`, the
-`Array.isArray(res.urls)` check always failed, and the code fell through to
-`window.location.hostname`, which inside Electron is literally `"localhost"`
-(the window loads `http://localhost:3001`). The backend endpoint
-(`GET /api/network/info`) was never broken — confirmed via direct `curl` that it
-correctly returns real LAN IPs (`192.168.1.16`, etc.). Fix: read `res.data.urls`.
+The largest genuinely missing approved feature (plan §2 design rule). Mirror of supplier
+returns, on the sales side:
 
-**2. Printing (invoice, quotation, purchase, statements) produced a blank or
-stale page.** Five call sites did `setActivePrintDocument(doc); window.print();`
-back to back in the same synchronous tick. React doesn't commit a state update to
-the DOM until the current call stack finishes, and `window.print()` captures the
-page's *current* DOM state — so it printed whatever was there *before* the new
-document was set, not the new one. Fixed by deferring the print call with
-`setTimeout(..., 50)` in all five spots (`App.tsx` ×3, `AppModals.tsx` ×2).
+- Server: `sale_returns` + `sale_return_items` tables (schema.ts + `npm run db:generate`);
+  document numbers `RET-YYYY-NNNNN` (same gap-free max+1-in-transaction pattern as
+  sales); per-line returnable caps against the original sale minus prior returns;
+  stock movement type `return` restoring base units (multi-unit aware — restore via the
+  snapshot on the sale line); cash refund from the **current open shift** (blocked if no
+  open shift) or customer-debt reduction for credit sales; manager-only; audit-logged;
+  cancelled/fully-returned sales cannot be returned again.
+- Bundles: returns operate on the component stock exactly as cancellation does (reverse
+  the original sale's stock movements proportionally).
+- Web: "مرتجع" action on the sale row → modal with per-line quantity pickers, refund
+  method, manager PIN; A4 print of the return note via the existing print system.
+- Tests: partial return caps, double-return rejection, cash-vs-credit refund paths,
+  stock restoration in base units, no-open-shift rejection.
 
-**3. Separately, direct testing on this machine also surfaced that Windows'
-native print dialog (`PrintDialog.exe`, the modern UWP Print UI) can launch as a
-process with `MainWindowHandle: 0` — i.e. no visible window at all — when its
-per-user AppX registration is missing. Confirmed via Chrome DevTools Protocol
-(`Runtime.evaluate` against the packaged app) that `window.print()` really was
-invoking the OS dialog broker; the broker just never rendered. `Get-AppxPackage
--Name "Windows.PrintDialog"` returned nothing on this machine; running
-`Add-AppxPackage -DisableDevelopmentMode -Register
-'C:\Windows\SystemApps\Windows.PrintDialog_cw5n1h2txyewy\AppxManifest.xml'`
-(a per-user, non-admin operation) fixed it immediately. This is a known issue on
-debloated/OEM-trimmed Windows images — plausible for cheap shop PCs in this
-product's target market — so the app now runs this same check-and-repair
-automatically at startup (`ensurePrintDialogRegistered()` in
-`electron/src/main.ts`), and printing was also switched from the renderer's
-`window.print()` to a main-process `webContents.print()` call via a new
-`window.flowpos.print()` IPC bridge (`preload.ts` + `flowpos:print` handler),
-which is Electron's documented, more reliable path.
+### G2. Warranty-ending notifications
 
-**Verified:** `npm run build` (typecheck clean) and Vitest 69/69 both green.
-Confirmed via direct `GET /api/network/info` call that real LAN IPs are
-returned, and via CDP that the rebuilt bundle hash matches the new build.
-**Not yet verified end-to-end through the actual installed app** — a silent
-elevated reinstall attempt during this session triggered a UAC prompt that was
-cancelled, so the perMachine NSIS installer needs to be run interactively by a
-human. `dist-installer\FlowPOS Setup 1.4.3.exe` is built and ready; run it,
-then confirm: QR modal shows a real `192.168.x.x` address, and printing an
-invoice/quotation/statement actually opens a usable print dialog.
+- Emit `warranty_ending` items in `server/src/routes/notifications.ts` for active
+  warranties expiring within a configurable horizon (mirror the existing
+  `expiring_quote` generator; default 30 days).
+- Web: the notification drawer already renders by type — add the icon/label mapping.
+- Tests: warranty inside/outside the horizon; expired warranties excluded.
+
+### G3. Automatic daily backup + retention
+
+- On server boot and then on a 24h timer (and, cheaply, on a date-change check whenever a
+  request arrives — the shop PC sleeps), create a daily backup via the existing
+  `app.sqlite.backup()` path if none exists for today's date. Keep the last N (default
+  14, Settings-configurable) daily backups; prune older ones. Never prune shift-close
+  backups.
+- Tests: backup-once-per-day idempotence, pruning respects N and never deletes
+  non-daily files.
+
+### G4. Arabic-normalized customer & supplier search
+
+- Apply `server/src/lib/arabic.ts` normalization (already used for products) to customer
+  and supplier name search — same shadow-column + index approach the products table uses
+  (schema change + migration + backfill in the migration).
+- Tests: أ/إ/آ/ا, ة/ه, ى/ي equivalences match for customers and suppliers.
+
+**Release as V1.5.0** (changelog: ميزات جديدة / تحسينات).
 
 ---
 
-## ✅ RESOLVED (round 2): Activation screen stuck on "لم يتم الاتصال" / machine code `----` (fixed 2026-07-21)
+## Milestone H — V1.5.1: Deployment & ops hardening
 
-**This is a *second, separate* bug from the `DATA_DIR` fix below** — found after the
-user reinstalled with that fix and still hit the activation screen showing a
-connection-error banner and empty machine code, even though `server.log` showed the
-server started cleanly this time (no `_journal.json` error) and `curl` against
-`/api/health` and `/api/license/info` both worked fine.
+### H1. Windows Firewall rule at install time
 
-**Root cause:** `web/src/lib/api.ts`'s `apiCall()` helper refuses to send a request at
-all when there is no stored auth token — it short-circuits with
-`{ success: false, error: 'no_token' }` before ever touching the network. The license
-activation screen runs **before login**, so on a genuinely fresh install/profile there
-is no token yet. `checkLicenseStatus()` in `App.tsx` and both activation handlers in
-`LicenseActivation.tsx` were calling `/api/license/info`, `/api/license/activate-pin`,
-and `/api/license/activate` through `apiCall()` — so every attempt failed locally
-without ever reaching the server, retried 30× over 24s, then permanently showed the
-"can't connect" banner with `machineCode: '----'`. It only *appeared* to work on this
-dev machine because a stale token was left over in Electron's `userData` (which
-uninstalling the app does not clear) from earlier manual testing — bearing any
-non-empty (even garbage) token was enough to make `apiCall()` proceed, and the server
-doesn't actually gate `/api/license/*` on auth at all (confirmed in
-`server/src/app.ts`'s license-exempt `onRequest` hook).
+- Add an NSIS `include` script (electron-builder `nsis.include`) that runs
+  `netsh advfirewall firewall add rule name="FlowPOS" dir=in action=allow program="$INSTDIR\FlowPOS.exe" enable=yes profile=private`
+  on install and deletes it on uninstall. The installer is already `perMachine` (elevated),
+  so no extra UAC prompt.
+- Verify on this machine: fresh install → phone on the same Wi-Fi reaches the QR URL
+  without any firewall prompt.
 
-**Fix:** `checkLicenseStatus()` and both activation submit handlers now use a plain
-unauthenticated `fetch()` instead of `apiCall()`, matching the server's actual
-contract for these pre-login routes.
+### H2. Persistent sessions
 
-**Verified:** wiped Electron's real `userData` directory
-(`%APPDATA%\flowpos-desktop`, *not* `%APPDATA%\FlowPOS` — the productName and the
-package.json `name` differ) so no stale token could mask the bug, confirmed via grep
-that no `pos-token` string existed in the fresh LevelDB `localStorage` files,
-reinstalled V1.4.2, launched, confirmed `/api/license/info` returns
-`active: false` with a real machine code, then activated via the same
-unauthenticated-`fetch` path the UI now uses — succeeded. Full Vitest suite: 69/69.
+- Persist sessions (token hash, userId, expiresAt) to a small SQLite table; load into the
+  in-memory map on boot; delete on logout/expiry. Cashier devices then survive a desktop
+  app restart. Keep the 12h idle-expiry semantics exactly.
+- Tests: session survives a simulated restart (`vi.resetModules()` or re-`buildApp`
+  against the same DB); expired sessions are not resurrected.
 
----
+### H3. Server availability decision (document, maybe build)
 
-## ✅ RESOLVED (round 1): Electron Packaged App — Server Does Not Start (fixed 2026-07-21)
+Present to the owner, then implement the choice:
 
-**Root cause found in `server.log`** (which the 2026-07-20 session hadn't inspected for
-a fresh run): `Error: Can't find meta/_journal.json file` — an early crash, not a hang.
-The 60s-timeout / retry fixes from the previous session (`25ffb3f`, `bf77f75`,
-`2d96236`, `19af81f`) papered over the symptom on later attempts but didn't fix the
-actual cause, which was a second, separate bug in `DATA_DIR`.
+- **Option A (document only):** the desktop app *is* the server — ops guide says "the
+  FlowPOS window/tray must stay open on the shop PC" and `openAtLogin` handles reboots
+  after login. Cheapest; acceptable for a single-shop product.
+- **Option B:** ship the bundled server additionally as a Windows service (NSSM,
+  installed by the NSIS script) with the desktop app as a pure client. Matches the
+  original E1 plan; meaningfully more moving parts (port conflicts with the in-process
+  server, upgrade path, service recovery config).
 
-**The real bug:** `electron/src/main.ts` computed the machine-wide data directory as
-`join(app.getPath('appData'), '..', 'ProgramData', 'FlowPOS', 'data')`. On Windows,
-`getPath('appData')` is `C:\Users\<user>\AppData\Roaming`, so `..` lands on
-`C:\Users\<user>\AppData`, and the code then appended a `ProgramData` subfolder there —
-**not** the real `C:\ProgramData`. This directory doesn't exist by default and isn't
-what any other part of the system expects, so migrations/DB paths ended up inconsistent
-between runs and installs, producing the observed flakiness (worked in one dev
-`win-unpacked` test, failed after a real install to `Program Files`).
+### H4. DB-encryption decision (close plan §5 open decision #1)
 
-**Fix applied:** `DATA_DIR` now reads the real machine-wide path from
-`process.env.ProgramData` (always set on Windows), falling back to
-`app.getPath('appData') + '..'` only on non-Windows platforms:
+Recommendation to put to the owner: **document BitLocker + physical control as the V1
+answer** (SQLCipher would break `better-sqlite3` prebuilds, complicate backups/restore,
+and the threat model is a shop PC, not a hostile host). Whatever is decided, record it in
+`docs/plan.md` §5 and the ops guide, and stop advertising "encrypted DB" in
+`تقرير-مميزات-المنظومة.html` unless it is actually true.
 
-```ts
-const COMMON_APP_DATA = process.env.ProgramData || join(app.getPath('appData'), '..');
-const DATA_DIR = join(COMMON_APP_DATA, 'FlowPOS', 'data');
-```
+### H5. Camera-scanning decision (close plan §2 hardening item)
 
-(Electron's `app.getPath()` has no built-in `'commonAppData'` key — that was tried
-first and rejected by the TypeScript types.)
+USB scanners work today. Camera scanning on phones requires an HTTPS LAN origin
+(`getUserMedia`), which means a local CA + cert install on each device — real ops burden.
+Recommendation: **defer camera scanning; document USB/keyboard-wedge scanners as the
+supported path**, and note the HTTPS prerequisite in the roadmap for when it's revisited.
+If the owner wants it: local CA generation on first boot, cert-install page served over
+HTTP, `BarcodeDetector` with ZXing fallback in the Stocktaking and POS screens.
 
-**Verified locally end-to-end on this machine (2026-07-21):**
-1. Uninstalled any prior FlowPOS install, wiped `C:\ProgramData\FlowPOS`,
-   `C:\Users\<user>\AppData\ProgramData\FlowPOS` (the old wrong path), and
-   `Program Files\FlowPOS`.
-2. Rebuilt server + web (`npm run build`) and the Electron app + installer
-   (`npm run dist` in `electron/`).
-3. Silent-installed the fresh `FlowPOS Setup 1.4.1.exe` (`/S`) — landed at
-   `C:\Program Files\FlowPOS` (default, since no prior custom install dir existed).
-4. Launched `FlowPOS.exe` directly (simulating a real customer double-click).
-5. `server.log` showed `DB path: C:\ProgramData\FlowPOS\data\pos.db` (correct) and no
-   errors.
-6. `GET /api/health` → `200` within seconds.
-7. `GET /api/license/info` → fresh machine code, `active: false` (correct first-run
-   state).
-8. `POST /api/license/activate-pin` with the master vendor PIN → activation succeeded.
-9. Full Vitest suite: 69/69 green.
+### H6. Ops guide + release checklist (E4 close-out)
 
-**Historical symptom (kept for context — do NOT re-attempt these):**
+- `docs/ops-guide.md` (or Arabic `دليل-التشغيل.md`, owner's choice): static IP for the
+  shop PC, UPS requirement, Africa/Tripoli timezone + clock drift, firewall behavior,
+  connecting cashier devices (QR flow), browser kiosk/silent-print setup for non-Electron
+  cashier stations (`chrome --kiosk-printing`), backup/restore procedure, upgrade
+  procedure (run newer installer over older; `C:\ProgramData\FlowPOS` survives).
+- `docs/release-checklist.md`: build server + web → build Electron + NSIS → install on a
+  clean Windows VM → smoke: activate license, login, sale, print, QR connect from phone,
+  restart app (license + sessions persist), uninstall keeps data.
+- Verify the upgrade path once for real: install V1.4.6 build, then install the next
+  release over it, confirm DB/uploads/backups/license survive.
 
-After installing an older build, the app opened but showed either an infinite loading
-spinner or the activation screen with machine code `----`, because the server crashed
-on the wrong `DATA_DIR` path before ever binding to the port.
-
-**What was tried and failed in the prior session (do NOT repeat these — the eventual
-fix kept the current approach, #4 below, and just corrected the data path):**
-
-1. **Child process with `node.exe`** — `better-sqlite3` ABI mismatch and missing
-   `node_modules` next to a standalone `node.exe`.
-2. **`ELECTRON_RUN_AS_NODE=1` with `process.execPath`** — `app.asar` path resolution
-   breaks when Electron is invoked as plain Node.
-3. **`extraFiles` copying `server/` directory** — wrong `better-sqlite3` native
-   binary path resolution outside the dev machine.
-4. **In-process `await import(SERVER_SCRIPT)`** — kept; this was never actually the
-   problem. The server runs in the Electron main process directly, and
-   electron-builder's smart-unpack correctly puts `better-sqlite3`'s native `.node`
-   binary in `app.asar.unpacked` automatically (confirmed via `npx asar list`).
+**Release as V1.5.1** (changelog: تحسينات / توثيق).
 
 ---
 
-## Milestone C — V1.3.4: Security hardening, dependencies, doc sync
+## Milestone I — V1.5.2: Design conformance & doc hygiene
 
-### C1. Server-side role gates (security)
+### I1. Permission table (Storekeeper-ready roles)
 
-The V1.3.3 audit found manager-only data reachable by any authenticated role — the
-client stopped calling these for the sales role, but the server never enforced it:
+plan §2: "Role checks live in API middleware keyed by a permission table (so adding
+Storekeeper later is data, not code)." Today: 45 inline role conditions across 13 route
+files. Refactor to a single `permissions.ts` map (`action → allowed roles`) consumed by a
+`requireRole(action)` preHandler; keep every current behavior identical (tests must not
+change except for imports). This is the prerequisite for the Phase-4-era Storekeeper role.
 
-- `POST /api/backup` and `GET /api/backup/list` (`server/src/routes/backup.ts`) have
-  **no role check at all** (only `/backup/restore` is gated).
-- Audit: verify `/api/audit-logs` and every other manager-only route is gated
-  **server-side**, not just hidden in the UI.
+### I2. Design-system audit pass
 
-Implementation: add a shared `requireManager` preHandler (e.g. in
-`server/src/lib/auth.ts` or wherever `authenticateRequest` lives) and use it instead
-of the copy-pasted inline `role !== 'manager'` checks across the 13 route files.
-`GET /api/auth/users` **stays open to all authenticated users** — PIN fast-switching
-depends on it and it only returns id/username/role/active.
+Walk `docs/design.md` against the app and fix or consciously waive (recording waivers in
+design.md itself):
 
-Tests: for each newly gated endpoint, sales token → 403 (Arabic error message),
-manager token → success.
+- §6 density modes: implement `data-density="touch|compact"` tokens or amend design.md to
+  match what was actually built.
+- §2 signature elements: verify the receipt-cart, stamp-press moment (200ms settle, only
+  orchestrated animation), perforated edges appear only where §2 allows.
+- §4: one shared currency formatter everywhere (no stray `toFixed`), `.mono` + LTR
+  isolation on all numerics; §13 contrast pairs on any token added since.
+- `prefers-reduced-motion` disables the stamp press and receipt-line animation.
 
-### C2. npm audit cleanup
+### I3. Documentation truth pass
 
-`npm audit` (2026-07-20): 8 vulnerabilities (7 moderate, 1 high), all transitive:
+- `docs/plan.md`: update the status header (still says V1.2.8); close §5 open decisions
+  with the H3/H4/H5 outcomes.
+- `docs/roadmap.md`: add V1.4.2–V1.4.6 to the post-Phase-3 list; add milestones F–I.
+- Delete `installer/setup.iss` (superseded by electron-builder NSIS) or move it under a
+  clearly-marked `attic/`.
+- Re-sync `AGENTS.md` ↔ `CLAUDE.md` (they have drifted beyond the status line).
+- `تقرير-مميزات-المنظومة.html` + `دليل-مميزات-منظومة-Flow.docx`: reflect V1.4.x desktop
+  features; remove/adjust any claim the audit found untrue (encryption, camera scanning)
+  until built.
+- `docs/prd.md` §12: renumber the "still open" list (currently 3,4,5,6 after two struck
+  items) and fold in the decisions made in H3–H5.
 
-- `drizzle-kit` → `@esbuild-kit/*` → old `esbuild` (dev-time advisory). Fix by
-  upgrading `drizzle-kit` (and `drizzle-orm` in lockstep if required) to current.
-  After upgrading: `npm run db:generate` must produce **no new migration** for an
-  unchanged schema, and existing migrations must still apply to a copy of the DB.
-- `exceljs` → vulnerable `uuid` (runtime). Fix via npm `overrides` pinning
-  `uuid@^11` — do **not** downgrade exceljs to 3.4.0.
-
-Verify: full test suite + a real `/api/reports/excel` download opens as valid xlsx.
-
-### C3. Documentation sync
-
-- `CLAUDE.md` + `AGENTS.md`: project status still says "feature-complete (V1.3.2)" —
-  update to reflect V1.3.3+ and Phase 3 completion. Keep the two files in sync.
-- `تقرير-مميزات-المنظومة.html` (customer-facing features report): Phase 3 features
-  (stocktaking, reports/charts/Excel, notification center, warranty & service
-  tickets) are essentially absent — add them in the report's existing style.
-
-**Release as V1.3.4** (changelog sections: أمان / إصلاحات / توثيق).
+**Release as V1.5.2** (changelog: تحسينات واجهة / توثيق).
 
 ---
 
-## Milestone D — V1.3.5: Backlog features + E2E safety net
+## Backlog (do only when asked)
 
-### D1. Supplier statement of account
-
-Mirror of the customer statement (same UX and print layout):
-
-- Server: `GET /api/suppliers/:id/statement?from=&to=` returning a sign-preserving
-  running-balance ledger — purchases increase supplier debt, supplier payments and
-  supplier returns (debt-reduction refunds) decrease it. Integer milli-LYD.
-- Web: statement modal in the Suppliers screen with date-range filter, printable A4
-  via the existing `StatementA4` template (parameterize customer/supplier labels).
-- Tests: running balance against seeded purchase/payment/return fixtures; date
-  filtering; unknown supplier → 404.
-
-### D2. Purchase invoice A4 print view
-
-- `web/src/print/PurchaseA4.tsx` following the existing print-system contract
-  (props in, JSX out, rendered through `PrintRoot`, `.print-only` CSS path).
-- Print button on each purchase row/detail in the Purchases screen.
-- No server changes.
-
-### D3. Playwright smoke test (planned in docs/plan.md §4, never built)
-
-- One spec covering the core loop: login → open shift → POS sale → print modal
-  renders invoice → cancel invoice with manager PIN (stock restored) → close shift.
-- Runs against a scratch DB (never `server/data/pos.db`).
-- Wire as `npm run test:e2e` at the root — **not** part of `npm test` (keep the
-  unit suite fast and offline).
-
-**Release as V1.3.5** (changelog sections: ميزات جديدة / توثيق).
-
----
-
-## Milestone E — V1.4.0: Commercial distribution (closed-system packaging)
-
-> **Owner-approved 2026-07-20.** The system is sold as a licensed closed product:
-> the customer receives an installer and a working system — never source code.
-> Keep the GitHub repo private. The keygen tool and private signing key live
-> **outside this repo** and never ship.
-
-### E1. Windows installer (Inno Setup)
-
-- Bundle: portable Node.js runtime + compiled server + `web/dist` + migrations.
-  Customer never sees npm or a terminal.
-- Install app to `Program Files`, DB + backups + uploads to `ProgramData`
-  (writable, survives upgrades).
-- Register the server as a **Windows service** (NSSM or node-windows): auto-start
-  on boot, restart on crash/power cut.
-- Open a Windows Firewall rule for LAN access; show the server's LAN address/QR at
-  the end of install so cashier devices can connect.
-- Desktop shortcut opens the app in the default browser.
-- **Upgrade path**: running a newer installer over an older install preserves
-  `ProgramData` and replaces the app; migrations-on-boot handles the DB.
-
-### E2. Source protection
-
-- Bundle + minify the server with `esbuild` into a single file
-  (`better-sqlite3`'s native `.node` binary ships alongside).
-- Phase 2 of protection (optional, later release): compile the bundle to V8
-  bytecode with `bytenode` — requires exact Node version match, which we control
-  since we ship the runtime.
-- Web app: Vite's minified build is sufficient (browser code is never protectable).
-
-### E3. Offline license activation
-
-- First run without a license → activation screen showing a **machine code**
-  (fingerprint of stable hardware identifiers).
-- Vendor-side keygen (separate private repo/folder) signs
-  `{machineCode, customerName, issuedAt, supportExpiry?}` with an **Ed25519
-  private key**; the app verifies with the embedded public key. Zero internet.
-- License file lives in `ProgramData`; invalid/missing/mismatched-machine license
-  → activation screen only, no data access, existing DB untouched.
-- Supports: time-limited demo licenses, per-customer name shown in the app,
-  optional support/updates expiry (system keeps working; updates stop).
-- Tests: signature verification, machine mismatch rejection, demo expiry.
-
-### E4. Non-technical
-
-- Per-customer sales contract: software licensed per location, not sold.
-- Release checklist doc for building an installer (build → bundle → installer →
-  smoke-test on a clean Windows VM).
-
----
-
-## Backlog (do only when asked — not part of the milestones)
-
-- Server-side gate review for any remaining role-sensitive read endpoints.
 - `bytenode` bytecode compilation (E2 phase 2).
-- Phase 4 items (cloud sync, multi-branch, installments…) — **each needs explicit
-  owner approval before any build** (see roadmap).
+- Windows-service server mode (if H3 picks Option A now but the owner changes their mind).
+- Camera scanning + local HTTPS CA (if H5 defers it).
+- Phase 4 items (cloud sync, multi-branch, payroll, payment gateway, barcode labels,
+  WhatsApp sharing, installments) — **each needs explicit owner approval before any build**.
 
 ## Process checklist for the executing agent
 
@@ -432,5 +266,37 @@ Mirror of the customer statement (same UX and print layout):
 3. Never edit `server/drizzle/*.sql` by hand — change `schema.ts` + `npm run db:generate`.
 4. Update `docs/roadmap.md` and `سجل-التغييرات.md` (Arabic, per its template) when a
    milestone ships; keep `AGENTS.md` ↔ `CLAUDE.md` in sync if conventions change.
-5. If anything in this plan conflicts with reality (schema drift, renamed files),
-   stop and tell the user instead of improvising.
+5. Milestones F2, H3, H4, H5 contain **owner decisions — ask before building**, then
+   record the decision in the docs listed there.
+6. If anything in this plan conflicts with reality (schema drift, renamed files), stop
+   and tell the user instead of improvising.
+
+---
+
+## Archived lessons from the V1.4.1–V1.4.6 fix rounds (do not re-learn these)
+
+Full narratives live in `سجل-التغييرات.md` and git history (`git log v-tags`); the
+load-bearing lessons:
+
+- **`DATA_DIR` on Windows** comes from `process.env.ProgramData` — never
+  `app.getPath('appData') + '..'` (V1.4.2). Electron `userData` is
+  `%APPDATA%\flowpos-desktop` (package name), not `%APPDATA%\FlowPOS` (product name),
+  and uninstall does **not** clear it — stale tokens there have masked bugs before.
+- **`apiCall()` refuses to run without a stored token** — pre-login surfaces (license
+  screens) must use plain `fetch()`. `apiCall()` also wraps responses as
+  `{ success, data }` — read `res.data.X`, never `res.X`.
+- **Printing:** interactive `window.print()`/GDI dialogs on Windows are unreliable
+  (orientation, no preview, and the UWP `PrintDialog` AppX can be unregistered on
+  debloated images — `ensurePrintDialogRegistered()` in `electron/src/main.ts` repairs
+  it). The shipped path is silent `webContents.print()` via the `flowpos:print` IPC
+  bridge with per-machine printer config in `<DATA_DIR>/print-config.json`. React state
+  must commit before printing — print calls are deferred with `setTimeout(..., 50)`.
+- **Adapter filtering for the QR link** uses PowerShell `Get-NetAdapter`
+  `InterfaceDescription` (30s cache) because `os.networkInterfaces()` names carry no
+  vendor info; the helper is a no-op under `NODE_ENV=test`, and `vi.spyOn` cannot mock
+  same-module ESM calls (they bind directly, not through the exports object).
+- **The server runs in-process in the Electron main process** (approach #4); child-process
+  and `ELECTRON_RUN_AS_NODE` approaches all failed on `better-sqlite3`/asar resolution —
+  do not retry them. electron-builder's smart-unpack handles the native `.node` binary.
+- **Licenses activated under V1.4.4 or earlier** were signed with a lost in-memory key
+  and need one re-activation under V1.4.5+ (and will need another after F1 lands).

@@ -117,7 +117,7 @@ export const LicenseActivationScreen: React.FC<LicenseActivationProps> = ({
           <img
             src="/logo.png"
             alt="Flow Dev Logo"
-            className="h-24 w-24 object-contain mb-1 drop-shadow-lg"
+            className="h-32 w-32 object-contain mb-1 rounded-2xl drop-shadow-lg"
           />
           <h1 className="text-2xl font-extrabold font-display">منظومة Flow</h1>
           <p className="text-xs text-muted">نظام إدارة المبيعات والمخزون — تفعيل التثبيت</p>

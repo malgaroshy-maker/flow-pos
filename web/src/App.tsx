@@ -671,14 +671,14 @@ export function App() {
     };
     return (
       <>
-        <div className="flex items-center gap-3 pt-1">
+        <div className="flex items-center gap-3.5 pt-1">
           <img
             src="/logo.png"
             alt="Flow Dev"
-            className="h-12 w-12 object-contain rounded-xl flex-shrink-0 drop-shadow-md"
+            className="h-16 w-16 object-contain rounded-2xl flex-shrink-0 drop-shadow-md"
           />
           <div className="min-w-0">
-            <div className="font-display text-sm font-extrabold leading-tight truncate">
+            <div className="font-display text-base font-extrabold leading-tight truncate">
               {settingsData?.businessName ?? 'فلو ديف للمستلزمات'}
             </div>
             <div className="mono text-[10px] text-muted">المستلزمات والمعدات</div>
@@ -810,7 +810,7 @@ export function App() {
             <img
               src="/logo.png"
               alt="Flow Dev"
-              className="h-9 w-9 object-contain rounded-lg flex-shrink-0"
+              className="h-12 w-12 object-contain rounded-xl flex-shrink-0 drop-shadow-sm"
             />
             <div className="flex flex-col">
               <span className="font-display font-bold text-sm leading-tight">

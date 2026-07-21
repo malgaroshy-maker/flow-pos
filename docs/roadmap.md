@@ -102,6 +102,12 @@ Quality, security, and commercial-distribution work between Phase 3 and any Phas
   - **✅ D2** — PurchaseA4.tsx print component + print button in purchases table.
   - **✅ D3** — Playwright smoke test (`npm run test:e2e`).
 - [x] **V1.4.0 / V1.4.1 — commercial distribution & desktop app (2026-07-20).** Offline licensing with Ed25519 signatures, machine fingerprinting, instant Master Vendor PIN (`1391997`) activation, Flow Dev logo branding (`logo.png`), single-file NSIS desktop installer (`FlowPOS Setup 1.4.1.exe`) packaging an Electron desktop window, native system tray, splash screen, and in-process Fastify Fastify server with embedded `better-sqlite3`. Verification: 69 server Vitest unit tests + local binary launch + health check 100% green.
+- [x] **V1.4.2 (2026-07-21)** — installer data-path fix: `DATA_DIR` now reads `process.env.ProgramData` on Windows instead of a miscomputed path, fixing the packaged app failing to start after a real install.
+- [x] **V1.4.3 (2026-07-21)** — QR network link showed `localhost` instead of a real LAN address (read `res.data.urls`, not `res.urls`); printing produced blank/stale pages (deferred `window.print()` past the React state commit); Windows' UWP print dialog broker could be unregistered on debloated images (`ensurePrintDialogRegistered()` added).
+- [x] **V1.4.4 (2026-07-21)** — switched to silent printing (`webContents.print({ silent: true })`, no OS dialog) with a real in-app print preview (`PrintPreviewFrame`/`PrintPreviewModal`) reusing the actual print components, plus per-machine printer selection in Settings.
+- [x] **V1.4.5 (2026-07-21)** — license persistence fix: the Ed25519 verification keypair is now persisted to `vendor-keys.json` instead of regenerated in memory on every process start, so activation survives app restarts.
+- [x] **V1.4.6 (2026-07-21)** — QR "connect a cashier device" modal filtered out virtual-adapter addresses (VirtualBox/VMware/PLCSIM) using real Windows adapter descriptions, and now leads with one recommended address instead of a confusing list.
+- [x] **V1.4.7 (2026-07-21)** — UI/UX pass: enlarged the Flow Dev logo across the sidebar, top header, login screen, license activation screen, and added it to the Home hub screen (previously a plain "POS" placeholder badge). First step of the post-re-audit plan in `docs/next-steps.md`.
 
 ## Phase 4 — Future expansion
 

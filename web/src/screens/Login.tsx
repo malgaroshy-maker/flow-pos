@@ -54,7 +54,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onSuccess }) => {
           <img
             src="/logo.png"
             alt="Flow Dev Logo"
-            className="h-24 w-24 object-contain mb-6 drop-shadow-xl"
+            className="h-36 w-36 object-contain mb-6 rounded-2xl drop-shadow-xl"
           />
           <h1
             className="text-4xl font-black leading-tight mb-4"
@@ -108,7 +108,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onSuccess }) => {
             <img
               src="/logo.png"
               alt="Flow Dev Logo"
-              className="h-20 w-20 object-contain drop-shadow-lg"
+              className="h-28 w-28 object-contain rounded-2xl drop-shadow-lg"
             />
           </div>
 

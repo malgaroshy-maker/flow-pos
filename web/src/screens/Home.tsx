@@ -102,12 +102,11 @@ export const Home: React.FC<HomeProps> = ({
           }}
         >
           <div className="flex items-center gap-4">
-            <div
-              className="flex h-14 w-14 items-center justify-center rounded-2xl font-mono text-lg font-black text-white shadow-md flex-shrink-0"
-              style={{ background: 'var(--gradient-jade)', boxShadow: 'var(--shadow-jade)' }}
-            >
-              POS
-            </div>
+            <img
+              src="/logo.png"
+              alt="Flow Dev"
+              className="h-16 w-16 object-contain rounded-2xl flex-shrink-0 shadow-md"
+            />
             <div>
               <h1 className="font-display text-2xl font-black" style={{ color: 'var(--text)' }}>
                 {settingsData?.businessName ?? 'منظومة مستلزمات المقاهي والمطاعم'}
