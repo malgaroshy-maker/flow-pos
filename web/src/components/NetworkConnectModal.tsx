@@ -22,9 +22,10 @@ export const NetworkConnectModal: React.FC<NetworkConnectModalProps> = ({ isOpen
       setLoading(true);
       try {
         const res: any = await apiCall('/api/network/info');
-        if (res && Array.isArray(res.urls) && res.urls.length > 0) {
-          setNetworkUrls(res.urls);
-          setSelectedUrl(res.urls[0]);
+        const urls = res?.success ? res.data?.urls : undefined;
+        if (Array.isArray(urls) && urls.length > 0) {
+          setNetworkUrls(urls);
+          setSelectedUrl(urls[0]);
         } else {
           const fallback = `http://${window.location.hostname}:3001`;
           setNetworkUrls([fallback]);

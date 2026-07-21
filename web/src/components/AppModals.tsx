@@ -10,6 +10,7 @@ import type {
 } from '../types';
 import { formatLYD, parseLYDOrZero } from '../lib/money';
 import { apiCall, uploadProductImage } from '../lib/api';
+import { triggerPrint } from '../lib/print';
 import { Icons } from './Icons';
 import { Modal } from './Modal';
 import { PrintDocument } from '../print/PrintRoot';
@@ -887,7 +888,7 @@ export const AppModals: React.FC<AppModalsProps> = ({
 
             <div className="flex gap-3 pt-3 border-t border-line">
               <button
-                onClick={() => window.print()}
+                onClick={() => triggerPrint()}
                 className="flex-1 py-3 bg-jade text-white font-bold rounded-control hover:bg-jade-2 transition-colors cursor-pointer text-sm shadow-md flex items-center justify-center gap-2"
               >
                 <Icons.Printer className="h-4 w-4" />
@@ -1527,7 +1528,9 @@ export const AppModals: React.FC<AppModalsProps> = ({
                   filterStart: statementFilterStart || undefined,
                   filterEnd: statementFilterEnd || undefined,
                 });
-                window.print();
+                // Must wait a tick for the print-only DOM to pick up the new document
+                // before triggerPrint() captures the page — otherwise it prints stale content.
+                setTimeout(() => triggerPrint(), 50);
               }}
               disabled={!statementData}
               className="py-3 bg-jade text-white text-xs font-bold rounded-control hover:bg-jade-2 transition-colors cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50"
@@ -2082,7 +2085,8 @@ export const AppModals: React.FC<AppModalsProps> = ({
                   partyLabel: 'المورد',
                   signatureLabel: 'توقيع المورد',
                 });
-                window.print();
+                // Must wait a tick for the print-only DOM to pick up the new document.
+                setTimeout(() => triggerPrint(), 50);
               }}
               className="w-full py-2.5 bg-copper text-white font-bold text-sm rounded-control hover:bg-copper/90 cursor-pointer flex items-center justify-center gap-2"
             >

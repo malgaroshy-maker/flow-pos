@@ -11,6 +11,59 @@
 
 ---
 
+## ✅ RESOLVED (round 3): QR network link showed `localhost`; printing produced blank/stale pages (fixed 2026-07-21, shipped as V1.4.3)
+
+Reported after V1.4.2 was installed and both earlier issues confirmed fixed. Two
+unrelated bugs, found by direct investigation on this machine (not guesswork):
+
+**1. QR "connect a cashier device" modal always showed `http://localhost:3001`.**
+`web/src/components/NetworkConnectModal.tsx` read `res.urls` directly off the
+return value of `apiCall()`. But `apiCall()` always wraps successful responses as
+`{ success: true, data: <body> }` — so `res.urls` was always `undefined`, the
+`Array.isArray(res.urls)` check always failed, and the code fell through to
+`window.location.hostname`, which inside Electron is literally `"localhost"`
+(the window loads `http://localhost:3001`). The backend endpoint
+(`GET /api/network/info`) was never broken — confirmed via direct `curl` that it
+correctly returns real LAN IPs (`192.168.1.16`, etc.). Fix: read `res.data.urls`.
+
+**2. Printing (invoice, quotation, purchase, statements) produced a blank or
+stale page.** Five call sites did `setActivePrintDocument(doc); window.print();`
+back to back in the same synchronous tick. React doesn't commit a state update to
+the DOM until the current call stack finishes, and `window.print()` captures the
+page's *current* DOM state — so it printed whatever was there *before* the new
+document was set, not the new one. Fixed by deferring the print call with
+`setTimeout(..., 50)` in all five spots (`App.tsx` ×3, `AppModals.tsx` ×2).
+
+**3. Separately, direct testing on this machine also surfaced that Windows'
+native print dialog (`PrintDialog.exe`, the modern UWP Print UI) can launch as a
+process with `MainWindowHandle: 0` — i.e. no visible window at all — when its
+per-user AppX registration is missing. Confirmed via Chrome DevTools Protocol
+(`Runtime.evaluate` against the packaged app) that `window.print()` really was
+invoking the OS dialog broker; the broker just never rendered. `Get-AppxPackage
+-Name "Windows.PrintDialog"` returned nothing on this machine; running
+`Add-AppxPackage -DisableDevelopmentMode -Register
+'C:\Windows\SystemApps\Windows.PrintDialog_cw5n1h2txyewy\AppxManifest.xml'`
+(a per-user, non-admin operation) fixed it immediately. This is a known issue on
+debloated/OEM-trimmed Windows images — plausible for cheap shop PCs in this
+product's target market — so the app now runs this same check-and-repair
+automatically at startup (`ensurePrintDialogRegistered()` in
+`electron/src/main.ts`), and printing was also switched from the renderer's
+`window.print()` to a main-process `webContents.print()` call via a new
+`window.flowpos.print()` IPC bridge (`preload.ts` + `flowpos:print` handler),
+which is Electron's documented, more reliable path.
+
+**Verified:** `npm run build` (typecheck clean) and Vitest 69/69 both green.
+Confirmed via direct `GET /api/network/info` call that real LAN IPs are
+returned, and via CDP that the rebuilt bundle hash matches the new build.
+**Not yet verified end-to-end through the actual installed app** — a silent
+elevated reinstall attempt during this session triggered a UAC prompt that was
+cancelled, so the perMachine NSIS installer needs to be run interactively by a
+human. `dist-installer\FlowPOS Setup 1.4.3.exe` is built and ready; run it,
+then confirm: QR modal shows a real `192.168.x.x` address, and printing an
+invoice/quotation/statement actually opens a usable print dialog.
+
+---
+
 ## ✅ RESOLVED (round 2): Activation screen stuck on "لم يتم الاتصال" / machine code `----` (fixed 2026-07-21)
 
 **This is a *second, separate* bug from the `DATA_DIR` fix below** — found after the

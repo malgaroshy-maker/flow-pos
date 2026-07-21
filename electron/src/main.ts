@@ -2,6 +2,7 @@ import {
   app,
   BrowserWindow,
   dialog,
+  ipcMain,
   nativeImage,
   Menu,
   shell,
@@ -363,6 +364,42 @@ function createTray() {
   tray.on('double-click', openOrFocusWindow);
 }
 
+// ─── Printing ─────────────────────────────────────────────────────────────────
+
+// On some debloated/OEM-trimmed Windows images, the built-in Print UI
+// package (Windows.PrintDialog) exists on disk but isn't registered for the
+// current user — window.print()/webContents.print() then spawn a windowless
+// PrintDialog.exe process instead of a visible dialog, so printing silently
+// does nothing. Re-registering it is a cheap, per-user, non-admin operation
+// that's a no-op if the package is already fine. Fire-and-forget at startup.
+function ensurePrintDialogRegistered() {
+  if (process.platform !== 'win32') return;
+  const manifestPath =
+    'C:\\Windows\\SystemApps\\Windows.PrintDialog_cw5n1h2txyewy\\AppxManifest.xml';
+  const ps = [
+    '-NoProfile',
+    '-Command',
+    `if (-not (Get-AppxPackage -Name 'Windows.PrintDialog')) { ` +
+      `try { Add-AppxPackage -DisableDevelopmentMode -Register '${manifestPath}' } catch {} }`,
+  ];
+  try {
+    const proc = spawn('powershell.exe', ps, { windowsHide: true, stdio: 'ignore' });
+    proc.on('error', () => {}); // best-effort — never block startup on this
+  } catch {}
+}
+
+// Triggered from the renderer's window.flowpos.print() (preload.ts) instead of
+// window.print() — see the comment there for why.
+ipcMain.handle('flowpos:print', async (event) => {
+  const win = BrowserWindow.fromWebContents(event.sender);
+  if (!win) return { success: false, reason: 'no_window' };
+  return new Promise<{ success: boolean; reason?: string }>((resolvePrint) => {
+    win.webContents.print({ silent: false, printBackground: true }, (success, reason) => {
+      resolvePrint({ success, reason });
+    });
+  });
+});
+
 // ─── App Lifecycle ────────────────────────────────────────────────────────────
 
 function quitApp() {
@@ -388,6 +425,8 @@ if (!gotTheLock) {
         name: 'FlowPOS',
       });
     }
+
+    ensurePrintDialogRegistered();
 
     // Show splash screen immediately while server starts
     createSplashWindow();

@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { useData } from '../context/DataContext';
 import { apiCall } from '../lib/api';
+import { triggerPrint } from '../lib/print';
 import { formatDate, formatDateTime } from '../lib/datetime';
 import { Icons } from '../components/Icons';
 import { Modal } from '../components/Modal';
@@ -256,7 +257,7 @@ export const StocktakingScreen: React.FC<{
                     </button>
                   )}
                   <button
-                    onClick={() => window.print()}
+                    onClick={() => triggerPrint()}
                     className="py-1.5 px-3 border border-border text-muted font-bold text-xs rounded-control hover:text-text cursor-pointer flex items-center gap-1"
                   >
                     <Icons.Printer className="h-3.5 w-3.5" />

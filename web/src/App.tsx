@@ -17,6 +17,7 @@ import { useAuth } from './context/AuthContext';
 import { useToast } from './context/ToastContext';
 import { useData } from './context/DataContext';
 import { apiCall } from './lib/api';
+import { triggerPrint } from './lib/print';
 
 import { Icons } from './components/Icons';
 import { PinOverrideModal } from './components/PinOverrideModal';
@@ -439,7 +440,9 @@ export function App() {
       const quoRes = await apiCall(`/api/quotations/${res.data.id}`);
       if (quoRes.success) {
         setActivePrintDocument({ type: 'quotation-a4', quotation: quoRes.data });
-        window.print();
+        // setActivePrintDocument only commits to the DOM after this tick — printing
+        // synchronously here would capture the print-only content before it updates.
+        setTimeout(() => triggerPrint(), 50);
       }
     } else {
       triggerToast(res.error || 'فشل حفظ عرض السعر', 'alert');
@@ -461,7 +464,8 @@ export function App() {
     const res = await apiCall(`/api/purchases/${purchase.id}`);
     if (res.success) {
       setActivePrintDocument({ type: 'purchase-a4', purchase: res.data });
-      window.print();
+      // See handleSaveQuotation — must wait a tick for the print-only DOM to update.
+      setTimeout(() => triggerPrint(), 50);
     } else {
       triggerToast(res.error || 'فشل جلب تفاصيل فاتورة المشتريات', 'alert');
     }
@@ -541,7 +545,8 @@ export function App() {
     const res = await apiCall(`/api/quotations/${q.id}`);
     if (res.success) {
       setActivePrintDocument({ type: 'quotation-a4', quotation: res.data });
-      window.print();
+      // See handleSaveQuotation — must wait a tick for the print-only DOM to update.
+      setTimeout(() => triggerPrint(), 50);
     } else {
       triggerToast(res.error || 'فشل جلب تفاصيل عرض السعر', 'alert');
     }
