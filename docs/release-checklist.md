@@ -11,10 +11,13 @@
       count; it should only ever go up).
 - [ ] `npm run build` — server (esbuild bundle) + web (Vite bundle) both succeed.
 - [ ] `npm run test:e2e` (Playwright smoke test) green, against a scratch DB.
-- [ ] In `electron/`: `npm run dist` — builds `FlowPOS Setup x.y.z.exe` into
-      `dist-installer/`. Confirm the version number in the output filename matches
-      `electron/package.json`'s `version` (bump it before building if it doesn't —
-      this is the version the customer-facing changelog entry should also use).
+- [ ] Build the installer: double-click `build-installer.bat` in the repo root (does
+      everything below in one step and opens `dist-installer\` when done), or
+      manually via `npm run package` from the repo root / `npm run dist` from
+      `electron/` — builds `FlowPOS Setup x.y.z.exe` into `dist-installer/`. Confirm
+      the version number in the output filename matches `electron/package.json`'s
+      `version` (bump it before building if it doesn't — this is the version the
+      customer-facing changelog entry should also use).
 
 ## 2. Changelog & docs
 
@@ -42,8 +45,10 @@ elevation has no non-interactive answer. A human needs to:
       `Get-NetFirewallRule -DisplayName FlowPOS` (elevated PowerShell) shows it.
 - [ ] Launch the app; confirm the license activation screen appears with a real
       machine code (not `----`); activate with a real license key from the vendor
-      keygen tool (`D:\flowpos-vendor-keygen\keygen.mjs` or wherever it now lives —
-      **never** commit that tool or its private key to this repo).
+      keygen tool (`D:\flowpos-vendor-keygen\keygen.mjs`, or double-click
+      `issue-license.bat` in that same folder for a guided prompt — pass the machine
+      code, customer name, and optional day count either as arguments or when asked;
+      **never** commit that tool, `issue-license.bat`, or the private key to this repo).
 - [ ] Log in, open a shift, record a cash sale, print an invoice (confirm it prints
       silently with no OS dialog, on the correct printer if one was configured in
       Settings), cancel the invoice with a manager PIN (confirm stock restores),
