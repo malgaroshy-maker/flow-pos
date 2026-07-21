@@ -1,6 +1,6 @@
 {
   "name": "flowpos-desktop",
-  "version": "1.5.3",
+  "version": "1.5.4",
   "description": "منظومة Flow — نافذة سطح المكتب",
   "author": "Flow Dev — Intelligent Software Solutions",
   "main": "dist/main.js",

@@ -193,13 +193,28 @@ a human needs to run `FlowPOS Setup 1.5.2.exe` interactively once and confirm
 `Get-NetFirewallRule -DisplayName FlowPOS` (or the Windows Defender Firewall UI) shows
 the rule, then test a phone connecting via the QR code on the same Wi-Fi.
 
-### H2. Persistent sessions
+### H2. Persistent sessions — ✅ DONE (V1.5.4, 2026-07-21)
 
-- Persist sessions (token hash, userId, expiresAt) to a small SQLite table; load into the
-  in-memory map on boot; delete on logout/expiry. Cashier devices then survive a desktop
-  app restart. Keep the 12h idle-expiry semantics exactly.
-- Tests: session survives a simulated restart (`vi.resetModules()` or re-`buildApp`
-  against the same DB); expired sessions are not resurrected.
+New `sessions` table (migration `0018_round_charles_xavier.sql`: `token` PK, `userId`,
+`username`/`role` snapshot, `expiresAt`). `createSession()` (login, PIN-switch) now
+inserts into both the in-memory map and the table; `authenticateRequest` renews
+`expiresAt` in both on every request (writes via `req.server.db` since it's a bare
+preHandler shared across route files, not closed over a specific `app`); logout deletes
+both. `loadPersistedSessions(db)` rehydrates the map at boot and drops already-expired
+rows — wired into `server/src/index.ts` only, never `buildApp()`, so no test file is
+affected. Idle-expiry semantics unchanged (12h). Note: the plan's original "token hash"
+suggestion wasn't followed — tokens are already high-entropy random bearer tokens
+(`randomBytes(32)`), and this is a local single-shop SQLite file, not a
+multi-tenant/cloud store, so storing them directly matches the trust model already used
+elsewhere in this app (e.g. `license.lic`).
+
+Tests (`session-persistence.test.ts`, 2, using the same `vi.resetModules()` +
+differently-queried dynamic import technique as `license.test.ts`): a session created via
+a real HTTP login in one simulated "process" is loaded correctly by
+`loadPersistedSessions()` in a fresh module graph; an already-expired row is dropped, not
+resurrected. Verified end-to-end on a real (non-Electron) server restart on this machine:
+killed and relaunched the `tsx watch` process, confirmed a token issued before the
+restart still authenticated (`GET /api/notifications` → 200) after it. 86/86 total green.
 
 ### H3. Server availability decision (document, maybe build)
 

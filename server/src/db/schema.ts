@@ -41,6 +41,20 @@ export const users = sqliteTable('users', {
   createdAt: text('created_at').notNull(),
 });
 
+// Persisted login sessions so a desktop-app restart doesn't log out every
+// cashier device mid-shift. The server's in-memory session map (auth.ts) is
+// still the hot-path source of truth; this table is loaded into it at boot
+// and kept in sync so it survives a restart.
+export const sessions = sqliteTable('sessions', {
+  token: text('token').primaryKey(),
+  userId: integer('user_id')
+    .notNull()
+    .references(() => users.id),
+  username: text('username').notNull(), // snapshot at login, matches in-memory session
+  role: text('role', { enum: ['manager', 'sales'] }).notNull(),
+  expiresAt: integer('expires_at').notNull(), // epoch ms
+});
+
 export const products = sqliteTable('products', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   name: text('name').notNull(),

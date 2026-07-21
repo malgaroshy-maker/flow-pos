@@ -1,8 +1,9 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { randomBytes } from 'node:crypto';
-import { eq } from 'drizzle-orm';
+import { eq, lt } from 'drizzle-orm';
 import bcrypt from 'bcryptjs';
-import { users, auditLogs } from '../db/schema.js';
+import type { Db } from '../db/index.js';
+import { users, auditLogs, sessions as sessionsTable } from '../db/schema.js';
 
 export interface UserSession {
   userId: number;
@@ -14,10 +15,16 @@ export interface UserSession {
 // Sessions idle out after 12 hours without a request (shop runs one shift a day).
 const SESSION_IDLE_MS = 12 * 60 * 60 * 1000;
 
-// In-memory session store (simple and offline-safe)
+// In-memory session store (hot path — every authenticated request reads
+// this, never the DB). Persisted to the `sessions` table so cashier devices
+// survive a desktop-app restart mid-shift instead of every device silently
+// logging out; loadPersistedSessions() rehydrates this map at boot.
 export const sessions = new Map<string, UserSession>();
 
-function createSession(user: { id: number; username: string; role: 'manager' | 'sales' }): {
+function createSession(
+  db: Db,
+  user: { id: number; username: string; role: 'manager' | 'sales' }
+): {
   token: string;
   session: UserSession;
 } {
@@ -29,7 +36,36 @@ function createSession(user: { id: number; username: string; role: 'manager' | '
     expiresAt: Date.now() + SESSION_IDLE_MS,
   };
   sessions.set(token, session);
+  db.insert(sessionsTable)
+    .values({
+      token,
+      userId: session.userId,
+      username: session.username,
+      role: session.role,
+      expiresAt: session.expiresAt,
+    })
+    .run();
   return { token, session };
+}
+
+/**
+ * Rehydrates the in-memory session map from disk at boot — called once from
+ * index.ts (never from buildApp(), so the ~20 test files that build an app
+ * per test are unaffected and always start with a clean session map).
+ * Expired rows are dropped here rather than carried forward.
+ */
+export function loadPersistedSessions(db: Db): void {
+  const now = Date.now();
+  db.delete(sessionsTable).where(lt(sessionsTable.expiresAt, now)).run();
+  const rows = db.select().from(sessionsTable).all();
+  for (const row of rows) {
+    sessions.set(row.token, {
+      userId: row.userId,
+      username: row.username,
+      role: row.role,
+      expiresAt: row.expiresAt,
+    });
+  }
 }
 
 // Brute-force guard for the credential endpoints (PINs are only 4 digits).
@@ -97,7 +133,7 @@ export async function authRoutes(app: FastifyInstance) {
     }
 
     clearAuthFailures(req.ip);
-    const { token, session: sessionData } = createSession(user);
+    const { token, session: sessionData } = createSession(app.db, user);
 
     // Audit log
     app.db
@@ -133,7 +169,7 @@ export async function authRoutes(app: FastifyInstance) {
     }
 
     clearAuthFailures(req.ip);
-    const { token, session: sessionData } = createSession(user);
+    const { token, session: sessionData } = createSession(app.db, user);
 
     // Audit log
     app.db
@@ -190,7 +226,9 @@ export async function authRoutes(app: FastifyInstance) {
   // Logout: invalidate the current session token
   app.post('/auth/logout', { preHandler: authenticateRequest }, async (req, reply) => {
     const authHeader = req.headers.authorization!;
-    sessions.delete(authHeader.substring(7));
+    const token = authHeader.substring(7);
+    sessions.delete(token);
+    app.db.delete(sessionsTable).where(eq(sessionsTable.token, token)).run();
     return { success: true };
   });
 
@@ -343,12 +381,23 @@ export async function authenticateRequest(req: FastifyRequest, reply: FastifyRep
   const token = authHeader.substring(7);
   const session = sessions.get(token);
   if (!session || session.expiresAt < Date.now()) {
-    if (session) sessions.delete(token);
+    if (session) {
+      sessions.delete(token);
+      req.server.db.delete(sessionsTable).where(eq(sessionsTable.token, token)).run();
+    }
     return reply.code(401).send({ error: 'unauthorized', message: 'انتهت صلاحية الجلسة' });
   }
 
   session.expiresAt = Date.now() + SESSION_IDLE_MS;
   req.user = session;
+  // Keep the persisted copy's idle-expiry in sync so a desktop-app restart
+  // mid-shift doesn't log the device out — WAL mode + local single-process
+  // SQLite makes a write per request cheap at this app's request volume.
+  req.server.db
+    .update(sessionsTable)
+    .set({ expiresAt: session.expiresAt })
+    .where(eq(sessionsTable.token, token))
+    .run();
 }
 
 // Authentication + manager-role hook for manager-only routes
