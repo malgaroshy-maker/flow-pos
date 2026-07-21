@@ -173,14 +173,25 @@ small UX feature if wanted:
 
 ## Milestone H — V1.5.1: Deployment & ops hardening
 
-### H1. Windows Firewall rule at install time
+### H1. Windows Firewall rule at install time — ✅ DONE (V1.5.3, 2026-07-21)
 
-- Add an NSIS `include` script (electron-builder `nsis.include`) that runs
-  `netsh advfirewall firewall add rule name="FlowPOS" dir=in action=allow program="$INSTDIR\FlowPOS.exe" enable=yes profile=private`
-  on install and deletes it on uninstall. The installer is already `perMachine` (elevated),
-  so no extra UAC prompt.
-- Verify on this machine: fresh install → phone on the same Wi-Fi reaches the QR URL
-  without any firewall prompt.
+`electron/installer.nsh` (`customInstall`/`customUnInstall` NSIS macros, wired via
+`nsis.include` in `electron/package.json`) adds a `netsh advfirewall firewall add rule
+name="FlowPOS" ... profile=private,domain` rule on install and deletes it on uninstall
+(also deletes any stale rule before re-adding, so re-installs stay idempotent). The
+installer is already `perMachine` (elevated), so no extra UAC prompt beyond the one the
+installer already triggers.
+
+Verified: `npm run dist` in `electron/` builds `FlowPOS Setup 1.5.2.exe` successfully
+with the NSIS include compiling cleanly (would fail the build on a syntax error); the
+bare `netsh advfirewall firewall add rule ...` invocation was tested directly on this
+machine and confirmed well-formed (rejected only for lack of elevation in an unprivileged
+shell — the expected difference from running inside the installer's elevated context).
+**Not yet verified end-to-end** — a real silent (`/S`) reinstall attempt on this machine
+hits a UAC prompt an agent can't answer (documented limitation from the V1.4.x rounds);
+a human needs to run `FlowPOS Setup 1.5.2.exe` interactively once and confirm
+`Get-NetFirewallRule -DisplayName FlowPOS` (or the Windows Defender Firewall UI) shows
+the rule, then test a phone connecting via the QR code on the same Wi-Fi.
 
 ### H2. Persistent sessions
 

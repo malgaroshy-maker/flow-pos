@@ -1,6 +1,6 @@
 {
   "name": "flowpos-desktop",
-  "version": "1.5.2",
+  "version": "1.5.3",
   "description": "منظومة Flow — نافذة سطح المكتب",
   "author": "Flow Dev — Intelligent Software Solutions",
   "main": "dist/main.js",
@@ -72,7 +72,8 @@
       "createStartMenuShortcut": true,
       "shortcutName": "منظومة Flow",
       "differentialPackage": false,
-      "perMachine": true
+      "perMachine": true,
+      "include": "installer.nsh"
     },
     "nodeGypRebuild": false,
     "npmRebuild": true,
