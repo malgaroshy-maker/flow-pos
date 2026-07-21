@@ -15,6 +15,10 @@ import { Icons } from './Icons';
 import { Modal } from './Modal';
 import { PrintDocument } from '../print/PrintRoot';
 import { StatementA4 } from '../print/StatementA4';
+import { InvoiceA4 } from '../print/InvoiceA4';
+import { ThermalReceipt } from '../print/ThermalReceipt';
+import { PrintPreviewFrame } from '../print/PrintPreviewFrame';
+import { useQrDataUrl } from '../print/useQrDataUrl';
 import { formatDateTime } from '../lib/datetime';
 
 interface AppModalsProps {
@@ -189,6 +193,10 @@ export const AppModals: React.FC<AppModalsProps> = ({
   const [overrideCustomerName, setOverrideCustomerName] = useState('');
   const [overrideWarrantyNotes, setOverrideWarrantyNotes] = useState('');
   const [overrideStampTitle, setOverrideStampTitle] = useState('');
+
+  const saleQrDataUrl = useQrDataUrl(
+    printingSale ? `${printingSale.invoiceNumber} | ${printingSale.total} LYD | ${printingSale.createdAt}` : null
+  );
 
   // Product Form
   const [productForm, setProductForm] = useState({
@@ -783,7 +791,7 @@ export const AppModals: React.FC<AppModalsProps> = ({
       {/* 2. Print Invoice Overlay Modal */}
       {showPrintModal && printingSale && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 overflow-y-auto no-print" dir="rtl">
-          <div className="w-full max-w-xl rounded-card border border-line bg-surface p-6 shadow-xl my-8 flex flex-col gap-4">
+          <div className="w-full max-w-3xl rounded-card border border-line bg-surface p-6 shadow-xl my-8 flex flex-col gap-4">
             <div className="flex justify-between items-center pb-3 border-b border-line">
               <h3 className="font-display font-extrabold text-base">معاينة وطباعة الفاتورة ({printingSale.invoiceNumber})</h3>
               <button onClick={() => setShowPrintModal(false)} className="text-xs border border-border px-3 py-1.5 rounded hover:bg-surface-2 cursor-pointer">
@@ -823,6 +831,23 @@ export const AppModals: React.FC<AppModalsProps> = ({
                 🧾 إيصال حراري (80mm)
               </button>
             </div>
+
+            {printMode === 'a4' ? (
+              <PrintPreviewFrame>
+                <InvoiceA4
+                  sale={printingSale}
+                  settings={settingsData}
+                  overrideCustomerName={overrideCustomerName}
+                  overrideWarrantyNotes={overrideWarrantyNotes}
+                  overrideStampTitle={overrideStampTitle}
+                  qrDataUrl={saleQrDataUrl}
+                />
+              </PrintPreviewFrame>
+            ) : (
+              <PrintPreviewFrame widthMm={80} scale={0.85}>
+                <ThermalReceipt sale={printingSale} settings={settingsData} />
+              </PrintPreviewFrame>
+            )}
 
             {printMode === 'a4' && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">

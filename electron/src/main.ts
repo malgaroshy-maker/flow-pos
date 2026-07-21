@@ -9,7 +9,7 @@ import {
   Tray,
 } from 'electron';
 import { ChildProcess, spawn } from 'node:child_process';
-import { appendFileSync, existsSync, mkdirSync } from 'node:fs';
+import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { get as httpGet } from 'node:http';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -388,19 +388,70 @@ function ensurePrintDialogRegistered() {
   } catch {}
 }
 
+// Printer selection persists across restarts in a small JSON file next to the
+// DB — not in the server's settings table, since this is a per-machine
+// Electron concern (each cashier device could have a different printer),
+// not shared business data.
+interface PrintConfig {
+  a4Printer?: string;
+  thermalPrinter?: string;
+}
+
+const PRINT_CONFIG_PATH = join(DATA_DIR, 'print-config.json');
+
+function loadPrintConfig(): PrintConfig {
+  try {
+    return JSON.parse(readFileSync(PRINT_CONFIG_PATH, 'utf-8'));
+  } catch {
+    return {};
+  }
+}
+
+function savePrintConfig(cfg: PrintConfig) {
+  try {
+    mkdirSync(DATA_DIR, { recursive: true });
+    writeFileSync(PRINT_CONFIG_PATH, JSON.stringify(cfg, null, 2), 'utf-8');
+  } catch {}
+}
+
+ipcMain.handle('flowpos:list-printers', async (event) => {
+  const win = BrowserWindow.fromWebContents(event.sender);
+  if (!win) return [];
+  try {
+    const printers = await win.webContents.getPrintersAsync();
+    return printers.map((p) => ({ name: p.name, displayName: p.displayName }));
+  } catch {
+    return [];
+  }
+});
+
+ipcMain.handle('flowpos:get-print-config', async () => loadPrintConfig());
+
+ipcMain.handle('flowpos:set-print-config', async (_event, cfg: PrintConfig) => {
+  const merged = { ...loadPrintConfig(), ...cfg };
+  savePrintConfig(merged);
+  return merged;
+});
+
 // Triggered from the renderer's window.flowpos.print() (preload.ts) instead of
-// window.print() — see the comment there for why.
+// window.print() — see the comment there for why. Prints silently (no OS
+// dialog): the interactive Windows print dialog was confirmed, via testing on
+// this machine, to (a) sometimes launch with no visible window at all
+// (see ensurePrintDialogRegistered above) and (b) ignore the requested
+// portrait/A4 orientation even when it does render — both are platform
+// limitations of Electron's legacy-GDI print path on Windows, not fixable by
+// passing different options. Silent printing sidesteps both entirely and
+// matches the "kiosk print, no dialog" behavior docs/design.md specifies.
 ipcMain.handle('flowpos:print', async (event, kind?: 'a4' | 'thermal') => {
   const win = BrowserWindow.fromWebContents(event.sender);
   if (!win) return { success: false, reason: 'no_window' };
-  // The print dialog otherwise defaults to landscape, which squeezes the
-  // portrait A4 invoice/quotation/statement layout into the top-left corner.
-  // Thermal receipts print on whatever the roll printer's own driver
-  // provides, so no page size is forced for them.
+  const cfg = loadPrintConfig();
+  const deviceName = kind === 'thermal' ? cfg.thermalPrinter : cfg.a4Printer;
+  const base = { silent: true, printBackground: true, landscape: false };
   const options =
     kind === 'thermal'
-      ? { silent: false, printBackground: true, landscape: false }
-      : { silent: false, printBackground: true, landscape: false, pageSize: 'A4' as const };
+      ? { ...base, ...(deviceName ? { deviceName } : {}) }
+      : { ...base, pageSize: 'A4' as const, ...(deviceName ? { deviceName } : {}) };
   return new Promise<{ success: boolean; reason?: string }>((resolvePrint) => {
     win.webContents.print(options, (success, reason) => {
       resolvePrint({ success, reason });

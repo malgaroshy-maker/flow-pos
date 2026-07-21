@@ -11,6 +11,55 @@
 
 ---
 
+## ✅ RESOLVED (round 4): Switched printing to silent (no dialog) + real in-app preview (2026-07-21, shipped as V1.4.4)
+
+After the V1.4.3 landscape-orientation fix, the user tested again with a real
+printed invoice: the dialog still defaulted to Landscape, and separately showed
+"This app doesn't support print preview." Both are the same root cause — Electron
+on Windows drives the *interactive* print dialog through the legacy GDI print
+path, which doesn't reliably honor `landscape`/`pageSize` options and has no
+preview capability at all. This is a platform limitation, confirmed by two
+rounds of testing, not something fixable by passing different options.
+
+**Fix, agreed with the user via AskUserQuestion:** switched to silent printing
+end to end.
+
+- `electron/src/main.ts`: `flowpos:print` now calls `webContents.print()` with
+  `silent: true` (plus `landscape: false`, `pageSize: 'A4'` for documents) —
+  no OS dialog, so orientation/size are fully under the app's control and the
+  earlier windowless-dialog bug (`ensurePrintDialogRegistered`) can't recur
+  either way. Printer choice persists per-machine in
+  `<DATA_DIR>/print-config.json` via new `flowpos:list-printers` /
+  `flowpos:get-print-config` / `flowpos:set-print-config` IPC handlers.
+- `web/src/screens/Settings.tsx`: new "طابعات الفواتير والإيصالات" card (only
+  rendered when `window.flowpos` exists, i.e. inside Electron) to pick a
+  separate A4 printer and thermal 80mm printer, defaulting to Windows' own
+  default printer when left unset.
+- `web/src/print/PrintPreviewFrame.tsx` (new): scaled on-screen wrapper reusing
+  the *actual* print components (`InvoiceA4`, `ThermalReceipt`, `QuotationA4`,
+  `PurchaseA4`) so what you see is exactly what prints.
+- `web/src/print/PrintPreviewModal.tsx` (new): generic preview+print modal for
+  quotations and purchase invoices, which previously printed instantly with no
+  preview at all. `App.tsx`'s `handleSaveQuotation`, `handleOpenQuotationPrint`,
+  `handleOpenPurchasePrint` now open this instead of calling `triggerPrint()`
+  directly.
+- The existing sale invoice/thermal print modal in `AppModals.tsx` (which
+  already had override-editing fields for customer name/stamp/warranty notes)
+  now also renders a live `PrintPreviewFrame` instead of just the form.
+- Customer/supplier statement print buttons already rendered `StatementA4`
+  inline as their own preview before this — left as is, just benefits from
+  silent printing now.
+
+**Verified:** `npm run build` (typecheck clean, both server and web), Electron
+`tsc --noEmit` clean, Vitest 69/69 green, `dist-installer\FlowPOS Setup
+1.4.4.exe` built successfully. **Not yet verified end-to-end through the
+installed app** — pushed at the user's request while they were away; when back,
+install `FlowPOS Setup 1.4.4.exe`, print an invoice and confirm no dialog
+appears and the PDF/paper comes out correct, and check the new printer
+dropdowns in Settings list real printers.
+
+---
+
 ## ✅ RESOLVED (round 3): QR network link showed `localhost`; printing produced blank/stale pages (fixed 2026-07-21, shipped as V1.4.3)
 
 Reported after V1.4.2 was installed and both earlier issues confirmed fixed. Two

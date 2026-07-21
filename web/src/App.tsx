@@ -17,12 +17,12 @@ import { useAuth } from './context/AuthContext';
 import { useToast } from './context/ToastContext';
 import { useData } from './context/DataContext';
 import { apiCall } from './lib/api';
-import { triggerPrint } from './lib/print';
 
 import { Icons } from './components/Icons';
 import { PinOverrideModal } from './components/PinOverrideModal';
 import { AppModals } from './components/AppModals';
 import { PrintRoot, type PrintDocument } from './print/PrintRoot';
+import { PrintPreviewModal } from './print/PrintPreviewModal';
 
 import { Home } from './screens/Home';
 import { Dashboard } from './screens/Dashboard';
@@ -191,6 +191,8 @@ export function App() {
 
   // Print Document State
   const [activePrintDocument, setActivePrintDocument] = useState<PrintDocument | null>(null);
+  const [showGenericPrintPreview, setShowGenericPrintPreview] = useState(false);
+  const [genericPrintPreviewTitle, setGenericPrintPreviewTitle] = useState('');
 
   // Special Prices Resolution
   const fetchSpecialPrices = async (customerId: number) => {
@@ -440,9 +442,8 @@ export function App() {
       const quoRes = await apiCall(`/api/quotations/${res.data.id}`);
       if (quoRes.success) {
         setActivePrintDocument({ type: 'quotation-a4', quotation: quoRes.data });
-        // setActivePrintDocument only commits to the DOM after this tick — printing
-        // synchronously here would capture the print-only content before it updates.
-        setTimeout(() => triggerPrint(), 50);
+        setGenericPrintPreviewTitle(`معاينة وطباعة عرض السعر (${quoRes.data.quoteNumber})`);
+        setShowGenericPrintPreview(true);
       }
     } else {
       triggerToast(res.error || 'فشل حفظ عرض السعر', 'alert');
@@ -464,8 +465,8 @@ export function App() {
     const res = await apiCall(`/api/purchases/${purchase.id}`);
     if (res.success) {
       setActivePrintDocument({ type: 'purchase-a4', purchase: res.data });
-      // See handleSaveQuotation — must wait a tick for the print-only DOM to update.
-      setTimeout(() => triggerPrint(), 50);
+      setGenericPrintPreviewTitle(`معاينة وطباعة فاتورة الشراء (${res.data.invoiceNumber})`);
+      setShowGenericPrintPreview(true);
     } else {
       triggerToast(res.error || 'فشل جلب تفاصيل فاتورة المشتريات', 'alert');
     }
@@ -545,8 +546,8 @@ export function App() {
     const res = await apiCall(`/api/quotations/${q.id}`);
     if (res.success) {
       setActivePrintDocument({ type: 'quotation-a4', quotation: res.data });
-      // See handleSaveQuotation — must wait a tick for the print-only DOM to update.
-      setTimeout(() => triggerPrint(), 50);
+      setGenericPrintPreviewTitle(`معاينة وطباعة عرض السعر (${res.data.quoteNumber})`);
+      setShowGenericPrintPreview(true);
     } else {
       triggerToast(res.error || 'فشل جلب تفاصيل عرض السعر', 'alert');
     }
@@ -1141,6 +1142,16 @@ export function App() {
 
       {/* Print Root System */}
       <PrintRoot document={activePrintDocument} settings={settingsData} />
+
+      {/* Generic Print Preview (quotations, purchase invoices) */}
+      {showGenericPrintPreview && (
+        <PrintPreviewModal
+          document={activePrintDocument}
+          settings={settingsData}
+          title={genericPrintPreviewTitle}
+          onClose={() => setShowGenericPrintPreview(false)}
+        />
+      )}
     </div>
   );
 }

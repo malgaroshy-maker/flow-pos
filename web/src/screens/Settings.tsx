@@ -38,6 +38,34 @@ export const SettingsScreen: React.FC<SettingsProps> = ({
     setFormSettings(settingsData);
   }, [settingsData]);
 
+  // Printer selection — only available inside the Electron desktop app
+  // (window.flowpos), which is where silent printing happens. Stored
+  // per-machine, not in the shared server settings.
+  const flowpos = (window as any).flowpos;
+  const [printers, setPrinters] = useState<{ name: string; displayName: string }[]>([]);
+  const [a4Printer, setA4Printer] = useState('');
+  const [thermalPrinter, setThermalPrinter] = useState('');
+  const [printersLoading, setPrintersLoading] = useState(false);
+
+  React.useEffect(() => {
+    if (!flowpos?.listPrinters) return;
+    setPrintersLoading(true);
+    Promise.all([flowpos.listPrinters(), flowpos.getPrintConfig()])
+      .then(([list, cfg]) => {
+        setPrinters(list || []);
+        setA4Printer(cfg?.a4Printer || '');
+        setThermalPrinter(cfg?.thermalPrinter || '');
+      })
+      .finally(() => setPrintersLoading(false));
+  }, [flowpos]);
+
+  const savePrinterChoice = async (field: 'a4Printer' | 'thermalPrinter', value: string) => {
+    if (field === 'a4Printer') setA4Printer(value);
+    else setThermalPrinter(value);
+    await flowpos.setPrintConfig({ [field]: value });
+    triggerToast('تم حفظ إعداد الطابعة');
+  };
+
   const handleSettingsSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formSettings) return;
@@ -219,6 +247,60 @@ export const SettingsScreen: React.FC<SettingsProps> = ({
               </div>
             </div>
           </div>
+
+          {/* Printer selection — Electron desktop app only */}
+          {flowpos?.listPrinters && (
+            <div className="rounded-card border border-line bg-surface p-6 flex flex-col gap-4">
+              <h2 className="text-lg font-bold">طابعات الفواتير والإيصالات</h2>
+              <p className="text-xs text-muted -mt-2">
+                الطباعة تتم مباشرة بلا نافذة اختيار — اختر الطابعة هنا مرة واحدة.
+              </p>
+              {printersLoading ? (
+                <div className="text-xs text-muted">جاري البحث عن الطابعات المتاحة...</div>
+              ) : printers.length === 0 ? (
+                <div className="text-xs text-muted">لم يتم العثور على أي طابعة مثبّتة على هذا الجهاز.</div>
+              ) : (
+                <>
+                  <div>
+                    <label className="text-xs font-bold text-muted mb-1 block">
+                      طابعة الفواتير القياسية (A4):
+                    </label>
+                    <select
+                      value={a4Printer}
+                      onChange={(e) => savePrinterChoice('a4Printer', e.target.value)}
+                      className="w-full h-10 rounded-control border border-line bg-surface-2 px-3 text-xs font-bold focus:outline-none"
+                    >
+                      <option value="">الطابعة الافتراضية في ويندوز</option>
+                      {printers.map((p) => (
+                        <option key={p.name} value={p.name}>
+                          {p.displayName || p.name}
+                          
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold text-muted mb-1 block">
+                      طابعة الإيصال الحراري (80mm):
+                    </label>
+                    <select
+                      value={thermalPrinter}
+                      onChange={(e) => savePrinterChoice('thermalPrinter', e.target.value)}
+                      className="w-full h-10 rounded-control border border-line bg-surface-2 px-3 text-xs font-bold focus:outline-none"
+                    >
+                      <option value="">الطابعة الافتراضية في ويندوز</option>
+                      {printers.map((p) => (
+                        <option key={p.name} value={p.name}>
+                          {p.displayName || p.name}
+                          
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
 
           {/* Backups registry */}
           <div className="rounded-card border border-line bg-surface p-6 flex flex-col gap-4">
