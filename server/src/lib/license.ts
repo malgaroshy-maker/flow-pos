@@ -14,16 +14,41 @@ MCowKOZzgjA+MCEGCSqGSIb3DQEHAqEAMB4EACD5v9kM1J5K4q3L4bQ
 
 // Concrete Ed25519 Public Key used by default if custom key not supplied.
 // Fallback keypair generation for default out-of-box operation.
+//
+// This MUST be persisted to disk. A license issued with an in-memory-only
+// key becomes unverifiable the instant the process restarts (a fresh
+// process = a fresh random keypair, which can never verify a signature made
+// by the previous process's key) — every app restart looked like the
+// license had been wiped, when actually the verification key itself had
+// silently changed underneath it.
 let defaultKeysCache: { publicKeyPem: string; privateKeyPem: string } | null = null;
 
+function getDefaultVendorKeysFilePath(): string {
+  if (process.env.POS_VENDOR_KEYS_PATH) return process.env.POS_VENDOR_KEYS_PATH;
+  const dbPath = resolveDbPath();
+  return join(dirname(dbPath), 'vendor-keys.json');
+}
+
 export function getDefaultVendorKeys(): { publicKeyPem: string; privateKeyPem: string } {
-  if (!defaultKeysCache) {
-    const { publicKey, privateKey } = generateKeyPairSync('ed25519');
-    defaultKeysCache = {
-      publicKeyPem: publicKey.export({ type: 'spki', format: 'pem' }).toString(),
-      privateKeyPem: privateKey.export({ type: 'pkcs8', format: 'pem' }).toString(),
-    };
+  if (defaultKeysCache) return defaultKeysCache;
+
+  const filePath = getDefaultVendorKeysFilePath();
+  if (existsSync(filePath)) {
+    try {
+      defaultKeysCache = JSON.parse(readFileSync(filePath, 'utf-8'));
+      return defaultKeysCache!;
+    } catch {
+      // Corrupt file — fall through and regenerate below.
+    }
   }
+
+  const { publicKey, privateKey } = generateKeyPairSync('ed25519');
+  defaultKeysCache = {
+    publicKeyPem: publicKey.export({ type: 'spki', format: 'pem' }).toString(),
+    privateKeyPem: privateKey.export({ type: 'pkcs8', format: 'pem' }).toString(),
+  };
+  mkdirSync(dirname(filePath), { recursive: true });
+  writeFileSync(filePath, JSON.stringify(defaultKeysCache), 'utf-8');
   return defaultKeysCache;
 }
 

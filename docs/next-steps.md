@@ -11,6 +11,40 @@
 
 ---
 
+## ✅ RESOLVED: License re-activation required on every app restart (2026-07-21, shipped as V1.4.5)
+
+**Symptom (user-reported):** "do i have to register the program everytime i open it, i always
+see the license screen when i re open the system."
+
+**Root cause:** `getDefaultVendorKeys()` in `server/src/lib/license.ts` generated a random
+Ed25519 keypair and cached it **only in memory** (`defaultKeysCache`, a module-level
+variable). Every real app restart starts a brand-new Node process, so that cache is empty
+again — the function silently generated a **different** random keypair each time. A
+license file signed with process N's private key can never verify against process N+1's
+freshly-generated public key, so `getLicenseInfo()` reported the signature invalid and the
+activation screen reappeared, even though the license itself was never actually wiped.
+
+**Fix:** the keypair is now persisted to `<DATA_DIR>/vendor-keys.json` (same directory as
+`license.lic`), generated once on first use and reloaded on every subsequent call —
+including across process restarts.
+
+**Verified:**
+- New regression test in `server/src/license.test.ts` — uses `vi.resetModules()` + a
+  differently-queried dynamic import of `./lib/license` to simulate two separate process
+  loads against the same on-disk key file, and confirms a license signed under the first
+  "process" verifies under the second.
+- Real end-to-end test on this machine using the actual packaged build
+  (`dist-installer/win-unpacked/FlowPOS.exe`): activated via vendor PIN, then killed and
+  relaunched the process three times in a row (a genuine restart, not a page reload) —
+  `GET /api/license/info` returned `active: true` every time with no reactivation needed.
+- `npm run build` (typecheck clean) + Vitest 70/70 green.
+
+**Important for anyone who activated under V1.4.4 or earlier:** that license was signed
+with a since-lost in-memory key and will fail to verify once — activate one more time
+after upgrading to V1.4.5, and it will then stay active permanently across restarts.
+
+---
+
 ## ✅ RESOLVED (round 4): Switched printing to silent (no dialog) + real in-app preview (2026-07-21, shipped as V1.4.4)
 
 After the V1.4.3 landscape-orientation fix, the user tested again with a real
