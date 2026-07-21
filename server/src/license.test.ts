@@ -1,8 +1,6 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { generateKeyPairSync } from 'node:crypto';
-import { unlinkSync, existsSync, mkdtempSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { unlinkSync, existsSync } from 'node:fs';
 import { buildApp } from './app';
 import { openDatabase } from './db/index';
 import {
@@ -11,8 +9,9 @@ import {
   getLicenseFilePath,
   getLicenseInfo,
   activateLicense,
+  signLicense,
+  VENDOR_PUBLIC_KEY_PEM,
 } from './lib/license';
-import { signLicense } from '../scripts/keygen';
 
 describe('offline hardware licensing system', () => {
   let sqlite: ReturnType<typeof openDatabase>;
@@ -144,46 +143,29 @@ describe('offline hardware licensing system', () => {
     expect(actRes.info?.customerName).toBe('مقاهي الفجر التضامنية');
   });
 
-  it('persists the default vendor keypair to disk so a license survives a process restart', async () => {
-    // Regression test: getDefaultVendorKeys() used to cache its keypair only
-    // in memory, so every fresh process (every real app restart) generated a
-    // brand-new random key and could never verify a license signed by the
-    // previous process's key — the app appeared to "forget" activation on
-    // every restart. vi.resetModules() + a fresh dynamic import simulates a
-    // separate process loading the same on-disk key file.
-    const dir = mkdtempSync(join(tmpdir(), 'flowpos-vendor-keys-'));
-    const keysPath = join(dir, 'vendor-keys.json');
-    process.env.POS_VENDOR_KEYS_PATH = keysPath;
-    try {
-      vi.resetModules();
-      const licenseModuleA = await import('./lib/license?a');
-      const keysA = licenseModuleA.getDefaultVendorKeys();
-      expect(existsSync(keysPath)).toBe(true);
+  it('rejects a license self-signed with a locally-generated keypair against the real embedded vendor key', () => {
+    // Regression test for the fixed vulnerability: the app used to generate
+    // its own signing keypair on the customer's machine (getDefaultVendorKeys(),
+    // persisted to vendor-keys.json), so anyone could sign their own "valid"
+    // license locally. Now the app only ever verifies against the vendor's
+    // real public key (VENDOR_PUBLIC_KEY_PEM, embedded at build time) — the
+    // matching private key lives exclusively in the external vendor keygen
+    // tool. A license forged with any other keypair, even a well-formed one,
+    // must fail verification against the real embedded key.
+    const machineCode = getMachineCode();
+    const forgedLicenseKey = signLicense(
+      {
+        machineCode,
+        customerName: 'ترخيص مزوّر',
+        issuedAt: new Date().toISOString(),
+        expiresAt: null,
+        licenseType: 'commercial',
+      },
+      testPrivateKeyPem // a keypair generated ad-hoc by this test, not the real vendor key
+    );
 
-      vi.resetModules();
-      const licenseModuleB = await import('./lib/license?b');
-      const keysB = licenseModuleB.getDefaultVendorKeys();
-
-      // Same keypair across the simulated restart — a license signed under
-      // module A's key must still verify under module B's key.
-      expect(keysB.publicKeyPem).toBe(keysA.publicKeyPem);
-
-      const machineCode = licenseModuleB.getMachineCode();
-      const licenseKey = licenseModuleA.signLicense(
-        {
-          machineCode,
-          customerName: 'محل الاختبار',
-          issuedAt: new Date().toISOString(),
-          expiresAt: null,
-          licenseType: 'commercial',
-        },
-        keysA.privateKeyPem
-      );
-      const verified = licenseModuleB.verifyLicenseString(licenseKey, machineCode, keysB.publicKeyPem);
-      expect(verified.valid).toBe(true);
-    } finally {
-      delete process.env.POS_VENDOR_KEYS_PATH;
-      rmSync(dir, { recursive: true, force: true });
-    }
+    const res = verifyLicenseString(forgedLicenseKey, machineCode, VENDOR_PUBLIC_KEY_PEM);
+    expect(res.valid).toBe(false);
+    expect(res.reason).toContain('توقيع الترخيص غير صالح');
   });
 });

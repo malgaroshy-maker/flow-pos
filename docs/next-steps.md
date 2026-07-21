@@ -40,49 +40,39 @@
 
 ---
 
-## Milestone F — V1.4.7: Licensing & security integrity
+## Milestone F — V1.4.7/V1.4.8: Licensing & security integrity
 
 > The product is being sold on the strength of "Ed25519 offline licensing". Today that
 > protection is cosmetic (finding #1). This milestone makes it real. **Requires the
 > owner's vendor machine once** to generate the real keypair.
 
-### F1. Real vendor keypair, embedded public key
+### F1. Real vendor keypair, embedded public key — ✅ DONE (V1.4.8, 2026-07-21)
 
-- Generate the production Ed25519 keypair **once, outside this repo** (e.g. in a private
-  `flowpos-keygen` folder the owner keeps). Move `scripts/keygen.ts` out of this repo into
-  that tool and delete it here.
-- Replace the placeholder `VENDOR_PUBLIC_KEY_PEM` in `server/src/lib/license.ts` with the
-  real public key, and make it the **only** verification key: delete
-  `getDefaultVendorKeys()`, the `vendor-keys.json` persistence, and every code path that
-  signs a license on the customer machine.
-- Migration for existing installs (all licenses so far are self-signed under per-machine
-  keys and will fail verification): on startup, if `license.lic` fails signature
-  verification but a `vendor-keys.json` exists and the license verifies under *that*
-  key, show the activation screen with a clear Arabic message ("يجب إعادة تفعيل الترخيص
-  بعد التحديث") — same one-time-reactivation pattern already documented for V1.4.5.
-- Tests: valid signature under embedded key passes; self-signed/forged license fails;
-  machine-code mismatch fails; expiry honored. (Tests may inject a test keypair via the
-  existing `publicKeyPem` parameters — keep those parameter seams.)
+Real Ed25519 keypair generated with a new standalone tool at
+`D:\flowpos-vendor-keygen\keygen.mjs` (outside this repo, zero dependency on
+FlowPOS source — plain Node.js `crypto`). `vendor_private.pem` stays there only;
+`server/src/lib/license.ts`'s `VENDOR_PUBLIC_KEY_PEM` now holds the matching real
+public key. `getDefaultVendorKeys()`, its `vendor-keys.json` persistence, and
+`scripts/keygen.ts` (which used to live inside this repo) are all removed —
+the app never generates or stores a private key again. Verified end-to-end on
+this machine: a license issued by the external tool activates successfully;
+a license forged with an unrelated keypair is rejected
+("توقيع الترخيص غير صالح أو معدّل"). Existing dev/test licenses from before this
+change no longer verify (expected — they were signed under the old insecure
+per-machine keys) and need one fresh reactivation with a real vendor-issued key.
 
-### F2. Vendor-PIN activation hardening
+### F2. Vendor-PIN activation — ✅ REMOVED (V1.4.8, 2026-07-21, owner decision)
 
-Decision needed from the owner first — the PIN activation as designed cannot be made
-cryptographically secure (any secret in the binary is extractable). Options:
+Owner chose to remove PIN activation entirely rather than harden it (it could
+never be made cryptographically secure — any secret embedded in the binary is
+extractable). `activateWithVendorPin()`, the hardcoded PIN, and
+`POST /api/license/activate-pin` are deleted from the server;
+`LicenseActivationScreen` now shows only the license-key form. Every customer
+activates with a signed license file issued by the external vendor tool
+(`D:\flowpos-vendor-keygen\keygen.mjs`) for their specific machine code — matches
+the original E3 design intent.
 
-1. **Remove PIN activation** — vendor issues a signed license file per machine code
-   (the E3 design). Most secure; adds friction at install time.
-2. **Keep PIN as a convenience** but: read it from an env/config the vendor sets at
-   install time (never a hardcoded default), rate-limit
-   `POST /api/license/activate-pin` with the same lockout mechanism as
-   `authFailures` in `auth.ts`, and log every attempt to the audit log. With F1 done,
-   a PIN-activated machine still needs the vendor because signing happens vendor-side —
-   so option 2 actually requires an online step or a challenge/response flow. Flag this
-   honestly to the owner before building.
-
-Either way: rate-limit and audit-log the license endpoints (they are deliberately
-pre-auth, so they are the most exposed surface on the LAN).
-
-### F3. Idle lock → PIN screen
+### F3. Idle lock → PIN screen (next)
 
 - Configurable idle timeout (Settings, default ~5 min; 0 = disabled) after which the UI
   locks to the PIN fast-switch screen. The in-progress POS cart **must survive** the lock

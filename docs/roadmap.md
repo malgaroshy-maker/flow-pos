@@ -108,6 +108,7 @@ Quality, security, and commercial-distribution work between Phase 3 and any Phas
 - [x] **V1.4.5 (2026-07-21)** — license persistence fix: the Ed25519 verification keypair is now persisted to `vendor-keys.json` instead of regenerated in memory on every process start, so activation survives app restarts.
 - [x] **V1.4.6 (2026-07-21)** — QR "connect a cashier device" modal filtered out virtual-adapter addresses (VirtualBox/VMware/PLCSIM) using real Windows adapter descriptions, and now leads with one recommended address instead of a confusing list.
 - [x] **V1.4.7 (2026-07-21)** — UI/UX pass: enlarged the Flow Dev logo across the sidebar, top header, login screen, license activation screen, and added it to the Home hub screen (previously a plain "POS" placeholder badge). First step of the post-re-audit plan in `docs/next-steps.md`.
+- [x] **V1.4.8 (2026-07-21)** — Milestone F1/F2 closed: fixed the critical licensing flaw where the Ed25519 private signing key was generated and stored on the customer's own machine (any license could be self-forged). The real vendor keypair now lives exclusively in an external keygen tool outside this repo; the app embeds only the public key. The insecure "Vendor PIN" instant-activation feature (hardcoded PIN, signed locally) was removed entirely per owner decision — activation is now license-key-only. `scripts/keygen.ts` moved out of the repo.
 
 ## Phase 4 — Future expansion
 

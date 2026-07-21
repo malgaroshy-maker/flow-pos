@@ -34,9 +34,6 @@ export const LicenseActivationScreen: React.FC<LicenseActivationProps> = ({
   onActivated,
 }) => {
   const { triggerToast } = useToast();
-  const [mode, setMode] = useState<'pin' | 'key'>('pin');
-  const [vendorPin, setVendorPin] = useState('');
-  const [customerName, setCustomerName] = useState('');
   const [licenseKey, setLicenseKey] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -47,35 +44,6 @@ export const LicenseActivationScreen: React.FC<LicenseActivationProps> = ({
     setCopied(true);
     triggerToast('تم نسخ كود الجهاز إلى الحافظة بنجاح');
     setTimeout(() => setCopied(false), 3000);
-  };
-
-  const handleActivateByPin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-
-    if (!vendorPin.trim()) {
-      setError('يرجى إدخال رمز الموزع المعتمد');
-      return;
-    }
-
-    setSubmitting(true);
-    try {
-      const res = await publicApiCall('/api/license/activate-pin', {
-        vendorPin: vendorPin.trim(),
-        customerName: customerName.trim() || 'عميل محلي',
-      });
-
-      if (res.success) {
-        triggerToast('تم تفعيل المنظومة بنجاح 🎉');
-        onActivated();
-      } else {
-        setError(res.error || 'رمز الموزع المعتمد غير صحيح');
-      }
-    } catch {
-      setError('خطأ أثناء التوصيل مع خادم المنظومة');
-    } finally {
-      setSubmitting(false);
-    }
   };
 
   const handleActivateByKey = async (e: React.FormEvent) => {
@@ -130,28 +98,6 @@ export const LicenseActivationScreen: React.FC<LicenseActivationProps> = ({
           </div>
         )}
 
-        {/* Tabs for Activation Mode */}
-        <div className="grid grid-cols-2 p-1 bg-surface-2 rounded-control border border-line gap-1">
-          <button
-            type="button"
-            onClick={() => { setMode('pin'); setError(''); }}
-            className={`py-2 text-xs font-bold rounded-[6px] transition-all cursor-pointer ${
-              mode === 'pin' ? 'bg-jade text-white shadow-sm' : 'text-muted hover:text-text'
-            }`}
-          >
-            ⚡ تفعيل موزع سريع (Vendor PIN)
-          </button>
-          <button
-            type="button"
-            onClick={() => { setMode('key'); setError(''); }}
-            className={`py-2 text-xs font-bold rounded-[6px] transition-all cursor-pointer ${
-              mode === 'key' ? 'bg-jade text-white shadow-sm' : 'text-muted hover:text-text'
-            }`}
-          >
-            🔑 إدخال مفتاح الترخيص
-          </button>
-        </div>
-
         {/* Machine Code Box */}
         <div className="bg-surface-2 p-3.5 rounded-control border border-line flex flex-col gap-1.5">
           <label className="text-[11px] font-bold text-muted block">
@@ -178,74 +124,34 @@ export const LicenseActivationScreen: React.FC<LicenseActivationProps> = ({
           </div>
         )}
 
-        {mode === 'pin' ? (
-          /* Vendor PIN Activation Form */
-          <form onSubmit={handleActivateByPin} className="flex flex-col gap-4">
-            <div>
-              <label className="text-xs font-bold text-muted mb-1 block">
-                اسم المحل / العميل:
-              </label>
-              <input
-                type="text"
-                value={customerName}
-                onChange={(e) => setCustomerName(e.target.value)}
-                className="w-full h-11 rounded-control border border-line bg-surface px-3 text-sm focus-visible:outline-none focus:border-jade"
-                placeholder="مثال: مقهى السلام"
-              />
-            </div>
+        {/* License Key Form */}
+        <form onSubmit={handleActivateByKey} className="flex flex-col gap-4">
+          <div>
+            <label className="text-xs font-bold text-muted mb-1 block">
+              مفتاح الترخيص (License Key):
+            </label>
+            <textarea
+              rows={4}
+              required
+              autoFocus
+              value={licenseKey}
+              onChange={(e) => setLicenseKey(e.target.value)}
+              className="w-full rounded-control border border-line bg-surface p-3 text-xs font-mono focus-visible:outline-none focus:border-jade resize-none"
+              placeholder="ألصق مفتاح الترخيص المشفر هنا..."
+            />
+            <p className="text-[11px] text-muted mt-1">
+              أرسل كود الجهاز أعلاه للموزع المعتمد ليصدر لك مفتاح ترخيص خاصاً بهذا الحاسوب، ثم الصقه هنا.
+            </p>
+          </div>
 
-            <div>
-              <label className="text-xs font-bold text-muted mb-1 block">
-                رمز الموزع المعتمد (Vendor PIN):
-              </label>
-              <input
-                type="password"
-                required
-                autoFocus
-                value={vendorPin}
-                onChange={(e) => setVendorPin(e.target.value)}
-                className="w-full h-11 rounded-control border border-line bg-surface px-3 text-sm font-mono focus-visible:outline-none focus:border-jade"
-                placeholder="أدخل رمز الموزع المعتمد..."
-              />
-              <p className="text-[11px] text-muted mt-1">
-                ادخل الرمز السري المعتمد للموزع لتفعيل المنظومة محلياً بضغط زر واحدة.
-              </p>
-            </div>
-
-            <button
-              type="submit"
-              disabled={submitting}
-              className="w-full h-12 bg-jade text-white font-bold rounded-control hover:bg-jade-2 transition-colors cursor-pointer text-sm shadow-md flex items-center justify-center gap-2"
-            >
-              {submitting ? 'جاري التحقق والتفعيل...' : '⚡ تفعيل المنظومة الآن'}
-            </button>
-          </form>
-        ) : (
-          /* License Key Form */
-          <form onSubmit={handleActivateByKey} className="flex flex-col gap-4">
-            <div>
-              <label className="text-xs font-bold text-muted mb-1 block">
-                مفتاح الترخيص (License Key):
-              </label>
-              <textarea
-                rows={4}
-                required
-                value={licenseKey}
-                onChange={(e) => setLicenseKey(e.target.value)}
-                className="w-full rounded-control border border-line bg-surface p-3 text-xs font-mono focus-visible:outline-none focus:border-jade resize-none"
-                placeholder="ألصق مفتاح الترخيص المشفر هنا..."
-              />
-            </div>
-
-            <button
-              type="submit"
-              disabled={submitting}
-              className="w-full h-12 bg-jade text-white font-bold rounded-control hover:bg-jade-2 transition-colors cursor-pointer text-sm shadow-md flex items-center justify-center gap-2"
-            >
-              {submitting ? 'جاري التحقق والتفعيل...' : 'تفعيل مفتاح الترخيص'}
-            </button>
-          </form>
-        )}
+          <button
+            type="submit"
+            disabled={submitting}
+            className="w-full h-12 bg-jade text-white font-bold rounded-control hover:bg-jade-2 transition-colors cursor-pointer text-sm shadow-md flex items-center justify-center gap-2"
+          >
+            {submitting ? 'جاري التحقق والتفعيل...' : 'تفعيل مفتاح الترخيص'}
+          </button>
+        </form>
 
         {/* Vendor Contact Footer */}
         <div className="border-t border-line pt-4 text-center text-[11px] text-muted flex flex-col gap-1">

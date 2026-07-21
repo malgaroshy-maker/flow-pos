@@ -1,61 +1,31 @@
-import { createHash, verify, sign, generateKeyPairSync } from 'node:crypto';
+import { createHash, verify, sign } from 'node:crypto';
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { cpus, hostname, arch, platform, networkInterfaces } from 'node:os';
 import { dirname, join } from 'node:path';
 import { resolveDbPath } from '../db/index.js';
 
-// Default embedded vendor public key for license signature verification.
-// Overridable via VENDOR_PUBLIC_KEY env variable if needed.
+// The embedded vendor public key — the ONLY key this app ever verifies
+// license signatures against. The matching private key is generated and
+// held exclusively by the vendor keygen tool, which lives OUTSIDE this
+// repository and never ships with the product (see docs/next-steps.md
+// Milestone F1). This app never generates, sees, or stores a private key —
+// doing so on the customer's own machine would let anyone with basic
+// tooling forge a valid license, which is exactly what the previous
+// getDefaultVendorKeys()-based design allowed.
 export const VENDOR_PUBLIC_KEY_PEM =
   process.env.VENDOR_PUBLIC_KEY ||
   `-----BEGIN PUBLIC KEY-----
-MCowKOZzgjA+MCEGCSqGSIb3DQEHAqEAMB4EACD5v9kM1J5K4q3L4bQ
+MCowBQYDK2VwAyEA8oMOYc4do1dFi2ZM3hWf3yDL2tgIaWZOAl69coPh12k=
 -----END PUBLIC KEY-----`;
 
-// Concrete Ed25519 Public Key used by default if custom key not supplied.
-// Fallback keypair generation for default out-of-box operation.
-//
-// This MUST be persisted to disk. A license issued with an in-memory-only
-// key becomes unverifiable the instant the process restarts (a fresh
-// process = a fresh random keypair, which can never verify a signature made
-// by the previous process's key) — every app restart looked like the
-// license had been wiped, when actually the verification key itself had
-// silently changed underneath it.
-let defaultKeysCache: { publicKeyPem: string; privateKeyPem: string } | null = null;
-
-function getDefaultVendorKeysFilePath(): string {
-  if (process.env.POS_VENDOR_KEYS_PATH) return process.env.POS_VENDOR_KEYS_PATH;
-  const dbPath = resolveDbPath();
-  return join(dirname(dbPath), 'vendor-keys.json');
-}
-
-export function getDefaultVendorKeys(): { publicKeyPem: string; privateKeyPem: string } {
-  if (defaultKeysCache) return defaultKeysCache;
-
-  const filePath = getDefaultVendorKeysFilePath();
-  if (existsSync(filePath)) {
-    try {
-      defaultKeysCache = JSON.parse(readFileSync(filePath, 'utf-8'));
-      return defaultKeysCache!;
-    } catch {
-      // Corrupt file — fall through and regenerate below.
-    }
-  }
-
-  const { publicKey, privateKey } = generateKeyPairSync('ed25519');
-  defaultKeysCache = {
-    publicKeyPem: publicKey.export({ type: 'spki', format: 'pem' }).toString(),
-    privateKeyPem: privateKey.export({ type: 'pkcs8', format: 'pem' }).toString(),
-  };
-  mkdirSync(dirname(filePath), { recursive: true });
-  writeFileSync(filePath, JSON.stringify(defaultKeysCache), 'utf-8');
-  return defaultKeysCache;
-}
-
-export function signLicense(
-  payload: LicensePayload,
-  privateKeyPem = getDefaultVendorKeys().privateKeyPem
-): string {
+/**
+ * Signs a license payload with a given private key PEM. Only ever called by
+ * the external vendor keygen tool (via a private key it alone holds) and by
+ * this repo's own tests (via an ad-hoc test keypair). The app itself never
+ * calls this in production — there is no private key on the customer's
+ * machine to call it with.
+ */
+export function signLicense(payload: LicensePayload, privateKeyPem: string): string {
   const payloadJsonStr = JSON.stringify(payload);
   const payloadB64 = Buffer.from(payloadJsonStr, 'utf-8').toString('base64');
   const signature = sign(null, Buffer.from(payloadJsonStr), privateKeyPem);
@@ -125,7 +95,7 @@ export function getLicenseFilePath(): string {
 export function verifyLicenseString(
   licenseKey: string,
   targetMachineCode = getMachineCode(),
-  publicKeyPem = getDefaultVendorKeys().publicKeyPem
+  publicKeyPem = VENDOR_PUBLIC_KEY_PEM
 ): { valid: boolean; payload?: LicensePayload; reason?: string } {
   try {
     const parts = licenseKey.trim().split('.');
@@ -175,7 +145,7 @@ export function verifyLicenseString(
 /**
  * Read and validate current license from disk.
  */
-export function getLicenseInfo(publicKeyPem = getDefaultVendorKeys().publicKeyPem): LicenseInfo {
+export function getLicenseInfo(publicKeyPem = VENDOR_PUBLIC_KEY_PEM): LicenseInfo {
   const machineCode = getMachineCode();
 
   // Bypassed in test environment or when explicitly disabled via env
@@ -233,7 +203,7 @@ export function getLicenseInfo(publicKeyPem = getDefaultVendorKeys().publicKeyPe
  */
 export function activateLicense(
   licenseKey: string,
-  publicKeyPem = getDefaultVendorKeys().publicKeyPem
+  publicKeyPem = VENDOR_PUBLIC_KEY_PEM
 ): { success: boolean; error?: string; info?: LicenseInfo } {
   const machineCode = getMachineCode();
   const res = verifyLicenseString(licenseKey, machineCode, publicKeyPem);
@@ -257,27 +227,4 @@ export function activateLicense(
       licenseType: res.payload.licenseType,
     },
   };
-}
-
-const DEFAULT_VENDOR_PIN = process.env.VENDOR_PIN || '1391997';
-
-export function activateWithVendorPin(
-  vendorPin: string,
-  customerName: string
-): { success: boolean; error?: string; info?: LicenseInfo } {
-  if (!vendorPin || vendorPin.trim() !== DEFAULT_VENDOR_PIN) {
-    return { success: false, error: 'رمز الموزع المعتمد غير صحيح' };
-  }
-  const machineCode = getMachineCode();
-  const keys = getDefaultVendorKeys();
-  const payload: LicensePayload = {
-    machineCode,
-    customerName: customerName.trim() || 'عميل محلي',
-    issuedAt: new Date().toISOString(),
-    expiresAt: null, // Lifetime commercial license
-    licenseType: 'commercial',
-  };
-
-  const licenseKey = signLicense(payload, keys.privateKeyPem);
-  return activateLicense(licenseKey, keys.publicKeyPem);
 }
