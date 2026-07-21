@@ -124,6 +124,7 @@ export async function settingsRoutes(app: FastifyInstance) {
       taxRatePermille?: number;
       discountCapPercent?: number;
       idleLockMinutes?: number;
+      backupRetentionDays?: number;
     };
 
     if (
@@ -162,6 +163,18 @@ export async function settingsRoutes(app: FastifyInstance) {
       });
     }
 
+    if (
+      body.backupRetentionDays !== undefined &&
+      (!Number.isSafeInteger(body.backupRetentionDays) ||
+        body.backupRetentionDays < 0 ||
+        body.backupRetentionDays > 90)
+    ) {
+      return reply.code(400).send({
+        error: 'invalid_backupRetentionDays',
+        message: 'عدد النسخ الاحتياطية اليومية المحفوظة يجب أن يكون عدداً صحيحاً بين 0 و 90',
+      });
+    }
+
     const row = app.db.select().from(settings).limit(1).all()[0];
     if (!row) {
       return reply.code(404).send({ error: 'settings_not_seeded' });
@@ -187,6 +200,10 @@ export async function settingsRoutes(app: FastifyInstance) {
           body.discountCapPercent !== undefined ? body.discountCapPercent : row.discountCapPercent,
         idleLockMinutes:
           body.idleLockMinutes !== undefined ? body.idleLockMinutes : row.idleLockMinutes,
+        backupRetentionDays:
+          body.backupRetentionDays !== undefined
+            ? body.backupRetentionDays
+            : row.backupRetentionDays,
       })
       .where(eq(settings.id, row.id))
       .run();

@@ -224,6 +224,30 @@ export const SettingsScreen: React.FC<SettingsProps> = ({
               </div>
             </div>
 
+            <div className="border-t border-line my-2 pt-4">
+              <h3 className="font-bold text-sm mb-3">النسخ الاحتياطي التلقائي اليومي</h3>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted">عدد النسخ اليومية المحفوظة (0 = تعطيل):</span>
+                <input
+                  type="number"
+                  min={0}
+                  max={90}
+                  value={formSettings?.backupRetentionDays ?? 14}
+                  onChange={(e) =>
+                    setFormSettings(
+                      formSettings
+                        ? { ...formSettings, backupRetentionDays: Number(e.target.value) }
+                        : null
+                    )
+                  }
+                  className="w-20 text-left h-8 rounded border border-border bg-surface px-2 mono text-xs focus-visible:outline-none"
+                />
+                <span className="text-xs text-muted">
+                  نسخة تلقائية يومياً؛ الأقدم تُحذف تلقائياً بعد هذا العدد
+                </span>
+              </div>
+            </div>
+
             <button
               type="submit"
               className="w-40 py-2.5 bg-jade text-white text-xs font-bold rounded-control hover:bg-jade-2 transition-colors cursor-pointer text-center"

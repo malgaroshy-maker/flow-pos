@@ -20,6 +20,9 @@ export const settings = sqliteTable('settings', {
   discountCapPercent: integer('discount_cap_percent').notNull().default(10),
   // Minutes of inactivity before the UI locks to the PIN screen; 0 = disabled.
   idleLockMinutes: integer('idle_lock_minutes').notNull().default(5),
+  // How many automatic daily backups to keep (oldest pruned beyond this count);
+  // 0 = automatic daily backups disabled (manual/shift-close backups still work).
+  backupRetentionDays: integer('backup_retention_days').notNull().default(14),
   currency: text('currency').notNull().default('LYD'),
   themeDefault: text('theme_default', { enum: ['light', 'dark'] })
     .notNull()

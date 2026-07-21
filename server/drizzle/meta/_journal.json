@@ -120,6 +120,13 @@
       "when": 1784666638848,
       "tag": "0016_known_stark_industries",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "6",
+      "when": 1784668258718,
+      "tag": "0017_burly_princess_powerful",
+      "breakpoints": true
     }
   ]
 }

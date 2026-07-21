@@ -112,6 +112,7 @@ Quality, security, and commercial-distribution work between Phase 3 and any Phas
 - [x] **V1.4.9 (2026-07-21)** — Milestone F3 closed: idle lock to the PIN screen (design.md §9, never built before). Configurable timeout in Settings (`idleLockMinutes`, default 5, 0 = disabled); locks to a full-screen PIN overlay on top of the still-mounted app so the in-progress POS cart survives; unlocks via the same PIN-switch endpoint used for shift-change fast switching.
 - [x] **V1.5.0 (2026-07-21)** — Milestone G1 closed: partial customer sale returns (`sale_returns` + `sale_return_items`, `RET-YYYY-NNNNN`), the largest missing approved feature (plan.md §2 design rule). Per-line return caps, bundle-aware and multi-unit-aware stock restoration, cash refund from the open shift or customer-debt reduction derived automatically from how the sale was paid, manager PIN confirmation, audit-logged. "مرتجع" button added to the Reports invoice log.
 - [x] **V1.5.1 (2026-07-21)** — Milestone G2 closed: `warranty_ending` notifications were declared in the type union since V1.3.2 but never generated. Now emitted for any active warranty ending within 30 days (≤7 days = alert tier), linking to the Warranty screen.
+- [x] **V1.5.2 (2026-07-21)** — Milestone G3 closed: automatic daily local backup (PRD NFR — previously manual/shift-close only). Runs at boot and hourly thereafter (idempotent per calendar day); retention count configurable in Settings (`backupRetentionDays`, default 14, 0 = disabled), pruning only its own `_auto_daily_` files.
 
 ## Phase 4 — Future expansion
 

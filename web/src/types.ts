@@ -136,6 +136,7 @@ export type Settings = {
   taxRatePermille: number;
   discountCapPercent: number;
   idleLockMinutes: number;
+  backupRetentionDays: number;
   currency: string;
 };
 

@@ -129,15 +129,20 @@ needed. Test added to `notifications.test.ts`: sells an equipment item to auto-c
 warranty, force-updates its `endDate` to 10 days out (directly via `app.db`, since a real
 sale bakes in the full `warrantyMonths` term), confirms it surfaces at `warning` severity.
 
-### G3. Automatic daily backup + retention
+### G3. Automatic daily backup + retention — ✅ DONE (V1.5.2, 2026-07-21)
 
-- On server boot and then on a 24h timer (and, cheaply, on a date-change check whenever a
-  request arrives — the shop PC sleeps), create a daily backup via the existing
-  `app.sqlite.backup()` path if none exists for today's date. Keep the last N (default
-  14, Settings-configurable) daily backups; prune older ones. Never prune shift-close
-  backups.
-- Tests: backup-once-per-day idempotence, pruning respects N and never deletes
-  non-daily files.
+`server/src/lib/autoBackup.ts`'s `runDailyBackupIfNeeded()` creates
+`pos_backup_auto_daily_YYYY-MM-DD.db` if today's doesn't exist yet, then prunes daily
+backups beyond `settings.backupRetentionDays` (default 14, 0 = disabled). Wired into
+`server/src/index.ts` only (never `buildApp()`, so the ~70 test files that call
+`buildApp()` directly are completely unaffected) — runs once at boot and then hourly via
+`setInterval`, so a day rollover is caught even if the process itself never restarts
+(the "shop PC sleeps" scenario from plan.md's hardening notes). Verified on this machine
+with a real (non-Electron) server boot: `pos_backup_auto_daily_2026-07-21.db` appeared
+in `server/data/backups/` within seconds of startup. Settings screen exposes the
+retention count. Tests (`autoBackup.test.ts`, 3): idempotent same-day calls, disabled at
+0, and pruning respects the count while leaving manual/shift-close backups untouched.
+84/84 total green.
 
 ### G4. Arabic-normalized customer & supplier search
 
