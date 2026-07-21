@@ -216,49 +216,44 @@ resurrected. Verified end-to-end on a real (non-Electron) server restart on this
 killed and relaunched the `tsx watch` process, confirmed a token issued before the
 restart still authenticated (`GET /api/notifications` → 200) after it. 86/86 total green.
 
-### H3. Server availability decision (document, maybe build)
+### H3. Server availability decision — ✅ DECIDED (2026-07-21, owner: document only)
 
-Present to the owner, then implement the choice:
+Owner chose **Option A**: the desktop app *is* the server, no separate Windows service.
+Recorded in `docs/plan.md` §5 item 6 and `docs/ops-guide.md` §1 — the FlowPOS
+window/tray must stay open on the shop PC; `openAtLogin` already covers reboots. The
+Windows-service alternative (Option B, NSSM) stays unbuilt; revisit only if the owner
+changes their mind later (real cost: port conflicts with the in-process server, a new
+upgrade path, service recovery config).
 
-- **Option A (document only):** the desktop app *is* the server — ops guide says "the
-  FlowPOS window/tray must stay open on the shop PC" and `openAtLogin` handles reboots
-  after login. Cheapest; acceptable for a single-shop product.
-- **Option B:** ship the bundled server additionally as a Windows service (NSSM,
-  installed by the NSIS script) with the desktop app as a pure client. Matches the
-  original E1 plan; meaningfully more moving parts (port conflicts with the in-process
-  server, upgrade path, service recovery config).
+### H4. DB-encryption decision — ✅ DECIDED (2026-07-21, owner: BitLocker)
 
-### H4. DB-encryption decision (close plan §5 open decision #1)
+Owner chose **BitLocker + physical control**, not SQLCipher/app-level encryption.
+Recorded in `docs/plan.md` §5 item 1 and `docs/prd.md` §9/§12 item 9 (NFR table
+corrected to say so explicitly instead of an unqualified "encrypted DB"); confirmed
+`تقرير-مميزات-المنظومة.html` never actually claimed DB encryption in the first place
+(only the original PRD HTML's NFR table did, which is a historical source document, not
+something this pass rewrites).
 
-Recommendation to put to the owner: **document BitLocker + physical control as the V1
-answer** (SQLCipher would break `better-sqlite3` prebuilds, complicate backups/restore,
-and the threat model is a shop PC, not a hostile host). Whatever is decided, record it in
-`docs/plan.md` §5 and the ops guide, and stop advertising "encrypted DB" in
-`تقرير-مميزات-المنظومة.html` unless it is actually true.
+### H5. Camera-scanning decision — ✅ DECIDED (2026-07-21, owner: defer)
 
-### H5. Camera-scanning decision (close plan §2 hardening item)
+Owner chose to **defer camera scanning indefinitely**; USB/keyboard-wedge scanners are
+the documented supported path (`docs/ops-guide.md` §2). Recorded in `docs/plan.md` §5
+item 5 and `docs/prd.md` §7/§12 item 10. Revisit only if explicitly requested — the
+local-CA + per-device cert-install work described in the original finding is still the
+right shape if that happens.
 
-USB scanners work today. Camera scanning on phones requires an HTTPS LAN origin
-(`getUserMedia`), which means a local CA + cert install on each device — real ops burden.
-Recommendation: **defer camera scanning; document USB/keyboard-wedge scanners as the
-supported path**, and note the HTTPS prerequisite in the roadmap for when it's revisited.
-If the owner wants it: local CA generation on first boot, cert-install page served over
-HTTP, `BarcodeDetector` with ZXing fallback in the Stocktaking and POS screens.
+### H6. Ops guide + release checklist — ✅ DONE (2026-07-21)
 
-### H6. Ops guide + release checklist (E4 close-out)
-
-- `docs/ops-guide.md` (or Arabic `دليل-التشغيل.md`, owner's choice): static IP for the
-  shop PC, UPS requirement, Africa/Tripoli timezone + clock drift, firewall behavior,
-  connecting cashier devices (QR flow), browser kiosk/silent-print setup for non-Electron
-  cashier stations (`chrome --kiosk-printing`), backup/restore procedure, upgrade
-  procedure (run newer installer over older; `C:\ProgramData\FlowPOS` survives).
-- `docs/release-checklist.md`: build server + web → build Electron + NSIS → install on a
-  clean Windows VM → smoke: activate license, login, sale, print, QR connect from phone,
-  restart app (license + sessions persist), uninstall keeps data.
-- Verify the upgrade path once for real: install V1.4.6 build, then install the next
-  release over it, confirm DB/uploads/backups/license survive.
-
-**Release as V1.5.1** (changelog: تحسينات / توثيق).
+- `docs/ops-guide.md`: static IP, UPS, BitLocker, firewall (now automatic per H1),
+  server clock/timezone, USB scanner requirement (per H5), connecting cashier devices
+  (QR flow), backup/restore (now automatic per G3), upgrade path, troubleshooting.
+- `docs/release-checklist.md`: build/test/typecheck steps, changelog/doc-sync
+  checklist, and an explicit "needs a human" install-verification section (silent
+  installs of this `perMachine` NSIS package can't get past the UAC prompt in an
+  automated agent context — documented, not worked around).
+- `docs/plan.md` §5 and `docs/prd.md` §12 updated to close out the H3/H4/H5 decisions
+  and correct several already-stale "decide in Phase 2" open questions that Phase 2
+  had, in fact, already answered (credit limits, multi-unit opt-in).
 
 ---
 

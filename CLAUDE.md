@@ -8,11 +8,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Status
 
-**Phases 1, 2, and 3, plus Milestones D and E are complete (latest release V1.4.6, 2026-07-21).** All milestones (Refactor Gate V1.2.9, Smart Stocktaking V1.3.0, Financial Reports & Excel V1.3.1, Notification Center & Warranties V1.3.2, Full System Audit & UI Fixes V1.3.3, Security & Dependency Hardening V1.3.4, Supplier Statement & Purchase A4 Print & Playwright Smoke V1.3.5, Commercial Packaging & Offline Licensing V1.4.0, Electron Desktop App & Instant Master Vendor PIN V1.4.1, Installer Data-Path Fix V1.4.2, QR Network Link & Print Reliability Fix V1.4.3, Silent Printing & In-App Preview V1.4.4, License Persistence Fix V1.4.5, QR Network Address Filtering V1.4.6) are implemented and verified by 72 Vitest unit tests (100% green) and 1 Playwright E2E test. See `docs/next-steps.md` and `docs/roadmap.md` for details.
+**Phases 1, 2, and 3 are complete, plus Milestones D–H of the post-Phase-3 hardening plan (latest release V1.5.5, 2026-07-21).** Milestones through V1.4.6 (commercial packaging, Electron desktop app, offline licensing, print reliability — see `سجل-التغييرات.md` for the full per-version list) were followed by a full re-audit (2026-07-21) that produced Milestones F–I in `docs/next-steps.md`: F (real vendor-key licensing, removed the insecure Vendor-PIN activation, idle lock) V1.4.7–V1.4.9; G (partial customer sale returns, warranty-ending notifications, automatic daily backups) V1.5.0–V1.5.2; H (Windows Firewall rule at install, persistent login sessions, ops guide + release checklist, and closed the DB-encryption/camera-scanning/server-availability decisions) V1.5.3–V1.5.5. 86 Vitest unit tests (100% green) and 1 Playwright E2E test. See `docs/next-steps.md` and `docs/roadmap.md` for details.
 
 Working today (typechecked, tested, built):
 
-- **Offline Core**: Fastify + SQLite + Drizzle monorepo with 3-decimal milli-LYD monetary precision; migrations through `0005_wet_kabuki.sql`.
+- **Offline Core**: Fastify + SQLite + Drizzle monorepo with 3-decimal milli-LYD monetary precision; migrations through `0018_round_charles_xavier.sql`.
 - **Product & Stock**: Equipment vs Consumable branch fields, barcode search/scan, stock movements ledger, manual adjustments; all product routes require a session.
 - **Cash Drawer & Shifts**: Shared drawer shift model, initial cash, cash expenses, shift closing with immutable variance audit and auto-backup. All cash in/out (sales, expenses, customer/supplier payments, paid purchases) requires an open shift.
 - **POS Invoicing & Print**: Gap-free sequential numbers (`INV-YYYY-NNNNN`, max+1 within the year), A4 equipment invoices (model, serials, warranty, Tafqeet, stamp), 80mm thermal receipts, invoice cancellation with stock & cash/credit reversal.
@@ -36,6 +36,8 @@ An **offline-first, Arabic (RTL) sales & inventory management system** for a caf
 - `docs/roadmap.md` — the 4 delivery phases and what belongs in each.
 - `docs/next-steps.md` — **the execution plan for what to build next** (backlog features, then commercial distribution V1.4.0). Start there when asked to "continue" or "do the next steps".
 - `docs/design.md` — the design system (tokens, type, components, print templates). All UI work follows it; extend it before deviating.
+- `docs/ops-guide.md` — for whoever runs a FlowPOS install on-site: setup checklist, backup/restore, upgrades, troubleshooting.
+- `docs/release-checklist.md` — build/test/verify steps before handing a new installer to a customer.
 - `سجل-التغييرات.md` — the official Arabic changelog, one summarized section per version, newest first.
 - `تقرير-مميزات-المنظومة.html` — customer-facing features report (Arabic); update it when major features ship.
 - `AGENTS.md` — the same working agreement for non-Claude agents; keep it in sync with this file.

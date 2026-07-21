@@ -105,7 +105,7 @@ Dashboard · POS (most-used screen: search/scan, cart, pay, print) · Products �
 
 ## 7. Architecture (proposed in PRD)
 
-One **local server** (PC/mini-PC in the shop) = single source of truth: encrypted local DB + backend API. Clients (cashier PCs, tablet/phone for camera barcode, USB scanner) connect over local WiFi. No internet required. When internet exists: cloud backup + read-only remote reports. Single-site V1 → no conflict resolution needed.
+One **local server** (the shop PC, running as a desktop app — see §12 item 11) = single source of truth: local DB (protected via BitLocker + physical access control, §12 item 9) + backend API. Clients (cashier PCs, tablet/phone, USB scanner) connect over local WiFi. Camera barcode scanning was considered but is deferred (§12 item 10) — USB/keyboard-wedge scanners are the supported input method. No internet required. When internet exists: cloud backup + read-only remote reports. Single-site V1 → no conflict resolution needed.
 
 ## 8. Data Model (entities)
 
@@ -127,7 +127,7 @@ One **local server** (PC/mini-PC in the shop) = single source of truth: encrypte
 | Language/UI | Full Arabic RTL, light + dark themes, responsive (mobile/tablet/desktop)              |
 | Currency    | LYD with 3 decimal places everywhere                                                  |
 | Performance | Sub-second responses on LAN; POS screen opens in seconds                              |
-| Security    | Hashed passwords, encrypted DB, strict permissions, full audit log, idle session lock |
+| Security    | Hashed passwords, DB protected via BitLocker + physical access control (not app-level encryption — see §12 item 9), strict permissions, full audit log, idle session lock |
 | Reliability | Full offline operation is non-negotiable; cloud is backup only                        |
 | Backup      | Automatic daily local backup + cloud copy when online + one-step restore              |
 | Scalability | Architecture allows future branches/roles without a rebuild                           |
@@ -157,9 +157,32 @@ Answered 2026-07-17 (recorded in `docs/plan.md` §0):
 3. ~~Is the tax rate known now?~~ → **Configured later; tax engine ships disabled.**
 4. ~~How many concurrent POS devices?~~ → **2–3.**
 
-Still open:
+Answered during Phase 2 (2026-07-19, recorded in `docs/roadmap.md`):
 
-3. Is a credit limit mandatory for every credit customer, or fully optional? (decide in Phase 2)
-4. What logo/identity should the official A4 invoice template use? (needed before invoice slice; Settings-configurable)
-5. Which products actually need multi-unit selling? (opt-in per product, Phase 2)
-6. Installments: adopt in the future or is open credit enough? (deferred — Installments entity is ready)
+5. ~~Is a credit limit mandatory for every credit customer, or fully optional?~~ →
+   **Fully optional per customer: 0 = unlimited credit; exceeding a set limit blocks
+   the credit sale unless a manager/PIN overrides (audit-flagged).**
+6. ~~What logo/identity should the official A4 invoice template use?~~ → **Settings-
+   configurable business name/logo/subtitle/phone/warranty terms/stamp title; a
+   placeholder ships by default.**
+7. ~~Which products actually need multi-unit selling?~~ → **Opt-in per product**
+   (`product_units`), not a fixed list — each product's owner decides at data-entry
+   time.
+
+Answered during the post-Phase-3 re-audit (2026-07-21, recorded in `docs/plan.md` §5
+and `docs/next-steps.md` Milestones H3–H5):
+
+8. Installments: adopt in the future or is open credit enough? — **Still deferred**,
+   unchanged from the original decision; the `Installments` entity schema is ready but
+   nothing is built. Needs explicit owner approval before any build (Phase 4).
+9. ~~DB encryption approach~~ → **BitLocker + physical control of the shop PC, not
+   SQLCipher/app-level encryption** (would break the `better-sqlite3` prebuilt binary
+   and complicate the working backup/restore path for a threat model — a hostile
+   remote attacker — that doesn't really apply to a single shop PC).
+10. ~~Camera barcode scanning~~ → **Deferred indefinitely; USB/keyboard-wedge
+    scanners are the supported input method.** The HTTPS-on-LAN prerequisite
+    (`getUserMedia` needs it) was never solved and the ops burden (a local CA + per-
+    device cert install) outweighs the benefit for shops already using USB scanners.
+11. ~~Server availability model~~ → **The desktop app IS the server; no separate
+    Windows service.** The FlowPOS window/tray must stay open on the shop PC; see
+    `docs/ops-guide.md`.

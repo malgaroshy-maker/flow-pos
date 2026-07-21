@@ -1,8 +1,9 @@
 # Implementation Plan
 
 > Companion to `docs/prd.md` (requirements) and `docs/roadmap.md` (phases).
-> **Status:** Phases 1–2 are feature-complete as of V1.2.8 (2026-07-19) — see `docs/roadmap.md`
-> for the checklist and `سجل-التغييرات.md` for the Arabic per-release changelog.
+> **Status:** Phases 1–3 are feature-complete; latest release V1.5.4 (2026-07-21) — see
+> `docs/roadmap.md` for the checklist and `سجل-التغييرات.md` for the Arabic per-release
+> changelog. `docs/next-steps.md` tracks post-Phase-3 hardening work in progress.
 
 ## 0. Confirmed Decisions (2026-07-17)
 
@@ -102,7 +103,26 @@ Each slice is shippable and testable end-to-end:
 
 ## 5. Remaining Open Decisions
 
-1. DB encryption approach: SQLCipher build vs. OS-level (BitLocker) + app-level field encryption — decide during scaffolding (slice 1).
+1. ~~DB encryption approach~~ → **Resolved 2026-07-21: OS-level (BitLocker) + physical
+   access control of the shop PC, not SQLCipher or app-level field encryption.**
+   Rationale: SQLCipher would break the `better-sqlite3` prebuilt native binary this
+   project ships (would need a custom build + rebuild pipeline for every Node/Electron
+   version bump), complicates the backup/restore path (`sqlite.backup()`, file-copy
+   restore) that already works well, and the actual threat model is a shop PC under the
+   owner's physical control — not a hostile multi-tenant host. See `docs/ops-guide.md`
+   for the BitLocker setup step; `docs/next-steps.md` Milestone H4 has the full record.
 2. Cloud backup target — deferred by decision; revisit after MVP.
 3. Invoice/receipt visual identity (logo, business details) — needed before slice 6; configurable in Settings so a placeholder is fine to start.
 4. Remaining PRD open questions (docs/prd.md §12): credit-limit policy (Phase 2), which products get multi-units (Phase 2), installments (Phase 4, deferred).
+5. ~~Camera barcode scanning~~ → **Resolved 2026-07-21: deferred indefinitely; USB/
+   keyboard-wedge scanners are the supported input method.** Camera scanning needs
+   `getUserMedia`, which browsers block on plain `http://` LAN origins — solving that
+   requires a locally-generated CA plus a one-time certificate install on every phone/
+   tablet, real ops burden for a feature most shops using USB scanners don't need. See
+   `docs/next-steps.md` Milestone H5.
+6. ~~Server availability model~~ → **Resolved 2026-07-21: the desktop app IS the
+   server (V1.4.1+ architecture) — no separate Windows service.** The FlowPOS
+   window/tray must stay open on the shop PC for cashier devices to reach it;
+   `openAtLogin` already covers reboots. See `docs/ops-guide.md`. `docs/next-steps.md`
+   Milestone H3 has the full record and the (unbuilt) Windows-service alternative if
+   this is revisited later.
