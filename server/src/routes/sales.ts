@@ -3,6 +3,8 @@ import { eq, desc, like } from 'drizzle-orm';
 import {
   sales,
   saleItems,
+  saleReturns,
+  saleReturnItems,
   products,
   stockMovements,
   cashMovements,
@@ -918,6 +920,282 @@ export async function saleRoutes(app: FastifyInstance) {
         return reply
           .code(400)
           .send({ error: 'already_cancelled', message: 'الفاتورة ملغاة بالفعل' });
+      }
+      throw err;
+    }
+  });
+
+  // Partial customer sale return (مرتجع مبيعات): unlike /cancel, this reverses
+  // only specific lines, after the day of sale, without touching the rest of
+  // the invoice. Never edits the original sale — a reversing document.
+  app.get('/sales/:id/returns', async (req, reply) => {
+    const saleId = Number((req.params as { id: string }).id);
+    const sale = app.db.select().from(sales).where(eq(sales.id, saleId)).get();
+    if (!sale) return reply.code(404).send({ error: 'sale_not_found', message: 'الفاتورة غير موجودة' });
+
+    const returns = app.db.select().from(saleReturns).where(eq(saleReturns.saleId, saleId)).all();
+    const withItems = returns.map((r) => ({
+      ...r,
+      items: app.db
+        .select()
+        .from(saleReturnItems)
+        .where(eq(saleReturnItems.saleReturnId, r.id))
+        .all(),
+    }));
+    return withItems;
+  });
+
+  app.post('/sales/:id/return', async (req, reply) => {
+    const saleId = Number((req.params as { id: string }).id);
+    const { overridePin } = req.body as { overridePin?: string };
+
+    let overrideUser: any = null;
+    if (overridePin) {
+      overrideUser = app.db.select().from(users).where(eq(users.pin, overridePin)).get();
+      if (!overrideUser || !overrideUser.active || overrideUser.role !== 'manager') {
+        return reply
+          .code(400)
+          .send({ error: 'invalid_override_pin', message: 'رمز PIN الخاص بالمدير غير صحيح' });
+      }
+    }
+
+    if (req.user!.role !== 'manager' && !overrideUser) {
+      return reply.code(403).send({
+        error: 'forbidden',
+        message: 'مرتجع المبيعات يتطلب صلاحية مدير أو إدخال رمز PIN للمدير',
+      });
+    }
+
+    const body = req.body as {
+      items?: Array<{ saleItemId: number; quantity: number }>;
+    };
+    if (!body.items || body.items.length === 0) {
+      return reply
+        .code(400)
+        .send({ error: 'missing_items', message: 'حدد الأصناف والكميات المرتجعة' });
+    }
+
+    try {
+      for (const item of body.items) {
+        requirePositiveInt(item.saleItemId, 'saleItemId');
+        requirePositiveInt(item.quantity, 'quantity');
+      }
+    } catch (err) {
+      if (err instanceof ValidationError) {
+        return reply.code(400).send({ error: err.code, message: err.message });
+      }
+      throw err;
+    }
+
+    const sale = app.db.select().from(sales).where(eq(sales.id, saleId)).get();
+    if (!sale) {
+      return reply.code(404).send({ error: 'sale_not_found', message: 'الفاتورة غير موجودة' });
+    }
+    if (sale.status === 'cancelled') {
+      return reply
+        .code(400)
+        .send({ error: 'sale_cancelled', message: 'الفاتورة ملغاة بالكامل بالفعل — لا يمكن إرجاع أصناف منها' });
+    }
+
+    const needsCashDrawer = sale.paymentType === 'cash' && sale.paymentMethod === 'cash';
+    const activeShift = app.db
+      .select()
+      .from(shifts)
+      .where(eq(shifts.status, 'open'))
+      .limit(1)
+      .get();
+
+    if (needsCashDrawer && !activeShift) {
+      return reply
+        .code(400)
+        .send({ error: 'no_active_shift', message: 'يجب فتح توكة أولاً لإجراء عملية الإرجاع النقدي' });
+    }
+
+    try {
+      const result = app.sqlite.transaction(() => {
+        const now = new Date().toISOString();
+        const actorId = overrideUser ? overrideUser.id : req.user!.userId;
+
+        // subtotal reconstructed from the immutable invoice total (never
+        // recomputed from current prices): total = subtotal + tax - discount.
+        const subtotal = sale.total - sale.taxAmount + sale.discount;
+
+        let returnValue = 0;
+        const returnedLines: Array<{ saleItemId: number; productId: number; quantity: number }> = [];
+
+        for (const item of body.items!) {
+          const line = app.db.select().from(saleItems).where(eq(saleItems.id, item.saleItemId)).get();
+          if (!line || line.saleId !== saleId) {
+            throw new Error(`item_not_in_sale:${item.saleItemId}`);
+          }
+          const returnable = line.quantity - line.returnedQuantity;
+          if (item.quantity > returnable) {
+            throw new Error(`over_return:${line.productId}:${returnable}`);
+          }
+
+          const components = app.db
+            .select()
+            .from(productComponents)
+            .where(eq(productComponents.productId, line.productId))
+            .all();
+          const isBundle = components.length > 0;
+
+          if (isBundle) {
+            for (const comp of components) {
+              const compProduct = app.db
+                .select()
+                .from(products)
+                .where(eq(products.id, comp.componentProductId))
+                .get();
+              if (!compProduct) continue;
+              const restoreQty = comp.quantity * item.quantity;
+              const newQty = compProduct.quantity + restoreQty;
+              app.db
+                .update(products)
+                .set({ quantity: newQty })
+                .where(eq(products.id, comp.componentProductId))
+                .run();
+              app.db
+                .insert(stockMovements)
+                .values({
+                  productId: comp.componentProductId,
+                  type: 'return',
+                  quantity: restoreQty,
+                  balanceAfter: newQty,
+                  reason: `مرتجع مبيعات فاتورة رقم ${sale.invoiceNumber} (ضمن باقة)`,
+                  userId: actorId,
+                  createdAt: now,
+                })
+                .run();
+            }
+          } else {
+            const product = app.db.select().from(products).where(eq(products.id, line.productId)).get();
+            if (!product) throw new Error(`item_not_in_sale:${item.saleItemId}`);
+            const restoreBaseQty = item.quantity * line.conversionFactor;
+            const newQty = product.quantity + restoreBaseQty;
+            app.db.update(products).set({ quantity: newQty }).where(eq(products.id, product.id)).run();
+            app.db
+              .insert(stockMovements)
+              .values({
+                productId: product.id,
+                type: 'return',
+                quantity: restoreBaseQty,
+                balanceAfter: newQty,
+                reason: `مرتجع مبيعات فاتورة رقم ${sale.invoiceNumber}`,
+                userId: actorId,
+                createdAt: now,
+              })
+              .run();
+          }
+
+          app.db
+            .update(saleItems)
+            .set({ returnedQuantity: line.returnedQuantity + item.quantity })
+            .where(eq(saleItems.id, line.id))
+            .run();
+
+          const grossReturned = lineTotal(line.unitPrice, item.quantity);
+          returnValue += subtotal > 0 ? Math.round((grossReturned / subtotal) * sale.total) : 0;
+          returnedLines.push({ saleItemId: line.id, productId: line.productId, quantity: item.quantity });
+        }
+
+        // Refund method is derived from how the sale was originally paid —
+        // never a free choice, so the reversal always matches reality.
+        let refundMethod: 'cash' | 'debt' | 'none' = 'none';
+        if (needsCashDrawer) {
+          refundMethod = 'cash';
+          app.db
+            .insert(cashMovements)
+            .values({
+              shiftId: activeShift!.id,
+              type: 'refund',
+              amount: -returnValue,
+              referenceId: `مرتجع مبيعات ${sale.invoiceNumber}`,
+              userId: actorId,
+              createdAt: now,
+            })
+            .run();
+        } else if (sale.paymentType === 'credit' && sale.customerId) {
+          refundMethod = 'debt';
+          const cust = app.db.select().from(customers).where(eq(customers.id, sale.customerId)).get();
+          if (cust) {
+            app.db
+              .update(customers)
+              .set({ creditBalance: cust.creditBalance - returnValue })
+              .where(eq(customers.id, sale.customerId))
+              .run();
+          }
+        }
+
+        // Gap-free sequential return numbers, same max+1-within-year pattern as invoices.
+        const currentYear = new Date().getFullYear();
+        const yearPrefix = `RET-${currentYear}-`;
+        const matchingReturns = app.db
+          .select({ returnNumber: saleReturns.returnNumber })
+          .from(saleReturns)
+          .where(like(saleReturns.returnNumber, `${yearPrefix}%`))
+          .all();
+        let maxNum = 0;
+        for (const r of matchingReturns) {
+          const num = parseInt(r.returnNumber.slice(yearPrefix.length), 10);
+          if (Number.isFinite(num) && num > maxNum) maxNum = num;
+        }
+        const returnNumber = `${yearPrefix}${String(maxNum + 1).padStart(5, '0')}`;
+
+        const returnResult = app.db
+          .insert(saleReturns)
+          .values({
+            returnNumber,
+            saleId,
+            customerId: sale.customerId,
+            amount: returnValue,
+            refundMethod,
+            userId: actorId,
+            createdAt: now,
+          })
+          .run();
+        const saleReturnId = Number(returnResult.lastInsertRowid);
+
+        for (const line of returnedLines) {
+          app.db
+            .insert(saleReturnItems)
+            .values({
+              saleReturnId,
+              saleItemId: line.saleItemId,
+              productId: line.productId,
+              quantity: line.quantity,
+            })
+            .run();
+        }
+
+        app.db
+          .insert(auditLogs)
+          .values({
+            userId: actorId,
+            action: 'sale_return',
+            details: `مرتجع مبيعات ${returnNumber} على الفاتورة ${sale.invoiceNumber} بقيمة ${(returnValue / 1000).toFixed(3)} د.ل (${refundMethod === 'cash' ? 'استرداد نقدي للدرج' : refundMethod === 'debt' ? 'خصم من رصيد العميل' : 'بدون تسوية نقدية'})`,
+            createdAt: now,
+          })
+          .run();
+
+        return { success: true, returnNumber, returnValue, refundMethod };
+      })();
+
+      return result;
+    } catch (err: any) {
+      const msg = err.message || '';
+      if (msg.startsWith('item_not_in_sale:')) {
+        return reply.code(400).send({
+          error: 'item_not_in_sale',
+          message: 'أحد الأصناف غير موجود في الفاتورة الأصلية',
+        });
+      }
+      if (msg.startsWith('over_return:')) {
+        const [, , returnable] = msg.split(':');
+        return reply.code(400).send({
+          error: 'over_return',
+          message: `الكمية المرتجعة لأحد الأصناف تتجاوز المتاح للإرجاع (${returnable})`,
+        });
       }
       throw err;
     }

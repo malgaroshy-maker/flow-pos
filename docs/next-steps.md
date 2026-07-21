@@ -89,24 +89,35 @@ window with no synthetic activity, unlocks with the manager PIN, POS state intac
 
 ## Milestone G — V1.5.0: Missing approved features
 
-### G1. Customer sale returns (المرتجعات)
+### G1. Customer sale returns (المرتجعات) — ✅ DONE (V1.5.0, 2026-07-21)
 
-The largest genuinely missing approved feature (plan §2 design rule). Mirror of supplier
-returns, on the sales side:
+`sale_returns` + `sale_return_items` tables (migration `0016_known_stark_industries.sql`),
+`returnedQuantity` added to `sale_items`. `POST /api/sales/:id/return`: document numbers
+`RET-YYYY-NNNNN` (same gap-free max+1-in-year pattern as invoices); per-line returnable
+caps (`saleItem.quantity - returnedQuantity`); multi-unit-aware (restores
+`quantity * conversionFactor` base units via the line's own snapshot); bundle-aware
+(restores every component proportionally via `productComponents`, not just the parent);
+refund method is **derived**, never a free choice — cash sales refund from the currently
+open shift (blocked with `no_active_shift` if none), credit sales reduce the customer's
+balance (may go negative, same as cancellation); manager-only with PIN-override fallback
+matching `/sales/:id/cancel`; rejects returns against an already-cancelled sale
+(`sale_cancelled`); audit-logged. Refund amount is proportional to the original invoice
+total (`subtotal = total - tax + discount` reconstructed from the immutable sale row, so
+tax/discount fold in correctly without recomputing at current prices).
 
-- Server: `sale_returns` + `sale_return_items` tables (schema.ts + `npm run db:generate`);
-  document numbers `RET-YYYY-NNNNN` (same gap-free max+1-in-transaction pattern as
-  sales); per-line returnable caps against the original sale minus prior returns;
-  stock movement type `return` restoring base units (multi-unit aware — restore via the
-  snapshot on the sale line); cash refund from the **current open shift** (blocked if no
-  open shift) or customer-debt reduction for credit sales; manager-only; audit-logged;
-  cancelled/fully-returned sales cannot be returned again.
-- Bundles: returns operate on the component stock exactly as cancellation does (reverse
-  the original sale's stock movements proportionally).
-- Web: "مرتجع" action on the sale row → modal with per-line quantity pickers, refund
-  method, manager PIN; A4 print of the return note via the existing print system.
-- Tests: partial return caps, double-return rejection, cash-vs-credit refund paths,
-  stock restoration in base units, no-open-shift rejection.
+Web: `SaleReturnModal` (self-contained, fetches the sale detail, per-line quantity
+inputs capped at the returnable amount) + a "مرتجع" button next to "إلغاء الفاتورة" in
+the Reports invoice log. Submitting closes the item-picker before opening the PIN
+overlay — both are `fixed inset-0 z-50`, so leaving the picker mounted blocked the PIN
+modal's clicks (later DOM sibling painting on top despite equal z-index actually wasn't
+the failure mode — it was outright *pointer-event interception* by the still-mounted
+form; confirmed via a stuck Playwright click before the fix). No A4 print template for
+the return note yet — out of scope for this pass, only the toast confirmation exists.
+
+Tests (`server/src/sale-returns.test.ts`, 5): partial cash return refunds correctly and
+caps at the remaining returnable quantity; credit return reduces customer balance;
+manager-only + PIN-override path; a fully-cancelled sale rejects further returns; a
+bundle return restores every component proportionally. 80/80 total green.
 
 ### G2. Warranty-ending notifications
 

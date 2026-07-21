@@ -21,6 +21,7 @@ import { apiCall } from './lib/api';
 import { Icons } from './components/Icons';
 import { PinOverrideModal } from './components/PinOverrideModal';
 import { IdleLockOverlay } from './components/IdleLockOverlay';
+import { SaleReturnModal } from './components/SaleReturnModal';
 import { AppModals } from './components/AppModals';
 import { PrintRoot, type PrintDocument } from './print/PrintRoot';
 import { PrintPreviewModal } from './print/PrintPreviewModal';
@@ -115,6 +116,10 @@ export function App() {
   // 0 = disabled). The in-progress POS cart survives — this is an overlay on top of
   // the still-mounted app, not a navigation or logout.
   const [isLocked, setIsLocked] = useState(false);
+
+  // Customer sale returns (مرتجع مبيعات)
+  const [showSaleReturnModal, setShowSaleReturnModal] = useState(false);
+  const [returnSale, setReturnSale] = useState<Sale | null>(null);
 
   // Modal Visibility States
   const [showUserPinModal, setShowUserPinModal] = useState(false);
@@ -512,6 +517,33 @@ export function App() {
         }
       }
     );
+  };
+
+  const handleReturnInvoice = (sale: Sale) => {
+    setReturnSale(sale);
+    setShowSaleReturnModal(true);
+  };
+
+  const handleSaleReturnSubmit = (items: Array<{ saleItemId: number; quantity: number }>) => {
+    if (!returnSale) return;
+    const sale = returnSale;
+    // Close the item-picker first — otherwise it and the PIN confirmation
+    // overlay would stack at the same z-index, and the item-picker (later in
+    // the DOM) would visually and pointer-block the PIN modal beneath it.
+    setShowSaleReturnModal(false);
+    triggerPinOverride(`تسجيل مرتجع مبيعات على الفاتورة ${sale.invoiceNumber}`, async (pin) => {
+      const res = await apiCall(`/api/sales/${sale.id}/return`, 'POST', { items, overridePin: pin });
+      if (res.success) {
+        triggerToast(
+          `تم تسجيل المرتجع ${res.data.returnNumber} بقيمة ${formatLYD(res.data.returnValue)} د.ل`
+        );
+        setShowSaleReturnModal(false);
+        setReturnSale(null);
+        refreshAllData();
+      } else {
+        triggerToast(res.error || 'فشل تسجيل مرتجع المبيعات', 'alert');
+      }
+    });
   };
 
   const handleExportCSV = (type: 'sales' | 'products' | 'shifts') => {
@@ -1064,6 +1096,7 @@ export function App() {
           <Reports
             onOpenInvoicePrint={openInvoicePrint}
             onCancelInvoice={handleCancelInvoice}
+            onReturnInvoice={handleReturnInvoice}
             onExportCSV={handleExportCSV}
           />
         )}
@@ -1179,6 +1212,17 @@ export function App() {
       <NetworkConnectModal
         isOpen={showNetworkModal}
         onClose={() => setShowNetworkModal(false)}
+      />
+
+      {/* Customer Sale Return Modal */}
+      <SaleReturnModal
+        isOpen={showSaleReturnModal}
+        sale={returnSale}
+        onClose={() => {
+          setShowSaleReturnModal(false);
+          setReturnSale(null);
+        }}
+        onSubmit={handleSaleReturnSubmit}
       />
 
       {/* Print Root System */}

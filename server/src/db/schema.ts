@@ -270,6 +270,40 @@ export const saleItems = sqliteTable('sale_items', {
   unitPrice: integer('unit_price').notNull(), // milli-LYD per sold unit
   total: integer('total').notNull(), // milli-LYD
   serialNumber: text('serial_number'),
+  returnedQuantity: integer('returned_quantity').notNull().default(0), // partial sale returns against this line
+});
+
+// Partial customer sale returns (after the day of sale, unlike full cancellation):
+// restores stock per line, refunds cash from the current shift for cash sales or
+// reduces the customer's credit balance for credit sales. Never edits the original
+// sale — a reversing document, same principle as supplier returns.
+export const saleReturns = sqliteTable('sale_returns', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  returnNumber: text('return_number').notNull().unique(), // RET-YYYY-NNNNN
+  saleId: integer('sale_id')
+    .notNull()
+    .references(() => sales.id),
+  customerId: integer('customer_id').references(() => customers.id),
+  amount: integer('amount').notNull(), // milli-LYD refunded/credited, proportional to the invoice total
+  refundMethod: text('refund_method', { enum: ['cash', 'debt', 'none'] }).notNull(),
+  userId: integer('user_id')
+    .notNull()
+    .references(() => users.id),
+  createdAt: text('created_at').notNull(),
+});
+
+export const saleReturnItems = sqliteTable('sale_return_items', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  saleReturnId: integer('sale_return_id')
+    .notNull()
+    .references(() => saleReturns.id),
+  saleItemId: integer('sale_item_id')
+    .notNull()
+    .references(() => saleItems.id),
+  productId: integer('product_id')
+    .notNull()
+    .references(() => products.id),
+  quantity: integer('quantity').notNull(), // in the sold unit, same as the sale item
 });
 
 export const purchases = sqliteTable('purchases', {
