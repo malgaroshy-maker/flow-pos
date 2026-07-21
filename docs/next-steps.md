@@ -119,13 +119,15 @@ caps at the remaining returnable quantity; credit return reduces customer balanc
 manager-only + PIN-override path; a fully-cancelled sale rejects further returns; a
 bundle return restores every component proportionally. 80/80 total green.
 
-### G2. Warranty-ending notifications
+### G2. Warranty-ending notifications — ✅ DONE (V1.5.1, 2026-07-21)
 
-- Emit `warranty_ending` items in `server/src/routes/notifications.ts` for active
-  warranties expiring within a configurable horizon (mirror the existing
-  `expiring_quote` generator; default 30 days).
-- Web: the notification drawer already renders by type — add the icon/label mapping.
-- Tests: warranty inside/outside the horizon; expired warranties excluded.
+`server/src/routes/notifications.ts` now emits `warranty_ending` items for every row in
+`warranties` whose `endDate` is within 30 days (≤7 days = `alert`, else `warning`),
+`tab: 'Warranty'`. The drawer already rendered generically by `severity`/`title`/
+`message`/`tab` (no per-type icon mapping exists in this codebase) so no web change was
+needed. Test added to `notifications.test.ts`: sells an equipment item to auto-create a
+warranty, force-updates its `endDate` to 10 days out (directly via `app.db`, since a real
+sale bakes in the full `warrantyMonths` term), confirms it surfaces at `warning` severity.
 
 ### G3. Automatic daily backup + retention
 

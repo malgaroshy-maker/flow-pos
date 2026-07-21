@@ -6,6 +6,7 @@ import {
   quotations,
   sales,
   saleItems,
+  warranties,
 } from '../db/schema.js';
 import { authenticateRequest } from './auth.js';
 
@@ -31,6 +32,7 @@ export async function notificationRoutes(app: FastifyInstance) {
     const allProducts = app.db.select().from(products).all();
     const allCustomers = app.db.select().from(customers).all();
     const allQuotations = app.db.select().from(quotations).all();
+    const allWarranties = app.db.select().from(warranties).all();
 
     // 1. Low Stock Alerts
     for (const p of allProducts) {
@@ -96,6 +98,23 @@ export async function notificationRoutes(app: FastifyInstance) {
             createdAt: nowIso,
           });
         }
+      }
+    }
+
+    // 5. Warranties ending soon (within 30 days)
+    for (const w of allWarranties) {
+      const endTime = new Date(w.endDate).getTime();
+      const diffDays = Math.ceil((endTime - now.getTime()) / (1000 * 60 * 60 * 24));
+      if (diffDays >= 0 && diffDays <= 30) {
+        notifications.push({
+          id: `warranty_${w.id}`,
+          type: 'warranty_ending',
+          severity: diffDays <= 7 ? 'alert' : 'warning',
+          title: 'قرب انتهاء ضمان',
+          message: `ضمان "${w.productName}" (رقم تسلسلي ${w.serialNumber}) ينتهي خلال ${diffDays} يوماً (${w.endDate.slice(0, 10)})`,
+          tab: 'Warranty',
+          createdAt: nowIso,
+        });
       }
     }
 
