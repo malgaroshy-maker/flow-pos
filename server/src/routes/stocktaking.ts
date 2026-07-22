@@ -9,6 +9,7 @@ import {
   users,
 } from '../db/schema.js';
 import { authenticateRequest } from './auth.js';
+import { verifyManagerPin } from '../lib/pin.js';
 
 export async function stocktakingRoutes(app: FastifyInstance) {
   // Require valid session for all stocktaking endpoints
@@ -204,13 +205,8 @@ export async function stocktakingRoutes(app: FastifyInstance) {
 
     let isAuthorized = req.user!.role === 'manager';
     if (!isAuthorized && overridePin) {
-      const mgr = app.db
-        .select()
-        .from(users)
-        .where(and(eq(users.role, 'manager'), eq(users.active, true)))
-        .all()
-        .find((u) => u.pin && u.pin === overridePin);
-      if (mgr) isAuthorized = true;
+      const v = verifyManagerPin(app.db, overridePin, req.ip);
+      if (v.success) isAuthorized = true;
     }
 
     if (!isAuthorized) {

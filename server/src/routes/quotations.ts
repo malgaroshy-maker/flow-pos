@@ -11,6 +11,7 @@ import {
   auditLogs,
 } from '../db/schema.js';
 import { authenticateRequest } from './auth.js';
+import { verifyManagerPin } from '../lib/pin.js';
 import { applyPermille, lineTotal } from '../lib/money.js';
 import { requireNonNegativeInt, requirePositiveInt, ValidationError } from '../lib/validate.js';
 import { resolveUnitPrice } from '../lib/pricing.js';
@@ -94,12 +95,13 @@ export async function quotationRoutes(app: FastifyInstance) {
 
     let pinUser: any = null;
     if (overridePin) {
-      pinUser = app.db.select().from(users).where(eq(users.pin, overridePin)).get();
-      if (!pinUser || !pinUser.active || pinUser.role !== 'manager') {
+      const v = verifyManagerPin(app.db, overridePin, req.ip);
+      if (!v.success || !v.user) {
         return reply
           .code(400)
           .send({ error: 'invalid_override_pin', message: 'رمز PIN الخاص بالمدير غير صحيح' });
       }
+      pinUser = v.user;
     }
 
     let subtotal = 0;

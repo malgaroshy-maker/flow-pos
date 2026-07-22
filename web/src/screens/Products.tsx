@@ -105,75 +105,88 @@ export const ProductsScreen: React.FC<ProductsProps> = ({
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {filteredProducts.map((p) => (
-                <tr key={p.id} className="hover:bg-surface-2/50 transition-colors">
-                  <td className="p-3">
-                    {p.imageUrl ? (
-                      <img
-                        src={p.imageUrl}
-                        alt={p.name}
-                        className="w-10 h-10 object-cover rounded-control border border-line"
-                      />
-                    ) : (
-                      <div className="w-10 h-10 rounded-control bg-surface-2 border border-line flex items-center justify-center text-muted font-bold text-[10px]">
-                        بلا صورة
-                      </div>
-                    )}
-                  </td>
-                  <td className="p-3 font-semibold">
-                    <div>{p.name}</div>
-                    {p.barcode && <div className="text-[10px] text-muted mono">{p.barcode}</div>}
-                  </td>
-                  <td className="p-3">
-                    <span
-                      className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                        p.type === 'equipment'
-                          ? 'bg-copper/10 text-copper border border-copper/30'
-                          : 'bg-jade/10 text-jade border border-jade/30'
-                      }`}
-                    >
-                      {p.type === 'equipment' ? 'معدة/جهاز' : 'استهلاكي'}
-                    </span>
-                  </td>
-                  <td className="p-3">{p.category}</td>
-                  <td className="p-3 mono font-bold text-jade">{formatLYD(p.retailPrice)} د.ل</td>
-                  <td className="p-3 mono">
-                    <span
-                      className={`font-bold ${
-                        p.quantity <= p.reorderPoint ? 'text-alert' : 'text-text'
-                      }`}
-                    >
-                      {p.quantity} {p.baseUnit}
-                    </span>
-                  </td>
-                  <td className="p-3">
-                    <div className="flex items-center gap-2">
-                      {currentUser?.role === 'manager' && (
-                        <>
-                          <button
-                            onClick={() => onStartEditProduct(p)}
-                            className="px-2.5 py-2 text-xs border border-border rounded text-muted hover:text-text cursor-pointer"
-                          >
-                            تعديل
-                          </button>
-                          <button
-                            onClick={() => onOpenAdjustModal(p)}
-                            className="px-2.5 py-2 text-xs border border-border bg-surface-2 rounded text-muted hover:text-text cursor-pointer"
-                          >
-                            تسوية
-                          </button>
-                        </>
-                      )}
-                      <button
-                        onClick={() => onViewMovements(p)}
-                        className="px-2.5 py-2 text-xs border border-border text-muted hover:text-text rounded cursor-pointer"
-                      >
-                        سجل الحركات
-                      </button>
-                    </div>
+              {filteredProducts.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="p-8 text-center text-muted text-sm">
+                    لا توجد منتجات بعد — أضف أول منتج
                   </td>
                 </tr>
-              ))}
+              ) : (
+                filteredProducts.map((p) => (
+                  <tr key={p.id} className="hover:bg-surface-2/50 transition-colors">
+                    <td className="p-3">
+                      {p.imageUrl ? (
+                        <img
+                          src={p.imageUrl}
+                          alt={p.name}
+                          className="w-10 h-10 object-cover rounded-control border border-line"
+                        />
+                      ) : (
+                        <div className="w-10 h-10 rounded-control bg-surface-2 border border-line flex items-center justify-center text-muted font-bold text-[10px]">
+                          بلا صورة
+                        </div>
+                      )}
+                    </td>
+                    <td className="p-3 font-semibold">
+                      <div>{p.name}</div>
+                      {p.barcode && <div className="text-[10px] text-muted mono">{p.barcode}</div>}
+                    </td>
+                    <td className="p-3">
+                      <span
+                        className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                          p.type === 'equipment'
+                            ? 'bg-copper/10 text-copper border border-copper/30'
+                            : 'bg-jade/10 text-jade border border-jade/30'
+                        }`}
+                      >
+                        {p.type === 'equipment' ? 'معدة/جهاز' : 'استهلاكي'}
+                      </span>
+                    </td>
+                    <td className="p-3">{p.category}</td>
+                    <td className="p-3 mono font-bold text-jade">{formatLYD(p.retailPrice)} د.ل</td>
+                    <td className="p-3 mono">
+                      <span
+                        className={`inline-flex items-center gap-1.5 font-bold ${
+                          p.quantity <= p.reorderPoint ? 'text-alert' : 'text-text'
+                        }`}
+                      >
+                        {p.quantity} {p.baseUnit}
+                        {p.quantity <= p.reorderPoint && (
+                          <span className="px-1.5 py-0.5 text-[9px] bg-alert/10 text-alert border border-alert/30 rounded font-bold">
+                            ⚠️ منخفض
+                          </span>
+                        )}
+                      </span>
+                    </td>
+                    <td className="p-3">
+                      <div className="flex items-center gap-2">
+                        {currentUser?.role === 'manager' && (
+                          <>
+                            <button
+                              onClick={() => onStartEditProduct(p)}
+                              className="px-2.5 py-2 text-xs border border-border rounded text-muted hover:text-text cursor-pointer"
+                            >
+                              تعديل
+                            </button>
+                            <button
+                              onClick={() => onOpenAdjustModal(p)}
+                              className="px-2.5 py-2 text-xs border border-border bg-surface-2 rounded text-muted hover:text-text cursor-pointer"
+                            >
+                              تسوية
+                            </button>
+                          </>
+                        )}
+                        <button
+                          onClick={() => onViewMovements(p)}
+                          className="px-2.5 py-2 text-xs border border-border text-muted hover:text-text rounded cursor-pointer"
+                        >
+                          سجل الحركات
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

@@ -68,33 +68,15 @@ export function loadPersistedSessions(db: Db): void {
   }
 }
 
-// Brute-force guard for the credential endpoints (PINs are only 4 digits).
-// Keyed by client IP: 10 failures locks the IP out for 15 minutes.
-const MAX_FAILURES = 10;
-const LOCKOUT_MS = 15 * 60 * 1000;
-const authFailures = new Map<string, { count: number; lockedUntil: number }>();
-
-function isLockedOut(ip: string): boolean {
-  const entry = authFailures.get(ip);
-  return !!entry && entry.lockedUntil > Date.now();
-}
-
-function recordAuthFailure(ip: string) {
-  const entry = authFailures.get(ip) ?? { count: 0, lockedUntil: 0 };
-  entry.count += 1;
-  if (entry.count >= MAX_FAILURES) {
-    entry.lockedUntil = Date.now() + LOCKOUT_MS;
-    entry.count = 0;
-  }
-  authFailures.set(ip, entry);
-}
-
-function clearAuthFailures(ip: string) {
-  authFailures.delete(ip);
-}
-
-const LOCKOUT_MESSAGE =
-  'تم إيقاف محاولات الدخول مؤقتاً بسبب محاولات فاشلة متكررة. حاول بعد 15 دقيقة';
+import {
+  verifyPin,
+  verifyManagerPin,
+  isLockedOut,
+  recordAuthFailure,
+  clearAuthFailures,
+  LOCKOUT_MESSAGE,
+  hashPin,
+} from '../lib/pin.js';
 
 declare module 'fastify' {
   interface FastifyRequest {
@@ -151,24 +133,18 @@ export async function authRoutes(app: FastifyInstance) {
 
   // Fast PIN switch (shared device workflow)
   app.post('/auth/pin-switch', async (req, reply) => {
-    if (isLockedOut(req.ip)) {
-      return reply.code(429).send({ error: 'too_many_attempts', message: LOCKOUT_MESSAGE });
-    }
-
     const { pin } = req.body as { pin?: string };
     if (!pin) {
       return reply.code(400).send({ error: 'missing_pin', message: 'رمز PIN مطلوب' });
     }
 
-    const user = app.db.select().from(users).where(eq(users.pin, pin)).get();
-    if (!user || !user.active) {
-      recordAuthFailure(req.ip);
-      return reply
-        .code(401)
-        .send({ error: 'invalid_pin', message: 'رمز PIN غير صحيح أو المستخدم غير نشط' });
+    const verification = verifyPin(app.db, pin, req.ip);
+    if (!verification.success || !verification.user) {
+      const statusCode = verification.error === 'too_many_attempts' ? 429 : 401;
+      return reply.code(statusCode).send({ error: verification.error, message: verification.message });
     }
 
-    clearAuthFailures(req.ip);
+    const user = verification.user;
     const { token, session: sessionData } = createSession(app.db, user);
 
     // Audit log
@@ -187,27 +163,18 @@ export async function authRoutes(app: FastifyInstance) {
 
   // Manager PIN override validation
   app.post('/auth/manager-override', async (req, reply) => {
-    if (isLockedOut(req.ip)) {
-      return reply.code(429).send({ error: 'too_many_attempts', message: LOCKOUT_MESSAGE });
-    }
-
     const { pin, reason } = req.body as { pin?: string; reason?: string };
     if (!pin) {
       return reply.code(400).send({ error: 'missing_pin', message: 'رمز PIN مطلوب للموافقة' });
     }
 
-    const user = app.db.select().from(users).where(eq(users.pin, pin)).get();
-    if (!user || !user.active) {
-      recordAuthFailure(req.ip);
-      return reply.code(401).send({ error: 'invalid_pin', message: 'رمز PIN غير صحيح' });
+    const verification = verifyManagerPin(app.db, pin, req.ip);
+    if (!verification.success || !verification.user) {
+      const statusCode = verification.error === 'too_many_attempts' ? 429 : verification.error === 'forbidden' ? 403 : 401;
+      return reply.code(statusCode).send({ error: verification.error, message: verification.message });
     }
-    clearAuthFailures(req.ip);
 
-    if (user.role !== 'manager') {
-      return reply
-        .code(403)
-        .send({ error: 'not_authorized', message: 'الموافقة تتطلب صلاحية مدير' });
-    }
+    const user = verification.user;
 
     // Audit log of override
     app.db

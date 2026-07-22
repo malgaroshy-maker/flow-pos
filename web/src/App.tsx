@@ -19,6 +19,7 @@ import { useData } from './context/DataContext';
 import { apiCall, restoreDbFromFile } from './lib/api';
 
 import { Icons } from './components/Icons';
+import { Modal } from './components/Modal';
 import { PinOverrideModal } from './components/PinOverrideModal';
 import { IdleLockOverlay } from './components/IdleLockOverlay';
 import { SaleReturnModal } from './components/SaleReturnModal';
@@ -663,31 +664,41 @@ export function App() {
     }
   };
 
+  const [restoreConfirmTarget, setRestoreConfirmTarget] = useState<{
+    filename?: string;
+    file?: File;
+  } | null>(null);
+
   const handleRestoreDb = async (filename: string) => {
-    if (!confirm(`هل أنت متأكد من استرجاع البيانات للملف ${filename}؟`)) return;
-    const res = await apiCall('/api/backup/restore', 'POST', { filename });
-    if (res.success) {
-      triggerToast('تمت استعادة قاعدة البيانات وجارٍ إعادة تحميل التطبيق...');
-      setTimeout(() => window.location.reload(), 1500);
-    } else {
-      triggerToast(res.error || 'فشل استرجاع البيانات', 'alert');
-    }
+    setRestoreConfirmTarget({ filename });
   };
 
   const handleRestoreDbFromFile = async (file: File) => {
     if (!token) return;
-    if (
-      !confirm(
-        `هل أنت متأكد من استرجاع البيانات من الملف "${file.name}"؟ سيتم استبدال جميع البيانات الحالية.`
-      )
-    )
-      return;
-    const res = await restoreDbFromFile(file, token);
-    if (res.success) {
-      triggerToast('تمت استعادة قاعدة البيانات وجارٍ إعادة تحميل التطبيق...');
-      setTimeout(() => window.location.reload(), 1500);
-    } else {
-      triggerToast(res.error || 'فشل استرجاع البيانات من الملف', 'alert');
+    setRestoreConfirmTarget({ file });
+  };
+
+  const confirmAndExecuteRestore = async () => {
+    if (!restoreConfirmTarget) return;
+    const { filename, file } = restoreConfirmTarget;
+    setRestoreConfirmTarget(null);
+
+    if (filename) {
+      const res = await apiCall('/api/backup/restore', 'POST', { filename });
+      if (res.success) {
+        triggerToast('تمت استعادة قاعدة البيانات وجارٍ إعادة تحميل التطبيق...');
+        setTimeout(() => window.location.reload(), 1500);
+      } else {
+        triggerToast(res.error || 'فشل استرجاع البيانات', 'alert');
+      }
+    } else if (file && token) {
+      const res = await restoreDbFromFile(file, token);
+      if (res.success) {
+        triggerToast('تمت استعادة قاعدة البيانات وجارٍ إعادة تحميل التطبيق...');
+        setTimeout(() => window.location.reload(), 1500);
+      } else {
+        triggerToast(res.error || 'فشل استرجاع البيانات من الملف', 'alert');
+      }
     }
   };
 
@@ -1248,6 +1259,40 @@ export function App() {
         }}
         onSubmit={handleSaleReturnSubmit}
       />
+
+      {/* Database Restore Confirmation Modal */}
+      <Modal
+        isOpen={!!restoreConfirmTarget}
+        onClose={() => setRestoreConfirmTarget(null)}
+        title="تأكيد استرجاع قاعدة البيانات"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-amber-500 font-bold">
+            ⚠️ تنبيه هام: سيتم استبدال قاعدة البيانات الحالية بالكامل بالنسخة المختارة.
+          </p>
+          <p className="text-xs text-muted">
+            {restoreConfirmTarget?.filename
+              ? `الملف المستهدف: ${restoreConfirmTarget.filename}`
+              : restoreConfirmTarget?.file
+              ? `الملف المرفوع: ${restoreConfirmTarget.file.name}`
+              : ''}
+          </p>
+          <div className="flex justify-end gap-3 pt-2">
+            <button
+              onClick={() => setRestoreConfirmTarget(null)}
+              className="px-4 py-2 border border-border rounded text-xs hover:bg-surface-2 cursor-pointer"
+            >
+              إلغاء
+            </button>
+            <button
+              onClick={confirmAndExecuteRestore}
+              className="px-4 py-2 bg-crimson text-white rounded text-xs font-bold hover:opacity-90 cursor-pointer"
+            >
+              استرجاع الآن
+            </button>
+          </div>
+        </div>
+      </Modal>
 
       {/* Print Root System */}
       <PrintRoot document={activePrintDocument} settings={settingsData} />

@@ -187,70 +187,78 @@ export const WarrantyScreen: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-line">
-              {serviceTickets.map((t) => (
-                <tr key={t.id}>
-                  <td className="p-3 font-mono font-bold text-jade">{t.ticketNumber}</td>
-                  <td className="p-3 font-bold">
-                    {t.productName}
-                    <span className="block text-[11px] mono text-muted">{t.serialNumber}</span>
-                  </td>
-                  <td className="p-3">
-                    {t.customerName || 'نقدي عام'}
-                    {t.customerPhone && <span className="block text-[11px] mono text-muted">{t.customerPhone}</span>}
-                  </td>
-                  <td className="p-3 max-w-xs truncate">{t.faultDescription}</td>
-                  <td className="p-3 text-center">
-                    <span
-                      className={`px-2 py-0.5 rounded text-[11px] font-bold ${
-                        t.inWarranty ? 'bg-jade/10 text-jade' : 'bg-copper/10 text-copper'
-                      }`}
-                    >
-                      {t.inWarranty ? 'ضمن الضمان' : 'خارج الضمان'}
-                    </span>
-                  </td>
-                  <td className="p-3 text-center mono font-bold">
-                    {formatLYD(t.totalCost)} د.ل
-                  </td>
-                  <td className="p-3 text-center">
-                    <span
-                      className={`px-2.5 py-1 rounded-full text-xs font-bold ${
-                        t.status === 'delivered'
-                          ? 'bg-jade/10 text-jade'
-                          : t.status === 'done'
-                            ? 'bg-blue-500/10 text-blue-500'
-                            : t.status === 'repairing'
-                              ? 'bg-copper/10 text-copper animate-pulse'
-                              : 'bg-surface-2 text-muted'
-                      }`}
-                    >
-                      {t.status === 'open'
-                        ? 'مفتوحة'
-                        : t.status === 'repairing'
-                          ? 'قيد الإصلاح'
-                          : t.status === 'done'
-                            ? 'جاهزة للتسليم'
-                            : 'تم التسليم'}
-                    </span>
-                  </td>
-                  <td className="p-3 text-center">
-                    <button
-                      onClick={() => {
-                        setEditingTicket(t);
-                        setTicketEditData({
-                          diagnosis: t.diagnosis || '',
-                          parts: t.parts || '',
-                          laborCost: (t.laborCost / 1000).toString(),
-                          partsCost: (t.partsCost / 1000).toString(),
-                          status: t.status,
-                        });
-                      }}
-                      className="px-2.5 py-2 bg-surface border border-line rounded text-xs hover:bg-surface-2 transition-all cursor-pointer"
-                    >
-                      تعديل/تحديث
-                    </button>
+              {serviceTickets.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="p-8 text-center text-muted text-sm">
+                    لا توجد تذاكر صيانة مسجلة بعد — أنشئ أول تذكرة صيانة
                   </td>
                 </tr>
-              ))}
+              ) : (
+                serviceTickets.map((t) => (
+                  <tr key={t.id}>
+                    <td className="p-3 font-mono font-bold text-jade">{t.ticketNumber}</td>
+                    <td className="p-3 font-bold">
+                      {t.productName}
+                      <span className="block text-[11px] mono text-muted">{t.serialNumber}</span>
+                    </td>
+                    <td className="p-3">
+                      {t.customerName || 'نقدي عام'}
+                      {t.customerPhone && <span className="block text-[11px] mono text-muted">{t.customerPhone}</span>}
+                    </td>
+                    <td className="p-3 max-w-xs truncate">{t.faultDescription}</td>
+                    <td className="p-3 text-center">
+                      <span
+                        className={`px-2 py-0.5 rounded text-[11px] font-bold ${
+                          t.inWarranty ? 'bg-jade/10 text-jade' : 'bg-copper/10 text-copper'
+                        }`}
+                      >
+                        {t.inWarranty ? 'ضمن الضمان' : 'خارج الضمان'}
+                      </span>
+                    </td>
+                    <td className="p-3 text-center mono font-bold">
+                      {formatLYD(t.totalCost)} د.ل
+                    </td>
+                    <td className="p-3 text-center">
+                      <span
+                        className={`px-2.5 py-1 rounded-full text-xs font-bold ${
+                          t.status === 'delivered'
+                            ? 'bg-jade/10 text-jade'
+                            : t.status === 'done'
+                              ? 'bg-blue-500/10 text-blue-500'
+                              : t.status === 'repairing'
+                                ? 'bg-copper/10 text-copper animate-pulse'
+                                : 'bg-surface-2 text-muted'
+                        }`}
+                      >
+                        {t.status === 'open'
+                          ? 'مفتوحة'
+                          : t.status === 'repairing'
+                            ? 'قيد الإصلاح'
+                            : t.status === 'done'
+                              ? 'جاهزة للتسليم'
+                              : 'تم التسليم'}
+                      </span>
+                    </td>
+                    <td className="p-3 text-center">
+                      <button
+                        onClick={() => {
+                          setEditingTicket(t);
+                          setTicketEditData({
+                            diagnosis: t.diagnosis || '',
+                            parts: t.parts || '',
+                            laborCost: (t.laborCost / 1000).toString(),
+                            partsCost: (t.partsCost / 1000).toString(),
+                            status: t.status,
+                          });
+                        }}
+                        className="px-2.5 py-2 bg-surface border border-line rounded text-xs hover:bg-surface-2 transition-all cursor-pointer"
+                      >
+                        تعديل/تحديث
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

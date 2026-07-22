@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
 import { currentTheme, toggleTheme } from '../theme';
 import { Icons } from '../components/Icons';
+import { formatDate, formatDateTime } from '../lib/datetime';
 
 interface HomeProps {
   onSelectTab: (tabId: string) => void;
@@ -195,7 +196,7 @@ export const Home: React.FC<HomeProps> = ({
               />
               <span>
                 التوكة مفتوحة: #{activeShift.id} — بدأت الساعة{' '}
-                {new Date(activeShift.openedAt).toLocaleTimeString('ar-LY')}
+                <span className="mono">{formatDateTime(activeShift.openedAt)}</span>
               </span>
             </div>
             <button
@@ -281,14 +282,7 @@ export const Home: React.FC<HomeProps> = ({
           className="flex justify-between items-center py-2 text-xs"
           style={{ color: 'var(--text-muted)' }}
         >
-          <span className="mono">
-            {new Date().toLocaleDateString('ar-LY', {
-              weekday: 'long',
-              year: 'numeric',
-              month: 'long',
-              day: 'numeric',
-            })}
-          </span>
+          <span className="mono">{formatDate(new Date())}</span>
           <span>نظام إدارة محلي · v2.0</span>
         </div>
       </div>

@@ -107,40 +107,48 @@ export const PurchasesScreen: React.FC<PurchasesProps> = ({
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {purchasesList.map((p) => {
-                  const remaining = p.total - p.paid;
-                  return (
-                    <tr key={p.id} className="hover:bg-surface-2/50 transition-colors">
-                      <td className="p-3 mono font-bold text-jade">{p.invoiceNumber}</td>
-                      <td className="p-3 font-semibold">{p.supplierName || '—'}</td>
-                      <td className="p-3 mono text-muted">
-                        {formatDate(p.createdAt)}
-                      </td>
-                      <td className="p-3 mono font-bold">{formatLYD(p.total)} د.ل</td>
-                      <td className="p-3 mono text-jade">{formatLYD(p.paid)} د.ل</td>
-                      <td className="p-3 mono text-alert">{formatLYD(remaining)} د.ل</td>
-                      <td className="p-3 flex items-center gap-2">
-                        {onPrintPurchase && (
-                          <button
-                            onClick={() => onPrintPurchase(p)}
-                            title="طباعة فاتورة الشراء (A4)"
-                            className="p-2.5 -m-1 text-muted hover:text-jade transition-colors cursor-pointer touch-manipulation"
-                          >
-                            <Icons.Printer className="h-4 w-4" />
-                          </button>
-                        )}
-                        {currentUser?.role === 'manager' && (
-                          <button
-                            onClick={() => onOpenReturnModal(p.id)}
-                            className="px-2.5 py-2 text-[11px] border border-alert/30 bg-alert/5 text-alert rounded font-bold hover:bg-alert/10 transition-colors cursor-pointer"
-                          >
-                            إرجاع للمورد
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
+                {purchasesList.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="p-8 text-center text-muted text-sm">
+                      لا توجد فواتير شراء بعد — أضف أول فاتورة شراء
+                    </td>
+                  </tr>
+                ) : (
+                  purchasesList.map((p) => {
+                    const remaining = p.total - p.paid;
+                    return (
+                      <tr key={p.id} className="hover:bg-surface-2/50 transition-colors">
+                        <td className="p-3 mono font-bold text-jade">{p.invoiceNumber}</td>
+                        <td className="p-3 font-semibold">{p.supplierName || '—'}</td>
+                        <td className="p-3 mono text-muted">
+                          {formatDate(p.createdAt)}
+                        </td>
+                        <td className="p-3 mono font-bold">{formatLYD(p.total)} د.ل</td>
+                        <td className="p-3 mono text-jade">{formatLYD(p.paid)} د.ل</td>
+                        <td className="p-3 mono text-alert">{formatLYD(remaining)} د.ل</td>
+                        <td className="p-3 flex items-center gap-2">
+                          {onPrintPurchase && (
+                            <button
+                              onClick={() => onPrintPurchase(p)}
+                              title="طباعة فاتورة الشراء (A4)"
+                              className="p-2.5 -m-1 text-muted hover:text-jade transition-colors cursor-pointer touch-manipulation"
+                            >
+                              <Icons.Printer className="h-4 w-4" />
+                            </button>
+                          )}
+                          {currentUser?.role === 'manager' && (
+                            <button
+                              onClick={() => onOpenReturnModal(p.id)}
+                              className="px-2.5 py-2 text-[11px] border border-alert/30 bg-alert/5 text-alert rounded font-bold hover:bg-alert/10 transition-colors cursor-pointer"
+                            >
+                              إرجاع للمورد
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
               </tbody>
             </table>
           </div>

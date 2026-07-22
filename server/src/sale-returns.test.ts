@@ -1,8 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { eq } from 'drizzle-orm';
 import { buildApp } from './app.js';
 import { openDatabase } from './db/index.js';
 import { runMigrations } from './db/migrate.js';
 import { seed } from './db/seed.js';
+import { cashMovements } from './db/schema.js';
 
 let app: ReturnType<typeof buildApp>;
 let managerToken: string;
@@ -305,5 +307,60 @@ describe('customer sale returns', () => {
     });
     expect(res.statusCode).toBe(400);
     expect(res.json().error).toBe('no_active_shift');
+  });
+
+  it('cancelling a sale after a partial return restores only unreturned stock and refunds only remaining cash', async () => {
+    const product = await createProduct({ quantity: 20 });
+    await openShift();
+
+    // Sell 10 items @ 30 LYD = 300 LYD
+    const saleRes = await app.inject({
+      method: 'POST',
+      url: '/api/sales',
+      headers: { authorization: `Bearer ${salesToken}` },
+      payload: {
+        items: [{ productId: product.id, quantity: 10, unitPrice: 30000 }],
+        discount: 0,
+      },
+    });
+    const sale = saleRes.json();
+    expect(await productQty(product.id)).toBe(10);
+
+    const detail = await getSale(sale.id);
+    const lineId = detail.items[0].id;
+
+    // Return 3 items (90 LYD refund, stock restored to 13)
+    const returnRes = await app.inject({
+      method: 'POST',
+      url: `/api/sales/${sale.id}/return`,
+      headers: { authorization: `Bearer ${managerToken}` },
+      payload: { items: [{ saleItemId: lineId, quantity: 3 }] },
+    });
+    expect(returnRes.statusCode).toBe(200);
+    expect(await productQty(product.id)).toBe(13);
+
+    // Cancel remaining sale (restores remaining 7 items -> total 20, refunds remaining 210 LYD)
+    const cancelRes = await app.inject({
+      method: 'POST',
+      url: `/api/sales/${sale.id}/cancel`,
+      headers: { authorization: `Bearer ${managerToken}` },
+    });
+    expect(cancelRes.statusCode).toBe(200);
+    expect(await productQty(product.id)).toBe(20);
+
+    // Verify shift cash balance: initial 0 + sales 300 - return 90 - cancel 210 = 0
+    const shiftRes = await app.inject({
+      method: 'GET',
+      url: '/api/shifts/active',
+      headers: { authorization: `Bearer ${managerToken}` },
+    });
+    const shiftId = shiftRes.json().active.id;
+    const movements = app.db
+      .select()
+      .from(cashMovements)
+      .where(eq(cashMovements.shiftId, shiftId))
+      .all();
+    const netCash = movements.reduce((acc, m) => acc + m.amount, 0);
+    expect(netCash).toBe(0);
   });
 });

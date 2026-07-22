@@ -31,6 +31,8 @@ interface DataContextType {
   purchasesList: Purchase[];
   quotationsList: Quotation[];
   depositsList: Deposit[];
+  isInitialLoading: boolean;
+  dataError: string | null;
   refreshAllData: () => Promise<void>;
   loadBaseData: () => Promise<void>;
 }
@@ -54,6 +56,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [purchasesList, setPurchasesList] = useState<Purchase[]>([]);
   const [quotationsList, setQuotationsList] = useState<Quotation[]>([]);
   const [depositsList, setDepositsList] = useState<Deposit[]>([]);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
+  const [dataError, setDataError] = useState<string | null>(null);
 
   const loadBaseData = useCallback(async () => {
     try {
@@ -71,39 +75,70 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!token) return;
 
     const onUnauthorized = () => logout();
+    let hasError = false;
 
     const fetchArray = async (url: string) => {
       const res = await apiCall(url, 'GET', undefined, token, onUnauthorized);
-      return res.success ? res.data : [];
+      if (!res.success) {
+        hasError = true;
+        return [];
+      }
+      return res.data ?? [];
     };
 
     const isManager = currentUser?.role === 'manager';
 
-    fetchArray('/api/products').then(setProductsList);
-    fetchArray('/api/sales').then(setSalesList);
-    fetchArray('/api/expenses').then(setExpensesList);
-    fetchArray('/api/customers').then(setCustomersList);
-    fetchArray('/api/suppliers').then(setSuppliersList);
-    fetchArray('/api/purchases').then(setPurchasesList);
-    fetchArray('/api/quotations').then(setQuotationsList);
-    fetchArray('/api/deposits').then(setDepositsList);
+    try {
+      const [prods, salesRes, exp, cust, supp, pur, quo, dep] = await Promise.all([
+        fetchArray('/api/products'),
+        fetchArray('/api/sales'),
+        fetchArray('/api/expenses'),
+        fetchArray('/api/customers'),
+        fetchArray('/api/suppliers'),
+        fetchArray('/api/purchases'),
+        fetchArray('/api/quotations'),
+        fetchArray('/api/deposits'),
+      ]);
 
-    apiCall('/api/shifts/active', 'GET', undefined, token, onUnauthorized).then((res) => {
-      setActiveShift(res.success ? res.data?.active ?? null : null);
-    });
+      setProductsList(prods);
+      setSalesList(salesRes);
+      setExpensesList(exp);
+      setCustomersList(cust);
+      setSuppliersList(supp);
+      setPurchasesList(pur);
+      setQuotationsList(quo);
+      setDepositsList(dep);
 
-    // Manager-only data: skip for sales role (server 403s /api/shifts; the
-    // rest is only consumed by manager-only screens anyway)
-    if (isManager) {
-      fetchArray('/api/shifts').then(setShiftsList);
-      fetchArray('/api/users').then(setUsersList);
-      fetchArray('/api/backup/list').then(setBackupsList);
-      fetchArray('/api/audit-logs').then(setAuditLogsList);
-    } else {
-      setShiftsList([]);
-      setUsersList([]);
-      setBackupsList([]);
-      setAuditLogsList([]);
+      const shiftRes = await apiCall('/api/shifts/active', 'GET', undefined, token, onUnauthorized);
+      if (shiftRes.success) {
+        setActiveShift(shiftRes.data?.active ?? null);
+      } else {
+        hasError = true;
+      }
+
+      if (isManager) {
+        const [shf, usr, bkp, aud] = await Promise.all([
+          fetchArray('/api/shifts'),
+          fetchArray('/api/users'),
+          fetchArray('/api/backup/list'),
+          fetchArray('/api/audit-logs'),
+        ]);
+        setShiftsList(shf);
+        setUsersList(usr);
+        setBackupsList(bkp);
+        setAuditLogsList(aud);
+      } else {
+        setShiftsList([]);
+        setUsersList([]);
+        setBackupsList([]);
+        setAuditLogsList([]);
+      }
+
+      setDataError(hasError ? 'تعذر تحديث بعض البيانات. تحقق من الاتصال بالشبكة.' : null);
+    } catch {
+      setDataError('حدث خطأ أثناء تحميل البيانات من الخادم.');
+    } finally {
+      setIsInitialLoading(false);
     }
   }, [token, currentUser, logout]);
 
@@ -132,6 +167,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         purchasesList,
         quotationsList,
         depositsList,
+        isInitialLoading,
+        dataError,
         refreshAllData,
         loadBaseData,
       }}

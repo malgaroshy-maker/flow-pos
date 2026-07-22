@@ -20,6 +20,7 @@ import {
   warranties,
 } from '../db/schema.js';
 import { authenticateRequest } from './auth.js';
+import { verifyManagerPin } from '../lib/pin.js';
 import { applyPermille, lineTotal } from '../lib/money.js';
 import { requireNonNegativeInt, requirePositiveInt, ValidationError } from '../lib/validate.js';
 import { resolveUnitPrice } from '../lib/pricing.js';
@@ -170,12 +171,13 @@ export async function saleRoutes(app: FastifyInstance) {
     // 2. Perform overrides or permission check
     let pinUser: any = null;
     if (overridePin) {
-      pinUser = app.db.select().from(users).where(eq(users.pin, overridePin)).get();
-      if (!pinUser || !pinUser.active || pinUser.role !== 'manager') {
+      const v = verifyManagerPin(app.db, overridePin, req.ip);
+      if (!v.success || !v.user) {
         return reply
           .code(400)
           .send({ error: 'invalid_override_pin', message: 'رمز PIN الخاص بالمدير غير صحيح' });
       }
+      pinUser = v.user;
     }
 
     if (isOverDiscountCap && req.user!.role !== 'manager' && !pinUser) {
@@ -742,16 +744,17 @@ export async function saleRoutes(app: FastifyInstance) {
   app.post('/sales/:id/cancel', async (req, reply) => {
     const { id } = req.params as { id: string };
     const saleId = Number(id);
-    const { overridePin } = req.body as { overridePin?: string };
+    const { overridePin } = (req.body as { overridePin?: string }) || {};
 
     let overrideUser: any = null;
     if (overridePin) {
-      overrideUser = app.db.select().from(users).where(eq(users.pin, overridePin)).get();
-      if (!overrideUser || !overrideUser.active || overrideUser.role !== 'manager') {
+      const v = verifyManagerPin(app.db, overridePin, req.ip);
+      if (!v.success || !v.user) {
         return reply
           .code(400)
           .send({ error: 'invalid_override_pin', message: 'رمز PIN الخاص بالمدير غير صحيح' });
       }
+      overrideUser = v.user;
     }
 
     if (req.user!.role !== 'manager' && !overrideUser) {
@@ -790,46 +793,95 @@ export async function saleRoutes(app: FastifyInstance) {
         // Cancel sale
         app.db.update(sales).set({ status: 'cancelled' }).where(eq(sales.id, saleId)).run();
 
-        // Reverse the sale's own stock movements. This is the source of truth
-        // for what was actually deducted — it restores bundle components and
-        // packaging-unit conversions correctly.
-        const saleMovements = app.db
+        // Check any previous partial returns on this sale to avoid double-restoration
+        const existingReturns = app.db
           .select()
-          .from(stockMovements)
-          .where(eq(stockMovements.type, 'sale'))
-          .all()
-          .filter((m) => m.reason === `مبيعات فاتورة رقم ${sale.invoiceNumber}`);
-        for (const movement of saleMovements) {
-          const product = app.db
+          .from(saleReturns)
+          .where(eq(saleReturns.saleId, saleId))
+          .all();
+        const alreadyReturnedAmount = existingReturns.reduce((sum, r) => sum + r.amount, 0);
+
+        // Reverse stock movements for remaining unreturned items only
+        const lines = app.db
+          .select()
+          .from(saleItems)
+          .where(eq(saleItems.saleId, saleId))
+          .all();
+
+        for (const line of lines) {
+          const unreturnedQty = line.quantity - line.returnedQuantity;
+          if (unreturnedQty <= 0) continue;
+
+          const conversionFactor = line.conversionFactor || 1;
+          const baseUnitsToRestore = unreturnedQty * conversionFactor;
+
+          const components = app.db
             .select()
-            .from(products)
-            .where(eq(products.id, movement.productId))
-            .get()!;
-          const restore = -movement.quantity; // sale movements are negative
-          const newQty = product.quantity + restore;
+            .from(productComponents)
+            .where(eq(productComponents.productId, line.productId))
+            .all();
 
-          app.db
-            .update(products)
-            .set({ quantity: newQty })
-            .where(eq(products.id, movement.productId))
-            .run();
+          if (components.length > 0) {
+            for (const comp of components) {
+              const compProduct = app.db
+                .select()
+                .from(products)
+                .where(eq(products.id, comp.componentProductId))
+                .get();
+              if (!compProduct) continue;
+              const restoreCompQty = unreturnedQty * comp.quantity;
+              const newQty = compProduct.quantity + restoreCompQty;
 
-          app.db
-            .insert(stockMovements)
-            .values({
-              productId: movement.productId,
-              type: 'return',
-              quantity: restore,
-              balanceAfter: newQty,
-              reason: `مرتجع مبيعات فاتورة رقم ${sale.invoiceNumber}`,
-              userId: actorId,
-              createdAt: now,
-            })
-            .run();
+              app.db
+                .update(products)
+                .set({ quantity: newQty })
+                .where(eq(products.id, compProduct.id))
+                .run();
+
+              app.db
+                .insert(stockMovements)
+                .values({
+                  productId: compProduct.id,
+                  type: 'return',
+                  quantity: restoreCompQty,
+                  balanceAfter: newQty,
+                  reason: `مرتجع مبيعات (إلغاء تجميعة) فاتورة رقم ${sale.invoiceNumber}`,
+                  userId: actorId,
+                  createdAt: now,
+                })
+                .run();
+            }
+          } else {
+            const product = app.db
+              .select()
+              .from(products)
+              .where(eq(products.id, line.productId))
+              .get();
+            if (product) {
+              const newQty = product.quantity + baseUnitsToRestore;
+              app.db
+                .update(products)
+                .set({ quantity: newQty })
+                .where(eq(products.id, product.id))
+                .run();
+
+              app.db
+                .insert(stockMovements)
+                .values({
+                  productId: product.id,
+                  type: 'return',
+                  quantity: baseUnitsToRestore,
+                  balanceAfter: newQty,
+                  reason: `مرتجع مبيعات فاتورة رقم ${sale.invoiceNumber}`,
+                  userId: actorId,
+                  createdAt: now,
+                })
+                .run();
+            }
+          }
         }
 
-        // A deposit applied to this sale goes back to "held": the customer's
-        // money returns to being ours-in-trust, and its reservation resumes.
+        // A deposit applied to this sale goes back to "held"
         const appliedDeposit = app.db
           .select()
           .from(deposits)
@@ -858,17 +910,18 @@ export async function saleRoutes(app: FastifyInstance) {
           }
         }
 
-        // Reverse customer debt if credit sale (net of the applied deposit).
-        // The balance may go negative: that means we now owe the customer —
-        // never silently drop the difference.
-        if (sale.paymentType === 'credit' && sale.customerId) {
+        // Net remaining cash or credit to refund (net of deposit & previous partial returns)
+        const netSaleAmount = Math.max(0, sale.total - depositAmount);
+        const remainingToRefund = Math.max(0, netSaleAmount - alreadyReturnedAmount);
+
+        if (sale.paymentType === 'credit' && sale.customerId && remainingToRefund > 0) {
           const cust = app.db
             .select()
             .from(customers)
             .where(eq(customers.id, sale.customerId))
             .get();
           if (cust) {
-            const newBal = cust.creditBalance - (sale.total - depositAmount);
+            const newBal = cust.creditBalance - remainingToRefund;
             app.db
               .update(customers)
               .set({ creditBalance: newBal })
@@ -877,19 +930,17 @@ export async function saleRoutes(app: FastifyInstance) {
           }
         }
 
-        // Reverse cash (only what was actually received now — the deposit
-        // portion stays in the drawer, back under the held deposit)
         if (
           sale.paymentType === 'cash' &&
           sale.paymentMethod === 'cash' &&
-          sale.total - depositAmount > 0
+          remainingToRefund > 0
         ) {
           app.db
             .insert(cashMovements)
             .values({
               shiftId: activeShift.id,
               type: 'refund',
-              amount: -(sale.total - depositAmount),
+              amount: -remainingToRefund,
               referenceId: sale.invoiceNumber,
               userId: actorId,
               createdAt: now,
@@ -951,12 +1002,13 @@ export async function saleRoutes(app: FastifyInstance) {
 
     let overrideUser: any = null;
     if (overridePin) {
-      overrideUser = app.db.select().from(users).where(eq(users.pin, overridePin)).get();
-      if (!overrideUser || !overrideUser.active || overrideUser.role !== 'manager') {
+      const v = verifyManagerPin(app.db, overridePin, req.ip);
+      if (!v.success || !v.user) {
         return reply
           .code(400)
           .send({ error: 'invalid_override_pin', message: 'رمز PIN الخاص بالمدير غير صحيح' });
       }
+      overrideUser = v.user;
     }
 
     if (req.user!.role !== 'manager' && !overrideUser) {

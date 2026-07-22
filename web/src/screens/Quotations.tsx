@@ -65,47 +65,55 @@ export const QuotationsScreen: React.FC<QuotationsProps> = ({
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {quotationsList.map((q) => (
-                <tr key={q.id} className="hover:bg-surface-2/50 transition-colors">
-                  <td className="p-3 mono font-bold text-copper">{q.quoteNumber}</td>
-                  <td className="p-3 font-semibold">{q.customerName || 'زبون نقدي'}</td>
-                  <td className="p-3 mono">{q.validUntil}</td>
-                  <td className="p-3 mono font-bold">{formatLYD(q.total)} د.ل</td>
-                  <td className="p-3">
-                    <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold border ${quotationStatusBadgeClass(q.status)}`}>
-                      {quotationStatusLabel(q.status)}
-                    </span>
-                  </td>
-                  <td className="p-3">{q.username || '—'}</td>
-                  <td className="p-3">
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => onOpenQuotationPrint(q)}
-                        className="px-2.5 py-2 text-xs border border-border bg-surface hover:bg-surface-2 rounded font-bold cursor-pointer flex items-center gap-1"
-                      >
-                        <Icons.Printer className="h-3.5 w-3.5" />
-                        <span>طباعة A4</span>
-                      </button>
-                      {q.status === 'active' && (
-                        <>
-                          <button
-                            onClick={() => onLoadQuotationIntoPos(q)}
-                            className="px-2.5 py-2 text-xs bg-jade text-white rounded font-bold hover:bg-jade-2 cursor-pointer"
-                          >
-                            تحويل لفاتورة
-                          </button>
-                          <button
-                            onClick={() => onCancelQuotation(q)}
-                            className="px-2.5 py-2 text-xs border border-alert/30 bg-alert/5 text-alert rounded font-bold hover:bg-alert/10 cursor-pointer"
-                          >
-                            إلغاء
-                          </button>
-                        </>
-                      )}
-                    </div>
+              {quotationsList.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="p-8 text-center text-muted text-sm">
+                    لا توجد عروض أسعار بعد — أنشئ أول عرض سعر
                   </td>
                 </tr>
-              ))}
+              ) : (
+                quotationsList.map((q) => (
+                  <tr key={q.id} className="hover:bg-surface-2/50 transition-colors">
+                    <td className="p-3 mono font-bold text-copper">{q.quoteNumber}</td>
+                    <td className="p-3 font-semibold">{q.customerName || 'زبون نقدي'}</td>
+                    <td className="p-3 mono">{q.validUntil}</td>
+                    <td className="p-3 mono font-bold">{formatLYD(q.total)} د.ل</td>
+                    <td className="p-3">
+                      <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold border ${quotationStatusBadgeClass(q.status)}`}>
+                        {quotationStatusLabel(q.status)}
+                      </span>
+                    </td>
+                    <td className="p-3">{q.username || '—'}</td>
+                    <td className="p-3">
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => onOpenQuotationPrint(q)}
+                          className="px-2.5 py-2 text-xs border border-border bg-surface hover:bg-surface-2 rounded font-bold cursor-pointer flex items-center gap-1"
+                        >
+                          <Icons.Printer className="h-3.5 w-3.5" />
+                          <span>طباعة A4</span>
+                        </button>
+                        {q.status === 'active' && (
+                          <>
+                            <button
+                              onClick={() => onLoadQuotationIntoPos(q)}
+                              className="px-2.5 py-2 text-xs bg-jade text-white rounded font-bold hover:bg-jade-2 cursor-pointer"
+                            >
+                              تحويل لفاتورة
+                            </button>
+                            <button
+                              onClick={() => onCancelQuotation(q)}
+                              className="px-2.5 py-2 text-xs border border-alert/30 bg-alert/5 text-alert rounded font-bold hover:bg-alert/10 cursor-pointer"
+                            >
+                              إلغاء
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

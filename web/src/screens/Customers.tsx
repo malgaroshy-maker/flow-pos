@@ -71,65 +71,73 @@ export const CustomersScreen: React.FC<CustomersProps> = ({
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {customersList.map((c) => (
-                <tr key={c.id} className="hover:bg-surface-2/50 transition-colors">
-                  <td className="p-3 font-semibold">
-                    <div>{c.name}</div>
-                    {c.notes && <div className="text-xs text-muted font-normal">{c.notes}</div>}
-                  </td>
-                  <td className="p-3 mono">{c.phone || '—'}</td>
-                  <td className="p-3">
-                    <span
-                      className={`px-2 py-0.5 rounded text-xs font-bold ${
-                        c.tier === 'wholesale'
-                          ? 'bg-copper/10 text-copper border border-copper/30'
-                          : 'bg-surface-2 text-muted border border-border'
-                      }`}
-                    >
-                      {c.tier === 'wholesale' ? 'جملة' : 'تجزئة'}
-                    </span>
-                  </td>
-                  <td className="p-3 mono">
-                    {c.creditLimit > 0 ? `${formatLYD(c.creditLimit)} د.ل` : 'غير محدد'}
-                  </td>
-                  <td className="p-3 mono font-bold">
-                    <span className={c.creditBalance > 0 ? 'text-alert' : 'text-jade'}>
-                      {formatLYD(c.creditBalance)} د.ل
-                    </span>
-                  </td>
-                  <td className="p-3">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <button
-                        onClick={() => onOpenPaymentModal(c)}
-                        className="px-2.5 py-2 text-xs bg-jade text-white rounded font-bold hover:bg-jade-2 transition-colors cursor-pointer"
-                      >
-                        سداد دين
-                      </button>
-                      <button
-                        onClick={() => onOpenStatementModal(c)}
-                        className="px-2.5 py-2 text-xs border border-border rounded font-bold hover:bg-surface-2 transition-colors cursor-pointer flex items-center gap-1"
-                      >
-                        <Icons.Receipt className="h-3.5 w-3.5" />
-                        <span>كشف حساب</span>
-                      </button>
-                      {currentUser?.role === 'manager' && (
-                        <button
-                          onClick={() => onOpenSpecialPricesModal(c)}
-                          className="px-2.5 py-2 text-xs border border-copper/40 bg-copper/5 text-copper rounded font-bold hover:bg-copper/10 transition-colors cursor-pointer"
-                        >
-                          أسعار خاصة
-                        </button>
-                      )}
-                      <button
-                        onClick={() => onOpenCustomerModal(c)}
-                        className="px-2.5 py-2 text-xs border border-border rounded text-muted hover:text-text cursor-pointer"
-                      >
-                        تعديل
-                      </button>
-                    </div>
+              {customersList.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="p-8 text-center text-muted text-sm">
+                    لا يوجد زبائن مسجلون بعد — أضف أول زبون
                   </td>
                 </tr>
-              ))}
+              ) : (
+                customersList.map((c) => (
+                  <tr key={c.id} className="hover:bg-surface-2/50 transition-colors">
+                    <td className="p-3 font-semibold">
+                      <div>{c.name}</div>
+                      {c.notes && <div className="text-xs text-muted font-normal">{c.notes}</div>}
+                    </td>
+                    <td className="p-3 mono">{c.phone || '—'}</td>
+                    <td className="p-3">
+                      <span
+                        className={`px-2 py-0.5 rounded text-xs font-bold ${
+                          c.tier === 'wholesale'
+                            ? 'bg-copper/10 text-copper border border-copper/30'
+                            : 'bg-surface-2 text-muted border border-border'
+                        }`}
+                      >
+                        {c.tier === 'wholesale' ? 'جملة' : 'تجزئة'}
+                      </span>
+                    </td>
+                    <td className="p-3 mono">
+                      {c.creditLimit > 0 ? `${formatLYD(c.creditLimit)} د.ل` : 'غير محدد'}
+                    </td>
+                    <td className="p-3 mono font-bold">
+                      <span className={c.creditBalance > 0 ? 'text-alert' : 'text-jade'}>
+                        {formatLYD(c.creditBalance)} د.ل
+                      </span>
+                    </td>
+                    <td className="p-3">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <button
+                          onClick={() => onOpenPaymentModal(c)}
+                          className="px-2.5 py-2 text-xs bg-jade text-white rounded font-bold hover:bg-jade-2 transition-colors cursor-pointer"
+                        >
+                          سداد دين
+                        </button>
+                        <button
+                          onClick={() => onOpenStatementModal(c)}
+                          className="px-2.5 py-2 text-xs border border-border rounded font-bold hover:bg-surface-2 transition-colors cursor-pointer flex items-center gap-1"
+                        >
+                          <Icons.Receipt className="h-3.5 w-3.5" />
+                          <span>كشف حساب</span>
+                        </button>
+                        {currentUser?.role === 'manager' && (
+                          <button
+                            onClick={() => onOpenSpecialPricesModal(c)}
+                            className="px-2.5 py-2 text-xs border border-copper/40 bg-copper/5 text-copper rounded font-bold hover:bg-copper/10 transition-colors cursor-pointer"
+                          >
+                            أسعار خاصة
+                          </button>
+                        )}
+                        <button
+                          onClick={() => onOpenCustomerModal(c)}
+                          className="px-2.5 py-2 text-xs border border-border rounded text-muted hover:text-text cursor-pointer"
+                        >
+                          تعديل
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

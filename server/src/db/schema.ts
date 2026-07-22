@@ -1,4 +1,4 @@
-import { integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
+import { index, integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
 
 // Money rule: all amounts are stored as integer milli-LYD (value × 1000).
 // Tax rate is stored in basis points ×10 (per-mille of a percent avoided):
@@ -79,7 +79,9 @@ export const products = sqliteTable('products', {
   // Units held by customer deposits — available stock = quantity - reserved.
   reservedQuantity: integer('reserved_quantity').notNull().default(0),
   createdAt: text('created_at').notNull(),
-});
+}, (table) => [
+  index('products_barcode_idx').on(table.barcode),
+]);
 
 // Setup bundles: a product with components sells at its own price and deducts
 // every component's stock; the parent's own quantity is never used.
@@ -270,7 +272,9 @@ export const sales = sqliteTable('sales', {
     .notNull()
     .default('completed'),
   createdAt: text('created_at').notNull(),
-});
+}, (table) => [
+  index('sales_created_at_idx').on(table.createdAt),
+]);
 
 export const saleItems = sqliteTable('sale_items', {
   id: integer('id').primaryKey({ autoIncrement: true }),
