@@ -964,7 +964,7 @@ export const AppModals: React.FC<AppModalsProps> = ({
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
               <label className="font-bold text-muted mb-1 block">النوع</label>
               <select
@@ -996,7 +996,7 @@ export const AppModals: React.FC<AppModalsProps> = ({
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
               <label className="font-bold text-muted mb-1 block">سعر التكلفة (د.ل)</label>
               <input
@@ -1736,7 +1736,7 @@ export const AppModals: React.FC<AppModalsProps> = ({
                         items: purchaseForm.items.filter((_, i) => i !== idx),
                       })
                     }
-                    className="text-alert hover:text-red-600 cursor-pointer"
+                    className="text-alert hover:text-red-600 cursor-pointer p-2.5 -m-1 touch-manipulation"
                   >
                     <Icons.Trash className="h-4 w-4" />
                   </button>

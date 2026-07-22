@@ -925,7 +925,7 @@ export function App() {
             <div className="relative">
               <button
                 onClick={() => setShowNotificationsDrawer(!showNotificationsDrawer)}
-                className="relative p-2 rounded-xl border border-line bg-surface hover:bg-surface-2 cursor-pointer flex items-center justify-center text-sm"
+                className="relative h-11 w-11 rounded-xl border border-line bg-surface hover:bg-surface-2 cursor-pointer flex items-center justify-center text-base touch-manipulation"
                 title="مركز التنبيهات والإشعارات"
               >
                 <span>🔔</span>

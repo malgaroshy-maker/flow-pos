@@ -203,7 +203,7 @@ export const Home: React.FC<HomeProps> = ({
                 onSelectTab('Shifts');
                 onCloseShiftModal();
               }}
-              className="px-3.5 py-1 text-xs font-bold rounded-xl bg-white/20 hover:bg-white/30 transition-all cursor-pointer"
+              className="px-3.5 py-2 text-xs font-bold rounded-xl bg-white/20 hover:bg-white/30 transition-all cursor-pointer"
             >
               إغلاق وجرد التوكة 🔒
             </button>

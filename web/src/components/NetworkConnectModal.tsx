@@ -77,7 +77,7 @@ export const NetworkConnectModal: React.FC<NetworkConnectModalProps> = ({ isOpen
           </div>
           <button
             onClick={onClose}
-            className="rounded-lg p-1.5 text-muted hover:bg-surface-2 hover:text-text cursor-pointer"
+            className="rounded-lg h-10 w-10 flex items-center justify-center text-muted hover:bg-surface-2 hover:text-text cursor-pointer touch-manipulation"
           >
             ✕
           </button>

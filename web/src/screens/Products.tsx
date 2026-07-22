@@ -152,13 +152,13 @@ export const ProductsScreen: React.FC<ProductsProps> = ({
                         <>
                           <button
                             onClick={() => onStartEditProduct(p)}
-                            className="px-2.5 py-1 text-xs border border-border rounded text-muted hover:text-text cursor-pointer"
+                            className="px-2.5 py-2 text-xs border border-border rounded text-muted hover:text-text cursor-pointer"
                           >
                             تعديل
                           </button>
                           <button
                             onClick={() => onOpenAdjustModal(p)}
-                            className="px-2.5 py-1 text-xs border border-border bg-surface-2 rounded text-muted hover:text-text cursor-pointer"
+                            className="px-2.5 py-2 text-xs border border-border bg-surface-2 rounded text-muted hover:text-text cursor-pointer"
                           >
                             تسوية
                           </button>
@@ -166,7 +166,7 @@ export const ProductsScreen: React.FC<ProductsProps> = ({
                       )}
                       <button
                         onClick={() => onViewMovements(p)}
-                        className="px-2.5 py-1 text-xs border border-border text-muted hover:text-text rounded cursor-pointer"
+                        className="px-2.5 py-2 text-xs border border-border text-muted hover:text-text rounded cursor-pointer"
                       >
                         سجل الحركات
                       </button>

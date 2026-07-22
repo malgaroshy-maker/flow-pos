@@ -101,13 +101,13 @@ export const CustomersScreen: React.FC<CustomersProps> = ({
                     <div className="flex items-center gap-2 flex-wrap">
                       <button
                         onClick={() => onOpenPaymentModal(c)}
-                        className="px-2.5 py-1 text-xs bg-jade text-white rounded font-bold hover:bg-jade-2 transition-colors cursor-pointer"
+                        className="px-2.5 py-2 text-xs bg-jade text-white rounded font-bold hover:bg-jade-2 transition-colors cursor-pointer"
                       >
                         سداد دين
                       </button>
                       <button
                         onClick={() => onOpenStatementModal(c)}
-                        className="px-2.5 py-1 text-xs border border-border rounded font-bold hover:bg-surface-2 transition-colors cursor-pointer flex items-center gap-1"
+                        className="px-2.5 py-2 text-xs border border-border rounded font-bold hover:bg-surface-2 transition-colors cursor-pointer flex items-center gap-1"
                       >
                         <Icons.Receipt className="h-3.5 w-3.5" />
                         <span>كشف حساب</span>
@@ -115,14 +115,14 @@ export const CustomersScreen: React.FC<CustomersProps> = ({
                       {currentUser?.role === 'manager' && (
                         <button
                           onClick={() => onOpenSpecialPricesModal(c)}
-                          className="px-2.5 py-1 text-xs border border-copper/40 bg-copper/5 text-copper rounded font-bold hover:bg-copper/10 transition-colors cursor-pointer"
+                          className="px-2.5 py-2 text-xs border border-copper/40 bg-copper/5 text-copper rounded font-bold hover:bg-copper/10 transition-colors cursor-pointer"
                         >
                           أسعار خاصة
                         </button>
                       )}
                       <button
                         onClick={() => onOpenCustomerModal(c)}
-                        className="px-2.5 py-1 text-xs border border-border rounded text-muted hover:text-text cursor-pointer"
+                        className="px-2.5 py-2 text-xs border border-border rounded text-muted hover:text-text cursor-pointer"
                       >
                         تعديل
                       </button>

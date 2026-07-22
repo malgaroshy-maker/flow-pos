@@ -55,7 +55,10 @@ export const StocktakingScreen: React.FC<{
   }, []);
 
   useEffect(() => {
-    if (activeSession && activeSession.status === 'open' && barcodeInputRef.current) {
+    // Same rationale as Pos.tsx: only steal focus for a physical
+    // keyboard-wedge scanner on a desktop/PC, never on touch devices.
+    const isPreciseInput = window.matchMedia('(pointer: fine)').matches;
+    if (isPreciseInput && activeSession && activeSession.status === 'open' && barcodeInputRef.current) {
       barcodeInputRef.current.focus();
     }
   }, [activeSession]);

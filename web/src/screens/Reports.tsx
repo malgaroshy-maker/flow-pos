@@ -359,7 +359,7 @@ export const Reports: React.FC<ReportsProps> = ({
                 <div className="flex gap-2">
                   <button
                     onClick={() => onOpenInvoicePrint(sale)}
-                    className="text-xs bg-surface border border-border px-2.5 py-1 rounded hover:bg-surface-2 transition-all cursor-pointer"
+                    className="text-xs bg-surface border border-border px-2.5 py-2 rounded hover:bg-surface-2 transition-all cursor-pointer"
                   >
                     عرض وطباعة
                   </button>
@@ -367,13 +367,13 @@ export const Reports: React.FC<ReportsProps> = ({
                     <>
                       <button
                         onClick={() => onReturnInvoice(sale)}
-                        className="text-xs bg-copper/5 text-copper border border-copper/20 px-2.5 py-1 rounded hover:bg-copper/10 transition-all cursor-pointer"
+                        className="text-xs bg-copper/5 text-copper border border-copper/20 px-2.5 py-2 rounded hover:bg-copper/10 transition-all cursor-pointer"
                       >
                         مرتجع
                       </button>
                       <button
                         onClick={() => onCancelInvoice(sale)}
-                        className="text-xs bg-red-500/5 text-alert border border-red-500/20 px-2.5 py-1 rounded hover:bg-red-500/10 transition-all cursor-pointer"
+                        className="text-xs bg-red-500/5 text-alert border border-red-500/20 px-2.5 py-2 rounded hover:bg-red-500/10 transition-all cursor-pointer"
                       >
                         إلغاء الفاتورة
                       </button>

@@ -124,7 +124,7 @@ export const PurchasesScreen: React.FC<PurchasesProps> = ({
                           <button
                             onClick={() => onPrintPurchase(p)}
                             title="طباعة فاتورة الشراء (A4)"
-                            className="p-1 text-muted hover:text-jade transition-colors cursor-pointer"
+                            className="p-2.5 -m-1 text-muted hover:text-jade transition-colors cursor-pointer touch-manipulation"
                           >
                             <Icons.Printer className="h-4 w-4" />
                           </button>
@@ -132,7 +132,7 @@ export const PurchasesScreen: React.FC<PurchasesProps> = ({
                         {currentUser?.role === 'manager' && (
                           <button
                             onClick={() => onOpenReturnModal(p.id)}
-                            className="px-2 py-1 text-[11px] border border-alert/30 bg-alert/5 text-alert rounded font-bold hover:bg-alert/10 transition-colors cursor-pointer"
+                            className="px-2.5 py-2 text-[11px] border border-alert/30 bg-alert/5 text-alert rounded font-bold hover:bg-alert/10 transition-colors cursor-pointer"
                           >
                             إرجاع للمورد
                           </button>

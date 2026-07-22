@@ -55,6 +55,16 @@
     text-wrap: balance;
   }
 
+  /* Rapid repeated taps (POS product grid, cart qty steppers) must register
+     as clicks immediately, not get eaten by the browser's double-tap-to-zoom
+     gesture detection on touch devices. */
+  button,
+  a,
+  select,
+  [role='button'] {
+    touch-action: manipulation;
+  }
+
   /* Custom scrollbar */
   ::-webkit-scrollbar {
     width: 6px;

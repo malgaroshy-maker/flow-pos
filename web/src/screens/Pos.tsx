@@ -66,7 +66,12 @@ export const PosScreen: React.FC<PosProps> = ({
   const [givenCash, setGivenCash] = useState<string>('');
 
   useEffect(() => {
-    if (searchInputRef.current) {
+    // Auto-focus only on devices with a precise pointer (mouse/barcode-scanner
+    // keyboard-wedge on a desktop/PC). On touch devices (tablets, QR-connected
+    // phones) this would pop the on-screen keyboard immediately on load and
+    // push the cart out of view.
+    const isPreciseInput = window.matchMedia('(pointer: fine)').matches;
+    if (isPreciseInput && searchInputRef.current) {
       searchInputRef.current.focus();
     }
   }, []);
@@ -162,12 +167,12 @@ export const PosScreen: React.FC<PosProps> = ({
             </div>
           </div>
 
-          <div className="flex gap-1.5 overflow-x-auto w-full sm:w-auto">
+          <div className="flex gap-1.5 overflow-x-auto w-full sm:w-auto touch-manipulation">
             {categories.map((cat) => (
               <button
                 key={cat}
                 onClick={() => onCategoryChange(cat)}
-                className={`px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-colors cursor-pointer ${
+                className={`px-3.5 py-2 rounded-full text-xs font-bold whitespace-nowrap transition-colors cursor-pointer ${
                   posCategory === cat
                     ? 'bg-jade text-white'
                     : 'bg-surface-2 text-muted border border-border hover:text-text'
@@ -180,7 +185,7 @@ export const PosScreen: React.FC<PosProps> = ({
         </div>
 
         {/* Products Grid */}
-        <div className="grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-3 overflow-y-auto max-h-[calc(100vh-230px)]">
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-3 lg:overflow-y-auto lg:max-h-[calc(100vh-230px)]">
           {filteredProducts.map((product) => {
             const price = resolveClientPrice(product);
             const isOutOfStock = product.quantity <= 0;
@@ -189,7 +194,7 @@ export const PosScreen: React.FC<PosProps> = ({
               <button
                 key={product.id}
                 onClick={() => onAddToCart(product)}
-                className="flex flex-col justify-between p-3.5 rounded-card border border-line bg-surface hover:border-jade/50 hover:shadow-md transition-all text-right cursor-pointer group relative overflow-hidden"
+                className="flex flex-col justify-between min-h-[96px] p-3.5 rounded-card border border-line bg-surface hover:border-jade/50 hover:shadow-md active:scale-[0.97] transition-all text-right cursor-pointer touch-manipulation group relative overflow-hidden"
               >
                 {product.imageUrl && (
                   <img
@@ -222,7 +227,7 @@ export const PosScreen: React.FC<PosProps> = ({
       </div>
 
       {/* Cart Column */}
-      <div className="flex flex-col rounded-card border border-line bg-surface p-5 shadow-lg justify-between overflow-y-auto">
+      <div className="flex flex-col rounded-card border border-line bg-surface p-5 shadow-lg justify-between lg:overflow-y-auto">
         <div>
           <div className="flex justify-between items-center pb-3 border-b border-line mb-3">
             <h2 className="font-display font-black text-base flex items-center gap-2">
@@ -318,7 +323,7 @@ export const PosScreen: React.FC<PosProps> = ({
                 <button
                   type="button"
                   onClick={() => onPaymentMethodChange('cash')}
-                  className={`py-1 rounded-control text-[11px] font-bold transition-colors cursor-pointer ${
+                  className={`py-2 rounded-control text-xs font-bold transition-colors cursor-pointer ${
                     posPaymentMethod === 'cash'
                       ? 'bg-jade/20 text-jade border border-jade/40'
                       : 'bg-surface border border-border text-muted'
@@ -329,7 +334,7 @@ export const PosScreen: React.FC<PosProps> = ({
                 <button
                   type="button"
                   onClick={() => onPaymentMethodChange('card')}
-                  className={`py-1 rounded-control text-[11px] font-bold transition-colors cursor-pointer ${
+                  className={`py-2 rounded-control text-xs font-bold transition-colors cursor-pointer ${
                     posPaymentMethod === 'card'
                       ? 'bg-purple-600/20 text-purple-600 border border-purple-600/40'
                       : 'bg-surface border border-border text-muted'
@@ -340,7 +345,7 @@ export const PosScreen: React.FC<PosProps> = ({
                 <button
                   type="button"
                   onClick={() => onPaymentMethodChange('transfer')}
-                  className={`py-1 rounded-control text-[11px] font-bold transition-colors cursor-pointer ${
+                  className={`py-2 rounded-control text-xs font-bold transition-colors cursor-pointer ${
                     posPaymentMethod === 'transfer'
                       ? 'bg-blue-600/20 text-blue-600 border border-blue-600/40'
                       : 'bg-surface border border-border text-muted'
@@ -360,7 +365,7 @@ export const PosScreen: React.FC<PosProps> = ({
           )}
 
           {/* Cart Items List */}
-          <div className="flex flex-col gap-2 overflow-y-auto max-h-[260px] mb-4">
+          <div className="flex flex-col gap-2 lg:overflow-y-auto lg:max-h-[260px] mb-4">
             {cart.map((item) => (
               <div
                 key={item.product.id}
@@ -376,7 +381,7 @@ export const PosScreen: React.FC<PosProps> = ({
                       <select
                         value={item.unitId || ''}
                         onChange={(e) => onChangeCartUnit(item.product.id, e.target.value)}
-                        className="h-6 rounded border border-border bg-surface px-1 text-[10px] font-semibold focus-visible:outline-none"
+                        className="h-8 rounded border border-border bg-surface px-1.5 text-[10px] font-semibold focus-visible:outline-none"
                       >
                         <option value="">{item.product.baseUnit} (أساسية)</option>
                         {item.product.units.map((u) => (
@@ -389,17 +394,17 @@ export const PosScreen: React.FC<PosProps> = ({
                   </div>
                 </div>
 
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1 touch-manipulation">
                   <button
                     onClick={() => onUpdateCartQuantity(item.product.id, item.quantity - 1)}
-                    className="w-6 h-6 rounded bg-surface border border-border flex items-center justify-center font-bold"
+                    className="w-9 h-9 rounded bg-surface border border-border flex items-center justify-center font-bold text-base active:bg-surface-2"
                   >
                     -
                   </button>
                   <span className="mono font-bold w-6 text-center">{item.quantity}</span>
                   <button
                     onClick={() => onUpdateCartQuantity(item.product.id, item.quantity + 1)}
-                    className="w-6 h-6 rounded bg-surface border border-border flex items-center justify-center font-bold"
+                    className="w-9 h-9 rounded bg-surface border border-border flex items-center justify-center font-bold text-base active:bg-surface-2"
                   >
                     +
                   </button>
@@ -411,9 +416,9 @@ export const PosScreen: React.FC<PosProps> = ({
 
                 <button
                   onClick={() => onRemoveFromCart(item.product.id)}
-                  className="text-alert hover:text-red-600 p-1"
+                  className="text-alert hover:text-red-600 p-2.5 -m-1 touch-manipulation"
                 >
-                  <Icons.Trash className="h-3.5 w-3.5" />
+                  <Icons.Trash className="h-4 w-4" />
                 </button>
               </div>
             ))}
@@ -435,7 +440,7 @@ export const PosScreen: React.FC<PosProps> = ({
                 value={givenCash}
                 onChange={(e) => setGivenCash(e.target.value)}
                 placeholder={(cartTotal / 1000).toFixed(3)}
-                className="w-28 h-7 text-left rounded border border-border bg-surface px-2 mono text-xs font-bold focus-visible:outline-none focus:border-jade"
+                className="w-28 h-9 text-left rounded border border-border bg-surface px-2 mono text-xs font-bold focus-visible:outline-none focus:border-jade"
               />
             </div>
             <div className="flex justify-between items-center text-xs font-bold">
@@ -447,8 +452,9 @@ export const PosScreen: React.FC<PosProps> = ({
           </div>
         )}
 
-        {/* Totals & Checkout Actions */}
-        <div className="border-t border-line pt-3 flex flex-col gap-3">
+        {/* Totals & Checkout Actions — sticky to the viewport bottom on mobile
+            so checkout stays reachable without scrolling through the cart. */}
+        <div className="sticky bottom-0 -mx-5 -mb-5 px-5 pb-5 bg-surface border-t border-line pt-3 flex flex-col gap-3 shadow-[0_-6px_16px_rgba(0,0,0,0.08)] lg:static lg:mx-0 lg:mb-0 lg:px-0 lg:pb-0 lg:shadow-none">
           <div className="flex justify-between items-center text-xs">
             <span className="text-muted">الخصم (د.ل):</span>
             <input
@@ -456,7 +462,7 @@ export const PosScreen: React.FC<PosProps> = ({
               inputMode="decimal"
               value={posDiscount}
               onChange={(e) => onDiscountChange(e.target.value)}
-              className="w-24 h-7 text-left rounded border border-border bg-surface px-2 mono text-xs focus-visible:outline-none"
+              className="w-24 h-9 text-left rounded border border-border bg-surface px-2 mono text-xs focus-visible:outline-none"
             />
           </div>
 

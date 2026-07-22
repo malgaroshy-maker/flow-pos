@@ -473,7 +473,7 @@ export const SettingsScreen: React.FC<SettingsProps> = ({
                       }
                       onOpenEditUserModal(usr);
                     }}
-                    className="px-2.5 py-1 text-xs border border-border bg-surface hover:bg-border rounded transition-all cursor-pointer text-muted hover:text-text font-bold"
+                    className="px-2.5 py-2 text-xs border border-border bg-surface hover:bg-border rounded transition-all cursor-pointer text-muted hover:text-text font-bold"
                   >
                     تعديل البيانات / كلمة المرور
                   </button>
@@ -502,7 +502,8 @@ export const SettingsScreen: React.FC<SettingsProps> = ({
         </div>
 
         <div className="border border-border rounded-control overflow-hidden">
-          <table className="w-full text-right border-collapse">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[560px] text-right border-collapse">
             <thead>
               <tr className="bg-surface-2 border-b border-border text-xs font-bold text-muted">
                 <th className="p-3">التاريخ والوقت</th>
@@ -534,6 +535,7 @@ export const SettingsScreen: React.FC<SettingsProps> = ({
               )}
             </tbody>
           </table>
+        </div>
         </div>
       </div>
     </div>

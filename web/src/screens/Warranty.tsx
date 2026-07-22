@@ -244,7 +244,7 @@ export const WarrantyScreen: React.FC = () => {
                           status: t.status,
                         });
                       }}
-                      className="px-2.5 py-1 bg-surface border border-line rounded text-xs hover:bg-surface-2 transition-all cursor-pointer"
+                      className="px-2.5 py-2 bg-surface border border-line rounded text-xs hover:bg-surface-2 transition-all cursor-pointer"
                     >
                       تعديل/تحديث
                     </button>

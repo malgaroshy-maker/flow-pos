@@ -64,8 +64,8 @@ export const SaleReturnModal: React.FC<SaleReturnModalProps> = ({
             تُخصم من رصيد العميل للفواتير الآجلة.
           </p>
 
-          <div className="max-h-60 overflow-y-auto border border-line rounded-control">
-            <table className="w-full text-right text-xs">
+          <div className="max-h-60 overflow-y-auto overflow-x-auto border border-line rounded-control">
+            <table className="w-full min-w-[420px] text-right text-xs">
               <thead className="bg-surface-2 border-b border-line">
                 <tr className="font-bold text-muted">
                   <th className="p-2">الصنف</th>

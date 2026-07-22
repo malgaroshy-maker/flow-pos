@@ -55,7 +55,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
               </span>
               <button
                 onClick={onCloseShiftModal}
-                className="text-xs bg-jade text-white px-3 py-1 rounded-full font-bold hover:bg-jade-2 transition-colors cursor-pointer"
+                className="text-xs bg-jade text-white px-3.5 py-2 rounded-full font-bold hover:bg-jade-2 transition-colors cursor-pointer"
               >
                 إغلاق التوكة
               </button>
@@ -68,7 +68,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
               </span>
               <button
                 onClick={onOpenShiftModal}
-                className="text-xs bg-alert text-white px-3 py-1 rounded-full font-bold hover:bg-alert-2 transition-colors cursor-pointer"
+                className="text-xs bg-alert text-white px-3.5 py-2 rounded-full font-bold hover:bg-alert-2 transition-colors cursor-pointer"
               >
                 فتح التوكة
               </button>
