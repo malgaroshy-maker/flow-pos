@@ -75,6 +75,28 @@ export async function apiCall<T = any>(
   }
 }
 
+export async function restoreDbFromFile(
+  file: File,
+  token: string
+): Promise<{ success: boolean; error?: string }> {
+  const formData = new FormData();
+  formData.append('file', file);
+  try {
+    const r = await fetch('/api/backup/restore-upload', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: formData,
+    });
+    if (!r.ok) {
+      const data = await r.json().catch(() => ({}));
+      return { success: false, error: data.message || 'فشل استرجاع قاعدة البيانات من الملف' };
+    }
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+}
+
 export async function uploadProductImage(
   productId: number,
   file: File,

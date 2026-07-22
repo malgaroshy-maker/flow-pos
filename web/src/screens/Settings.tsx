@@ -9,6 +9,7 @@ import { formatDateTime } from '../lib/datetime';
 interface SettingsProps {
   onTriggerBackup: () => void;
   onRestoreDb: (filename: string) => void;
+  onRestoreDbFromFile: (file: File) => void;
   onOpenCreateUserModal: () => void;
   onOpenEditUserModal: (user: User) => void;
   licenseInfo?: {
@@ -23,6 +24,7 @@ interface SettingsProps {
 export const SettingsScreen: React.FC<SettingsProps> = ({
   onTriggerBackup,
   onRestoreDb,
+  onRestoreDbFromFile,
   onOpenCreateUserModal,
   onOpenEditUserModal,
   licenseInfo,
@@ -104,7 +106,8 @@ export const SettingsScreen: React.FC<SettingsProps> = ({
                       formSettings ? { ...formSettings, businessName: e.target.value } : null
                     )
                   }
-                  className="w-full h-10 rounded-control border border-line bg-surface px-3 text-sm focus-visible:outline-none"
+                  placeholder="مثال: فلو ديف للمستلزمات"
+                  className="w-full h-10 rounded-control border border-line bg-surface-2 px-3 text-sm focus-visible:outline-none focus:border-jade"
                 />
               </div>
               <div>
@@ -117,7 +120,8 @@ export const SettingsScreen: React.FC<SettingsProps> = ({
                       formSettings ? { ...formSettings, businessPhone: e.target.value } : null
                     )
                   }
-                  className="w-full h-10 rounded-control border border-line bg-surface px-3 text-sm focus-visible:outline-none"
+                  placeholder="مثال: 0912345678"
+                  className="w-full h-10 rounded-control border border-line bg-surface-2 px-3 text-sm focus-visible:outline-none focus:border-jade"
                 />
               </div>
             </div>
@@ -132,7 +136,8 @@ export const SettingsScreen: React.FC<SettingsProps> = ({
                     formSettings ? { ...formSettings, businessAddress: e.target.value } : null
                   )
                 }
-                className="w-full h-10 rounded-control border border-line bg-surface px-3 text-sm focus-visible:outline-none"
+                placeholder="مثال: طرابلس - شارع الجمهورية"
+                className="w-full h-10 rounded-control border border-line bg-surface-2 px-3 text-sm focus-visible:outline-none focus:border-jade"
               />
             </div>
 
@@ -386,6 +391,25 @@ export const SettingsScreen: React.FC<SettingsProps> = ({
                   </div>
                 ))}
               </div>
+            </div>
+
+            <div className="border-t border-line pt-3 flex flex-col gap-2">
+              <span className="text-xs text-muted font-bold">
+                استرجاع من ملف نسخة احتياطية خارجي (فلاشة، مجلد آخر...):
+              </span>
+              <label className="w-full py-2.5 bg-surface-2 border border-dashed border-line text-xs font-bold rounded-control text-center cursor-pointer hover:border-jade transition-colors">
+                اختيار ملف .db للاستعادة
+                <input
+                  type="file"
+                  accept=".db"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) onRestoreDbFromFile(file);
+                    e.target.value = '';
+                  }}
+                />
+              </label>
             </div>
           </div>
 

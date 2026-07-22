@@ -16,7 +16,7 @@ import type {
 import { useAuth } from './context/AuthContext';
 import { useToast } from './context/ToastContext';
 import { useData } from './context/DataContext';
-import { apiCall } from './lib/api';
+import { apiCall, restoreDbFromFile } from './lib/api';
 
 import { Icons } from './components/Icons';
 import { PinOverrideModal } from './components/PinOverrideModal';
@@ -674,6 +674,23 @@ export function App() {
     }
   };
 
+  const handleRestoreDbFromFile = async (file: File) => {
+    if (!token) return;
+    if (
+      !confirm(
+        `هل أنت متأكد من استرجاع البيانات من الملف "${file.name}"؟ سيتم استبدال جميع البيانات الحالية.`
+      )
+    )
+      return;
+    const res = await restoreDbFromFile(file, token);
+    if (res.success) {
+      triggerToast('تمت استعادة قاعدة البيانات وجارٍ إعادة تحميل التطبيق...');
+      setTimeout(() => window.location.reload(), 1500);
+    } else {
+      triggerToast(res.error || 'فشل استرجاع البيانات من الملف', 'alert');
+    }
+  };
+
   // Block UI while license status is loading or if license is not active
   if (!licenseInfo || !licenseInfo.active) {
     // Still loading — show a plain spinner so the app never flashes through
@@ -737,7 +754,10 @@ export function App() {
             className="h-16 w-16 object-contain rounded-2xl flex-shrink-0 drop-shadow-md"
           />
           <div className="min-w-0">
-            <div className="font-display text-base font-extrabold leading-tight truncate">
+            <div
+              className="font-display text-sm font-extrabold leading-tight line-clamp-2 break-words"
+              title={settingsData?.businessName ?? 'فلو ديف للمستلزمات'}
+            >
               {settingsData?.businessName ?? 'فلو ديف للمستلزمات'}
             </div>
             <div className="mono text-[10px] text-muted">المستلزمات والمعدات</div>
@@ -868,11 +888,11 @@ export function App() {
       {/* Main Content Area */}
       <main className="p-6 md:p-8 bg-bg min-h-dvh flex flex-col gap-6 overflow-y-auto">
         <header className="sticky top-0 z-30 flex items-center justify-between border border-line bg-surface/95 backdrop-blur-md p-4 rounded-card shadow-sm">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 min-w-0">
             {/* Mobile menu button (<901px) */}
             <button
               onClick={() => setShowMobileNav(true)}
-              className="flex h-9 w-9 items-center justify-center rounded-[8px] border border-line bg-surface-2 text-text cursor-pointer min-[901px]:hidden"
+              className="flex h-9 w-9 items-center justify-center rounded-[8px] border border-line bg-surface-2 text-text cursor-pointer min-[901px]:hidden flex-shrink-0"
               aria-label="فتح قائمة التنقل"
               title="القائمة"
             >
@@ -885,8 +905,11 @@ export function App() {
               alt="Flow Dev"
               className="h-12 w-12 object-contain rounded-xl flex-shrink-0 drop-shadow-sm"
             />
-            <div className="flex flex-col">
-              <span className="font-display font-bold text-sm leading-tight">
+            <div className="flex flex-col min-w-0">
+              <span
+                className="font-display font-bold text-sm leading-tight truncate"
+                title={settingsData?.businessName ?? 'فلو ديف للمستلزمات'}
+              >
                 {settingsData?.businessName ?? 'فلو ديف للمستلزمات'}
               </span>
               <div className="flex items-center gap-1.5 text-[10px] text-muted leading-tight mt-0.5">
@@ -1104,6 +1127,7 @@ export function App() {
           <SettingsScreen
             onTriggerBackup={triggerManualBackup}
             onRestoreDb={handleRestoreDb}
+            onRestoreDbFromFile={handleRestoreDbFromFile}
             onOpenCreateUserModal={() => setShowCreateUserModal(true)}
             onOpenEditUserModal={(u) => {
               setEditingUser(u);

@@ -1,9 +1,11 @@
 import type { FastifyInstance } from 'fastify';
-import { existsSync, readdirSync, mkdirSync } from 'node:fs';
+import { existsSync, readdirSync, mkdirSync, writeFileSync, unlinkSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { openDatabase, resolveDbPath } from '../db/index.js';
 import { authenticateRequest, requireManager } from './auth.js';
 import { auditLogs } from '../db/schema.js';
+
+const SQLITE_MAGIC = 'SQLite format 3\0';
 
 export async function backupRoutes(app: FastifyInstance) {
   // Apply authentication
@@ -149,6 +151,75 @@ export async function backupRoutes(app: FastifyInstance) {
       return reply
         .code(500)
         .send({ error: 'restore_failed', message: 'فشل استرجاع قاعدة البيانات' });
+    }
+  });
+
+  // Restore database from an uploaded backup file (manager only) — lets an
+  // owner bring back a copy saved externally (USB drive, cloud folder, another
+  // machine) instead of only ones still sitting in the local backups dir.
+  app.post('/backup/restore-upload', { preHandler: requireManager }, async (req, reply) => {
+    const dbPath = resolveDbPath();
+    if (dbPath === ':memory:') {
+      return reply
+        .code(400)
+        .send({ error: 'in_memory_db', message: 'لا يمكن عمل استرجاع لقاعدة بيانات في الذاكرة' });
+    }
+
+    const data = await req.file({ limits: { fileSize: 500 * 1024 * 1024, files: 1 } });
+    if (!data) {
+      return reply
+        .code(400)
+        .send({ error: 'missing_file', message: 'يرجى اختيار ملف النسخة الاحتياطية' });
+    }
+
+    const buffer = await data.toBuffer();
+    if (
+      buffer.length < SQLITE_MAGIC.length ||
+      buffer.subarray(0, SQLITE_MAGIC.length).toString('utf8') !== SQLITE_MAGIC
+    ) {
+      return reply
+        .code(400)
+        .send({ error: 'invalid_file', message: 'الملف المرفوع ليس ملف قاعدة بيانات صالح' });
+    }
+
+    const backupDir = join(dirname(dbPath), 'backups');
+    if (!existsSync(backupDir)) {
+      mkdirSync(backupDir, { recursive: true });
+    }
+    const tempPath = join(backupDir, `pos_backup_uploaded_${Date.now()}.db`);
+    writeFileSync(tempPath, buffer);
+
+    try {
+      app.sqlite.close();
+
+      const restoreSqlite = openDatabase(tempPath);
+      await restoreSqlite.backup(dbPath);
+      restoreSqlite.close();
+
+      app.swapDatabase(openDatabase(dbPath));
+
+      app.db
+        .insert(auditLogs)
+        .values({
+          userId: req.user!.userId,
+          action: 'restore_database',
+          details: `استرجاع قاعدة البيانات من ملف مرفوع (${data.filename || 'بدون اسم'})`,
+          createdAt: new Date().toISOString(),
+        })
+        .run();
+
+      return { success: true };
+    } catch (err: any) {
+      app.log.error(err);
+      return reply
+        .code(500)
+        .send({ error: 'restore_failed', message: 'فشل استرجاع قاعدة البيانات' });
+    } finally {
+      try {
+        unlinkSync(tempPath);
+      } catch {
+        // best-effort cleanup
+      }
     }
   });
 }
