@@ -37,6 +37,19 @@
 | 14 | **E4 non-technical deliverables missing**: ops guide (static IP, UPS, Africa/Tripoli timezone/drift, firewall, browser kiosk mode for silent thermal print on non-Electron cashier devices), release checklist, per-customer license contract template. | Medium (commercial) | H6 |
 | 15 | **Design-system drift**: design §6 density modes (`data-density="touch|compact"`) are not implemented (0 occurrences in `web/src`); role-permission checks are 45 hard-coded `role !== 'manager'`-style conditions across 13 route files instead of the plan §2 permission table ("adding Storekeeper later is data, not code"). | Low–Medium | I1, I2 |
 | 16 | **Doc drift**: `docs/plan.md` header still says "feature-complete as of V1.2.8"; `docs/roadmap.md` post-Phase-3 section stops at V1.4.0/V1.4.1 (missing V1.4.2–V1.4.6); `installer/setup.iss` (Inno Setup) is dead code superseded by electron-builder NSIS; `AGENTS.md` and `CLAUDE.md` have drifted in length/content beyond the status line. | Low | I3 |
+| 17 | **Cancel-after-partial-return double-reverses stock and cash.** `POST /sales/:id/cancel` (`server/src/routes/sales.ts:742`) replays the *original full* invoice's stock movements and refunds the *original full* total with no check against `saleReturns` — sell 10, return 3, then cancel → stock and cash both move as if the return never happened, on top of the return's own effects. Real ledger corruption on a normal workflow, not a contrived edge case. | Critical | J1 |
+| 18 | **Manager-PIN brute force has no rate limit outside the dedicated override endpoint.** `sales.ts`, `quotations.ts`, `stocktaking.ts` each do their own inline plaintext-PIN lookup (`users.pin`, `schema.ts:36`) for overrides, bypassing the lockout built for `/auth/manager-override`. Server binds `0.0.0.0` with no CORS (by design, for QR/phone access), so this is reachable from anyone on the shop WiFi, not just at the counter. | High | J1 |
+| 19 | **Seeded weak defaults (`admin`/`sales`, PINs `1111`/`2222`, `seed.ts:21`) have no forced rotation.** Combined with #18, a shop that never touches user management ships with a guessable, network-reachable manager PIN indefinitely. | High | J1 |
+| 20 | **No index on `products.barcode` or `sales.createdAt`**, and `GET /products`/`GET /sales`/reports-analytics load full tables into memory with no pagination — the two columns the domain rules themselves call out as hot paths (barcode scan, date-range reports) are unindexed. Fine today at seed-data scale; will degrade quietly as a real shop's history grows. | Medium | J2 |
+| 21 | **`DataContext.fetchArray` silently returns `[]` on any failed request** — no error surfaced, no loading flag exposed by the context at all. A cashier on a flaky connection sees "zero products" indistinguishable from an actually-empty catalog. `Reports.tsx` even has a `loading` state that's set but never read (dead code, evidence this was intended and dropped). | Medium (correctness, not just polish) | J2 |
+| 22 | **Zero modals close on Escape or backdrop click**, contradicting design.md §7 ("ESC/backdrop closes except mid-payment"). One shared `Modal.tsx` (`web/src/components/Modal.tsx:22-45`) has no `onKeyDown`/backdrop `onClick`/`role="dialog"` — every one of the ~15+ modals built on it inherits the gap. | Medium | J3 |
+| 23 | **The single scariest action in the app (full DB restore) uses native `confirm()`** (`App.tsx:667,680`) — breaks RTL, unstyled, and inconsistent with invoice cancellation's proper PIN-override modal that restates the amount. It's the only `confirm()` call in the whole web app. | Medium | J3 |
+| 24 | **No empty state on Products/Customers/Purchases/Quotations/Warranty tables** — bare header row, nothing below. design.md §8 literally specifies the Arabic copy for Products (`لا منتجات بعد — أضف أول منتج`) and it's unused; `Stocktaking.tsx` does this correctly and should be the template. | Medium | J3 |
+| 25 | **Bidi-date regression on `Home.tsx`** (lines 198, 285 use raw `toLocaleTimeString`/`toLocaleDateString('ar-LY')` instead of the shared `datetime.ts` helpers) — the exact bug class V1.3.3 already paid to fix, back on the shift-status banner every user sees dozens of times a day. Only two `toLocale*` call sites left in `web/src`; everywhere else is correct. | Medium | J4 |
+| 26 | **Deposits (shipped Phase 2 feature) has no top-level nav entry** — `depositsList` is fetched by `DataContext` but no `Deposits` screen/nav item exists in `App.tsx`/`Home.tsx`'s nav config; needs confirming it isn't genuinely stranded UI. | Medium | J4 |
+| 27 | **Design-token drift**: raw hex colors on `Login.tsx` (lines 61,67,89,96) and the Reports sales-trend chart (`#10b981` instead of the `--jade` token), plus stray fallback tokens in `App.tsx`'s pre-license spinner (`--bg-base`, `--color-primary`) that don't exist in `tokens.css` — all contradict CLAUDE.md's "tokens only, never raw hex" rule. Emoji mixed into an otherwise-consistent SVG `Icons.tsx` system, and two nav-icon collisions (Stocktaking/Reports share one icon, Warranty/Settings share another) hurt at-a-glance scanability. Low-stock in `Products.tsx` is shown by red digits alone with no badge/icon, contradicting the app's own "never color alone" rule (followed correctly everywhere else). | Low | J4 |
+| 28 | **No first-run/onboarding experience** for a brand-new shop — `Home.tsx` renders the identical 9-tile grid whether the catalog has 0 or 10,000 products, with "التقارير المالية"/"الجرد الذكي" carrying equal visual weight to "نقطة البيع" before a single product exists. Worth a lightweight setup checklist given the product is now sold commercially. | Low | J5 |
+| 29 | **Architecture debt**: `sales.ts` (1200+ lines) mixes HTTP/authZ/pricing/tax/stock/cash/audit with copy-pasted override-check blocks; `App.tsx` (1267 lines, ~35 `useState`) is a god component; zero frontend tests exist beyond one Playwright smoke test despite POS cart math (subtotal/tax/discount/change) being central to correctness. Not urgent, but a refactor tax on every future change until addressed. | Low | J6 |
 
 ---
 
@@ -313,6 +326,99 @@ scoped here happened alongside it):
   builds it from its own independently hardcoded Arabic content (not parsed from the
   HTML report), so fixing the HTML report does **not** fix the docx — both need their
   own content update, in whatever order is convenient.
+
+---
+
+## Milestone J — post-V1.5.8 full-app review (2026-07-22)
+
+> A follow-up review (architecture/code-quality, security/data-integrity, and
+> UX/feature-completeness, each done independently) after the touch/mobile ergonomics
+> pass. Ordered by actual risk: J1 is data/security correctness happening in production
+> today, J2–J3 are correctness-adjacent UX, J4–J6 are consistency/scale/debt that won't
+> bite immediately but compound. Do J1 before anything else in this file.
+
+### J1. Cancel/return ledger integrity + manager-PIN hardening
+
+- **Cancel-after-partial-return double-reversal** (finding #17): `POST /sales/:id/cancel`
+  (`server/src/routes/sales.ts:742`) must check `saleReturns` for the invoice and only
+  reverse the *remaining* (not-yet-returned) stock/cash, mirroring the returnable-quantity
+  cap logic already used on the return path (`saleItem.quantity - returnedQuantity`).
+  Add a test: sell → partial return → cancel → assert stock and cash reflect only the
+  unreturned remainder, not the full original invoice twice.
+- **Hash PINs like passwords** (finding #18/#19): `users.pin` (`schema.ts:36`) moves from
+  plaintext to bcrypt (same pattern already used for `passwordHash`). Add one shared
+  `verifyManagerPin(userId, pin)` helper in `lib/`, rate-limited and audit-logged on
+  failure, and replace every inline PIN-lookup call site (`sales.ts`, `quotations.ts`,
+  `stocktaking.ts`, plus the existing `/auth/manager-override`) with it — no route should
+  do its own PIN comparison again.
+- **Forced rotation of seeded defaults**: on first login with the seeded `admin`/`sales`
+  passwords or `1111`/`2222` PINs, either force a change before proceeding or show a
+  persistent, undismissable-until-resolved banner. Cheapest correct option: a `mustChangeCredentials`
+  flag on the seeded rows, cleared on the user's first successful password/PIN change.
+- Tests: double-cancel-after-return regression test; PIN-hash migration (existing PINs
+  re-hashed on first successful auth, not a breaking migration); rate limit shared across
+  every PIN-check call site now that they funnel through one helper.
+
+### J2. Read-path scale + fetch-failure visibility
+
+- Add indexes on `products.barcode` and `sales.createdAt` (migration via
+  `npm run db:generate` after adding `.index()` calls in `schema.ts` — never hand-edit
+  the generated SQL).
+- `DataContext.fetchArray` (`web/src/context/DataContext.tsx:70-108`) must distinguish
+  "empty" from "failed to load": expose an error/loading flag per list (or at least a
+  global `dataLoadError` the shell can toast), and wire the dead `loading` state already
+  declared in `Reports.tsx` into an actual spinner. Do not ship a table that can silently
+  read as "zero inventory" when the real cause is a dropped request.
+- Defer full pagination unless/until a real shop's product or sales table is large enough
+  to matter — note it here so it isn't forgotten, but don't build it speculatively.
+
+### J3. Modal & confirmation consistency
+
+- `Modal.tsx` (`web/src/components/Modal.tsx`): add Escape-to-close and backdrop-click-to-close
+  (skip both for any modal that's mid-payment, per design.md §7's own carve-out), plus
+  `role="dialog"` / `aria-modal="true"` / `aria-labelledby` pointing at the title. One
+  fix, inherited by every modal built on the shared component.
+- Replace the two native `confirm()` calls gating DB restore (`App.tsx:667,680`) with the
+  same `PinOverrideModal`/confirmation-modal pattern already used for invoice cancellation
+  — restate what's about to be replaced, require the same manager-PIN confirmation a
+  destructive action of this severity deserves.
+- Add the empty-state branch (muted sentence + action button, per design.md §8's own
+  copy) to Products, Customers, Purchases, Quotations, and Warranty tables — copy
+  `Stocktaking.tsx`'s existing pattern rather than inventing a new one.
+
+### J4. Design-system & bidi conformance sweep
+
+- Fix the two remaining raw `toLocaleTimeString`/`toLocaleDateString` calls in
+  `Home.tsx` (lines 198, 285) to use `datetime.ts`'s shared formatters.
+- Confirm whether Deposits is reachable anywhere in the UI; if not, add a nav entry (or a
+  documented, deliberate decision that it's POS-flow-only and why).
+- Replace the raw hex in `Login.tsx` and the Reports chart with real tokens (`--jade` for
+  the chart series), and clean up the stray non-existent fallback tokens in `App.tsx`'s
+  pre-license spinner.
+- Swap emoji for the existing `Icons.tsx` SVG set where both are used for the same kind
+  of action (print, power, printer icons especially — `Icons.Printer` already exists and
+  is used inconsistently against raw 🖨️ elsewhere); resolve the two duplicate nav-icon
+  pairs (Stocktaking/Reports, Warranty/Settings).
+- Give `Products.tsx`'s low-stock indicator a badge/icon in addition to the red digits,
+  matching the badge pattern already used correctly for warranty/out-of-stock status.
+
+### J5. First-run onboarding
+
+- Design and add a lightweight setup checklist shown only while the shop's data is
+  genuinely empty (no products, no users beyond the seeded pair): business info →
+  first product → optional first real user/PIN. Product decision on scope/UI, not just
+  an engineering task — check with the owner on how prescriptive it should be before
+  building.
+
+### J6. Architecture debt (backlog — do opportunistically, not as a standalone project)
+
+- Next time checkout/override logic is touched: extract a `lib/sales-service.ts` from
+  `sales.ts` instead of adding another copy-pasted override/audit-log block.
+- Next time `App.tsx` needs a new piece of global UI state: consider whether it belongs
+  in a context instead of another top-level `useState`.
+- Add component-level tests for POS cart math (subtotal/tax/discount/change) before any
+  significant refactor of `Pos.tsx` — currently zero frontend test coverage exists for
+  the app's most financially sensitive screen.
 
 ---
 
