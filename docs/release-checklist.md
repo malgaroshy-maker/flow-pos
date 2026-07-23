@@ -41,6 +41,7 @@ elevation has no non-interactive answer. A human needs to:
 
 - [ ] On a clean Windows VM or a spare machine: run `FlowPOS Setup x.y.z.exe`
       interactively (not `/S`).
+- [ ] Confirm Host PC has a Static IP or router DHCP reservation configured.
 - [ ] Confirm the Windows Firewall rule was added:
       `Get-NetFirewallRule -DisplayName FlowPOS` (elevated PowerShell) shows it.
 - [ ] Launch the app; confirm the license activation screen appears with a real
@@ -55,6 +56,9 @@ elevation has no non-interactive answer. A human needs to:
       close the shift.
 - [ ] From a phone on the same WiFi: scan the QR code from the sidebar, confirm the
       page loads without any firewall prompt appearing.
+- [ ] **Multi-PC LAN Client verification**: From a secondary PC on the same LAN, open
+      `http://<host-ip>:3001` or run Electron in Client Mode. Confirm PIN login, POS cart
+      math, and cashier actions operate against the Host DB correctly.
 - [ ] Restart the FlowPOS app (close and reopen, or restart the PC): confirm the
       license is still active and any logged-in cashier session survives (per
       `سجل-التغييرات.md` V1.4.5 and V1.5.4).

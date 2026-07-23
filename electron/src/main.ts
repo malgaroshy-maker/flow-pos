@@ -22,13 +22,32 @@ const APP_ROOT = app.getAppPath();
 const SERVER_SCRIPT = join(APP_ROOT, 'dist', 'server.js');
 
 // Data directory: survives upgrades, doesn't need admin to write.
-// Electron's app.getPath() has no machine-wide "ProgramData" entry, so read it
-// from the environment (always set on Windows) instead of faking it off
-// getPath('appData') + '..' + 'ProgramData', which landed inside the user's own
-// C:\Users\<user>\AppData\ProgramData — a directory Windows never creates.
 const COMMON_APP_DATA = process.env.ProgramData || join(app.getPath('appData'), '..');
 const DATA_DIR = join(COMMON_APP_DATA, 'FlowPOS', 'data');
 const DB_PATH = join(DATA_DIR, 'pos.db');
+
+const USER_DATA_DIR = app.getPath('userData');
+const APP_CONFIG_PATH = join(USER_DATA_DIR, 'app-config.json');
+
+export interface AppConfig {
+  mode?: 'host' | 'client';
+  serverUrl?: string;
+}
+
+function loadAppConfig(): AppConfig {
+  try {
+    return JSON.parse(readFileSync(APP_CONFIG_PATH, 'utf-8'));
+  } catch {
+    return {};
+  }
+}
+
+function saveAppConfig(cfg: AppConfig) {
+  try {
+    mkdirSync(USER_DATA_DIR, { recursive: true });
+    writeFileSync(APP_CONFIG_PATH, JSON.stringify(cfg, null, 2), 'utf-8');
+  } catch {}
+}
 
 const PORT = 3001;
 const SERVER_URL = `http://localhost:${PORT}`;
@@ -49,12 +68,19 @@ let serverProcess: ChildProcess | null = null;
 let serverReady = false;
 let isQuitting = false;
 
-// ─── Splash Screen ────────────────────────────────────────────────────────────
+// ─── Splash & Helper Screen Paths ─────────────────────────────────────────────
 
-// Splash is placed in resources/ via extraFiles in packaged mode
 const SPLASH_HTML_PATH = IS_PACKAGED
   ? join(process.resourcesPath, 'splash.html')
   : join(APP_ROOT, 'assets', 'splash.html');
+
+const MODE_SELECT_HTML_PATH = IS_PACKAGED
+  ? join(process.resourcesPath, 'mode-select.html')
+  : join(APP_ROOT, 'assets', 'mode-select.html');
+
+const DISCONNECTED_HTML_PATH = IS_PACKAGED
+  ? join(process.resourcesPath, 'disconnected.html')
+  : join(APP_ROOT, 'assets', 'disconnected.html');
 
 function createSplashWindow() {
   const iconPath = existsSync(APP_ICON_PATH) ? APP_ICON_PATH : undefined;
@@ -285,7 +311,24 @@ function createMainWindow() {
     return { action: 'deny' };
   });
 
-  mainWindow.loadURL(SERVER_URL);
+  // Connection failover for client mode
+  mainWindow.webContents.on('did-fail-load', (_event, errorCode, errorDescription, validatedURL) => {
+    const cfg = loadAppConfig();
+    if (cfg.mode === 'client' && validatedURL && !validatedURL.includes('disconnected.html')) {
+      logServer(`Client connection failed to ${validatedURL} (${errorCode}: ${errorDescription})`);
+      const targetParam = encodeURIComponent(cfg.serverUrl || SERVER_URL);
+      mainWindow?.loadFile(DISCONNECTED_HTML_PATH, { search: `url=${targetParam}` });
+    }
+  });
+
+  const appCfg = loadAppConfig();
+  if (!appCfg.mode) {
+    mainWindow.loadFile(MODE_SELECT_HTML_PATH);
+  } else if (appCfg.mode === 'client' && appCfg.serverUrl) {
+    mainWindow.loadURL(appCfg.serverUrl);
+  } else {
+    mainWindow.loadURL(SERVER_URL);
+  }
 }
 
 function openOrFocusWindow() {
@@ -301,7 +344,14 @@ function openOrFocusWindow() {
 // ─── Tray ─────────────────────────────────────────────────────────────────────
 
 function buildTrayMenu(): Menu {
-  const statusLabel = serverReady ? '● الخادم يعمل' : '○ الخادم متوقف';
+  const appCfg = loadAppConfig();
+  const modeText = appCfg.mode === 'client' ? '📱 جهاز كاشير فرعي (Client)' : '🖥️ خادم رئيسي (Host)';
+  const statusLabel =
+    appCfg.mode === 'client'
+      ? `● متصل بالخادم (${appCfg.serverUrl || ''})`
+      : serverReady
+      ? '● الخادم يعمل (3001)'
+      : '○ الخادم متوقف';
 
   return Menu.buildFromTemplate([
     {
@@ -311,17 +361,35 @@ function buildTrayMenu(): Menu {
     },
     { type: 'separator' },
     {
-      label: statusLabel,
+      label: `نمط التشغيل: ${modeText}`,
       enabled: false,
     },
     {
-      label: 'إعادة تشغيل الخادم',
-      click: () => restartServer(),
+      label: statusLabel,
+      enabled: false,
     },
     { type: 'separator' },
     {
+      label: 'إعداد نمط التشغيل / الخادم',
+      click: () => {
+        if (mainWindow) {
+          openOrFocusWindow();
+          mainWindow.loadFile(MODE_SELECT_HTML_PATH);
+        }
+      },
+    },
+    ...(appCfg.mode !== 'client'
+      ? [
+          {
+            label: 'إعادة تشغيل الخادم',
+            click: () => restartServer(),
+          },
+        ]
+      : []),
+    { type: 'separator' },
+    {
       label: 'فتح مجلد البيانات',
-      click: () => shell.openPath(DATA_DIR),
+      click: () => shell.openPath(existsSync(DATA_DIR) ? DATA_DIR : USER_DATA_DIR),
     },
     { type: 'separator' },
     {
@@ -397,7 +465,9 @@ interface PrintConfig {
   thermalPrinter?: string;
 }
 
-const PRINT_CONFIG_PATH = join(DATA_DIR, 'print-config.json');
+const PRINT_CONFIG_PATH = existsSync(DATA_DIR)
+  ? join(DATA_DIR, 'print-config.json')
+  : join(USER_DATA_DIR, 'print-config.json');
 
 function loadPrintConfig(): PrintConfig {
   try {
@@ -409,10 +479,29 @@ function loadPrintConfig(): PrintConfig {
 
 function savePrintConfig(cfg: PrintConfig) {
   try {
-    mkdirSync(DATA_DIR, { recursive: true });
+    const dir = existsSync(DATA_DIR) ? DATA_DIR : USER_DATA_DIR;
+    mkdirSync(dir, { recursive: true });
     writeFileSync(PRINT_CONFIG_PATH, JSON.stringify(cfg, null, 2), 'utf-8');
   } catch {}
 }
+
+ipcMain.handle('flowpos:get-app-config', async () => loadAppConfig());
+
+ipcMain.handle('flowpos:save-app-config', async (_event, cfg: AppConfig) => {
+  saveAppConfig(cfg);
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    if (cfg.mode === 'client' && cfg.serverUrl) {
+      mainWindow.loadURL(cfg.serverUrl);
+    } else {
+      try {
+        await startServer();
+      } catch {}
+      mainWindow.loadURL(SERVER_URL);
+    }
+  }
+  updateTrayMenu();
+  return cfg;
+});
 
 ipcMain.handle('flowpos:list-printers', async (event) => {
   const win = BrowserWindow.fromWebContents(event.sender);
@@ -487,22 +576,28 @@ if (!gotTheLock) {
 
     ensurePrintDialogRegistered();
 
-    // Show splash screen immediately while server starts
-    createSplashWindow();
+    const appCfg = loadAppConfig();
+
+    // Show splash screen immediately if starting as host server
+    if (appCfg.mode !== 'client') {
+      createSplashWindow();
+    }
 
     // Create tray so user sees something even during startup
     createTray();
 
-    // Start the Fastify server
-    try {
-      await startServer();
-      console.log('[FlowPOS] Server ready at', SERVER_URL);
-    } catch (err: any) {
-      console.error('[FlowPOS] Server failed to start:', err);
-      dialog.showErrorBox(
-        'خطأ في تشغيل خادم المنظومة',
-        `تعذر تشغيل الخادم المحلي على هذا الجهاز.\n\nالخطأ: ${err?.message || err}\n\nسجل الخادم:\n${serverLogBuffer.slice(-1500) || 'لا توجد مخرجات'}`
-      );
+    // Only start Fastify server if running as Host (or default before mode selection)
+    if (appCfg.mode !== 'client') {
+      try {
+        await startServer();
+        console.log('[FlowPOS] Server ready at', SERVER_URL);
+      } catch (err: any) {
+        console.error('[FlowPOS] Server failed to start:', err);
+        dialog.showErrorBox(
+          'خطأ في تشغيل خادم المنظومة',
+          `تعذر تشغيل الخادم المحلي على هذا الجهاز.\n\nالخطأ: ${err?.message || err}\n\nسجل الخادم:\n${serverLogBuffer.slice(-1500) || 'لا توجد مخرجات'}`
+        );
+      }
     }
 
     // Close splash and open main window

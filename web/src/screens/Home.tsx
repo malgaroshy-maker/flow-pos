@@ -19,7 +19,7 @@ export const Home: React.FC<HomeProps> = ({
   onThemeToggle,
 }) => {
   const { currentUser, logout } = useAuth();
-  const { settingsData, activeShift } = useData();
+  const { settingsData, activeShift, productsList } = useData();
   const theme = currentTheme();
 
   if (!currentUser) return null;
@@ -229,6 +229,51 @@ export const Home: React.FC<HomeProps> = ({
             >
               ⚡ فتح توكة جديدة
             </button>
+          </div>
+        )}
+
+        {/* First-Run Onboarding Setup Card (shown when catalog has zero products) */}
+        {productsList.length === 0 && (
+          <div
+            className="p-5 rounded-2xl border flex flex-col gap-3"
+            style={{
+              background: 'linear-gradient(135deg, color-mix(in srgb, var(--jade) 10%, var(--surface)) 0%, var(--surface-2) 100%)',
+              borderColor: 'color-mix(in srgb, var(--jade) 40%, transparent)',
+              boxShadow: 'var(--shadow-sm)',
+            }}
+          >
+            <div className="flex items-center gap-2 text-jade font-black text-base">
+              <span>🚀 مرحباً بك في منظومة Flow — خطوات الإعداد السريع للمحل</span>
+            </div>
+            <p className="text-xs text-muted leading-relaxed">
+              يبدو أن المنظومة جديدة كلياً ولا تحتوي على منتجات بعد. اتبع خطوات التهيئة البسيطة للبدء بالعمل:
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-1">
+              <div
+                onClick={() => onSelectTab('Settings')}
+                className="p-3 rounded-xl border bg-surface flex flex-col gap-1 cursor-pointer hover:border-jade transition-colors"
+                style={{ borderColor: 'var(--border)' }}
+              >
+                <div className="font-bold text-xs text-text">1. ضبط بيانات المحل ⚙️</div>
+                <div className="text-[11px] text-muted">اسم التجارة، الشعار، وإعدادات الضمان</div>
+              </div>
+              <div
+                onClick={() => onSelectTab('Products')}
+                className="p-3 rounded-xl border bg-surface flex flex-col gap-1 cursor-pointer hover:border-jade transition-colors"
+                style={{ borderColor: 'var(--border)' }}
+              >
+                <div className="font-bold text-xs text-jade">2. إضافة أول منتج 📦</div>
+                <div className="text-[11px] text-muted">أضف الأصناف، الباركود، والأسعار</div>
+              </div>
+              <div
+                onClick={() => (activeShift ? onSelectTab('POS') : onOpenShiftModal())}
+                className="p-3 rounded-xl border bg-surface flex flex-col gap-1 cursor-pointer hover:border-jade transition-colors"
+                style={{ borderColor: 'var(--border)' }}
+              >
+                <div className="font-bold text-xs text-copper">3. فتح توكة والبيع 💵</div>
+                <div className="text-[11px] text-muted">افتح التوكة وابدأ إصدار الفواتير</div>
+              </div>
+            </div>
           </div>
         )}
 

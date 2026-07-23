@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>نمط التشغيل — منظومة Flow</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
+    body {
+      background-color: #0f172a;
+      color: #f8fafc;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+    }
+    .card {
+      background: rgba(30, 41, 59, 0.9);
+      border: 1px solid rgba(51, 65, 85, 0.7);
+      backdrop-filter: blur(16px);
+      border-radius: 1.25rem;
+      padding: 2.5rem;
+      max-width: 520px;
+      width: 100%;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    }
+    .header { text-align: center; margin-bottom: 2rem; }
+    .logo {
+      width: 48px;
+      height: 48px;
+      background: #0284c7;
+      border-radius: 0.75rem;
+      margin: 0 auto 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+    }
+    h1 { font-size: 1.6rem; font-weight: 700; color: #f8fafc; margin-bottom: 0.5rem; }
+    p { color: #94a3b8; font-size: 0.95rem; }
+    .option-card {
+      border: 2px solid #334155;
+      background: #1e293b;
+      border-radius: 0.75rem;
+      padding: 1.25rem;
+      margin-bottom: 1rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .option-card:hover { border-color: #38bdf8; background: #1e293b; }
+    .option-card.selected { border-color: #0284c7; background: rgba(2, 132, 199, 0.1); }
+    .option-title { font-weight: 700; font-size: 1.05rem; margin-bottom: 0.35rem; color: #38bdf8; }
+    .option-desc { font-size: 0.85rem; color: #94a3b8; line-height: 1.5; }
+    .input-section { margin-top: 1rem; display: none; text-align: right; }
+    .input-section.active { display: block; }
+    label { display: block; font-size: 0.85rem; color: #cbd5e1; margin-bottom: 0.5rem; }
+    input {
+      width: 100%;
+      padding: 0.75rem 1rem;
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 0.5rem;
+      color: #fff;
+      font-size: 1rem;
+      direction: ltr;
+      text-align: left;
+    }
+    input:focus { outline: none; border-color: #0284c7; }
+    button {
+      width: 100%;
+      padding: 0.85rem;
+      background: #0284c7;
+      color: #fff;
+      border: none;
+      border-radius: 0.5rem;
+      font-weight: 700;
+      font-size: 1rem;
+      cursor: pointer;
+      margin-top: 1.5rem;
+      transition: background 0.2s;
+    }
+    button:hover { background: #0369a1; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="header">
+      <div class="logo">⚡</div>
+      <h1>إعداد نمط تشغيل المنظومة</h1>
+      <p>اختر دور هذا الجهاز في المحل للمتابعة</p>
+    </div>
+
+    <div class="option-card selected" id="opt-host" onclick="selectOption('host')">
+      <div class="option-title">🖥️ خادم رئيسي (Host Server)</div>
+      <div class="option-desc">هذا الجهاز هو الكمبيوتر الرئيسي للمحل، يحتوي على قاعدة البيانات ويقوم بتشغيل الخادم للربط مع باقي الكاشيرات والهواتف.</div>
+    </div>
+
+    <div class="option-card" id="opt-client" onclick="selectOption('client')">
+      <div class="option-title">📱 جهاز كاشير فرعي (Cashier Client)</div>
+      <div class="option-desc">هذا الجهاز كاشير إضافي يتصل بالخادم الرئيسي عبر الشبكة المحلية (LAN). لا يحتاج ترخيصاً منفصلاً.</div>
+    </div>
+
+    <div class="input-section" id="client-inputs">
+      <label for="server-url">عنوان الخادم الرئيسي (Host IP):</label>
+      <input type="text" id="server-url" placeholder="http://192.168.1.100:3001" value="http://192.168.1.100:3001" />
+    </div>
+
+    <button onclick="saveConfig()">حفظ والبدء 🚀</button>
+  </div>
+
+  <script>
+    let selectedMode = 'host';
+
+    function selectOption(mode) {
+      selectedMode = mode;
+      document.getElementById('opt-host').classList.toggle('selected', mode === 'host');
+      document.getElementById('opt-client').classList.toggle('selected', mode === 'client');
+      document.getElementById('client-inputs').classList.toggle('active', mode === 'client');
+    }
+
+    async function saveConfig() {
+      const serverUrl = document.getElementById('server-url').value.trim().replace(/\/$/, '');
+      if (selectedMode === 'client' && (!serverUrl.startsWith('http://') && !serverUrl.startsWith('https://'))) {
+        alert('يرجى إدخال عنوان صحيح يبدأ بـ http://');
+        return;
+      }
+      if (window.flowposConfig) {
+        await window.flowposConfig.save({ mode: selectedMode, serverUrl });
+      } else {
+        alert('تعذر حفظ الإعدادات تلقائياً.');
+      }
+    }
+  </script>
+</body>
+</html>

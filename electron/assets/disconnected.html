@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>انقطع الاتصال بالخادم — منظومة Flow</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
+    body {
+      background-color: #0f172a;
+      color: #f8fafc;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+    }
+    .card {
+      background: rgba(30, 41, 59, 0.85);
+      border: 1px solid rgba(51, 65, 85, 0.6);
+      backdrop-filter: blur(12px);
+      border-radius: 1rem;
+      padding: 2.5rem;
+      max-width: 480px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
+    }
+    .icon {
+      width: 64px;
+      height: 64px;
+      margin: 0 auto 1.25rem;
+      background: rgba(239, 68, 68, 0.15);
+      color: #ef4444;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+    }
+    h1 { font-size: 1.5rem; font-weight: 700; margin-bottom: 0.75rem; color: #f8fafc; }
+    p { color: #94a3b8; font-size: 0.95rem; line-height: 1.6; margin-bottom: 1.5rem; }
+    .status {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: rgba(15, 23, 42, 0.6);
+      padding: 0.5rem 1rem;
+      border-radius: 2rem;
+      font-size: 0.85rem;
+      color: #cbd5e1;
+      margin-bottom: 1.5rem;
+    }
+    .spinner {
+      width: 14px;
+      height: 14px;
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      border-top-color: #38bdf8;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .form-group { margin-bottom: 1.25rem; text-align: right; }
+    label { display: block; font-size: 0.85rem; color: #cbd5e1; margin-bottom: 0.5rem; }
+    input {
+      width: 100%;
+      padding: 0.75rem 1rem;
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 0.5rem;
+      color: #fff;
+      font-size: 1rem;
+      direction: ltr;
+      text-align: left;
+    }
+    input:focus { outline: none; border-color: #0284c7; }
+    .btn-group { display: flex; gap: 0.75rem; }
+    button {
+      flex: 1;
+      padding: 0.75rem;
+      border-radius: 0.5rem;
+      border: none;
+      font-weight: 600;
+      font-size: 0.95rem;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .btn-primary { background: #0284c7; color: #fff; }
+    .btn-primary:hover { background: #0369a1; }
+    .btn-secondary { background: #334155; color: #e2e8f0; }
+    .btn-secondary:hover { background: #475569; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="icon">🔌</div>
+    <h1>انقطع الاتصال بالخادم الرئيسي</h1>
+    <p>تعذر الاتصال بخادم المنظومة على الشبكة المحلية. يتم الآن إعادة المحاولة تلقائياً...</p>
+    
+    <div class="status">
+      <div class="spinner"></div>
+      <span id="status-text">جارٍ محاولة الاتصال...</span>
+    </div>
+
+    <div class="form-group">
+      <label for="server-url">عنوان الخادم (Host IP):</label>
+      <input type="text" id="server-url" placeholder="http://192.168.1.100:3001" />
+    </div>
+
+    <div class="btn-group">
+      <button class="btn-primary" onclick="retryConnection()">إعادة الاتصال</button>
+      <button class="btn-secondary" onclick="saveNewAddress()">حفظ وتوصيل</button>
+    </div>
+  </div>
+
+  <script>
+    const urlParams = new URLSearchParams(window.location.search);
+    const targetUrl = urlParams.get('url') || localStorage.getItem('flowpos_client_server_url') || 'http://localhost:3001';
+    
+    const inputEl = document.getElementById('server-url');
+    inputEl.value = targetUrl;
+
+    async function checkHealth() {
+      const currentUrl = inputEl.value.trim().replace(/\/$/, '');
+      try {
+        const res = await fetch(currentUrl + '/api/health', { method: 'GET' });
+        if (res.ok || res.status === 401) {
+          document.getElementById('status-text').innerText = 'تم التوصيل! جارٍ التحميل...';
+          localStorage.setItem('flowpos_client_server_url', currentUrl);
+          window.location.href = currentUrl;
+          return true;
+        }
+      } catch (err) {}
+      document.getElementById('status-text').innerText = 'جارٍ المحاولة تلقائياً...';
+      return false;
+    }
+
+    function retryConnection() {
+      checkHealth();
+    }
+
+    function saveNewAddress() {
+      const newUrl = inputEl.value.trim().replace(/\/$/, '');
+      if (!newUrl.startsWith('http://') && !newUrl.startsWith('https://')) {
+        alert('يرجى إدخال عنوان صحيح يبدأ بـ http://');
+        return;
+      }
+      localStorage.setItem('flowpos_client_server_url', newUrl);
+      if (window.flowposClient) {
+        window.flowposClient.setServerUrl(newUrl);
+      } else {
+        window.location.href = newUrl;
+      }
+    }
+
+    // Auto retry every 4 seconds
+    setInterval(checkHealth, 4000);
+  </script>
+</body>
+</html>

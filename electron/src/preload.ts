@@ -11,3 +11,9 @@ contextBridge.exposeInMainWorld('flowpos', {
   setPrintConfig: (cfg: { a4Printer?: string; thermalPrinter?: string }) =>
     ipcRenderer.invoke('flowpos:set-print-config', cfg),
 });
+
+contextBridge.exposeInMainWorld('flowposConfig', {
+  get: () => ipcRenderer.invoke('flowpos:get-app-config'),
+  save: (cfg: { mode: 'host' | 'client'; serverUrl?: string }) =>
+    ipcRenderer.invoke('flowpos:save-app-config', cfg),
+});

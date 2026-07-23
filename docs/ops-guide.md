@@ -20,8 +20,8 @@ does not restart it on its own.
 
 ## 2. One-time setup checklist
 
-- [ ] **Static IP for the server PC** (or a DHCP reservation on the router) — if its
-  LAN address changes, the QR code and any bookmarked cashier-device URLs go stale.
+- [ ] **[MANDATORY] Static IP for the server PC** (or a DHCP reservation on the router) — if its
+  LAN address changes, the QR code and any bookmarked cashier-device URLs go stale, breaking all client stations.
 - [ ] **UPS (battery backup)** on the server PC — Libya's power situation makes
   unexpected outages routine; SQLite's WAL mode + `synchronous=FULL` protects against
   data corruption from a hard power loss, but a UPS avoids the interruption itself.
@@ -42,18 +42,20 @@ does not restart it on its own.
   phone/tablet is not supported (would need a local HTTPS certificate on every device);
   use USB scanners.
 
-## 3. Connecting a cashier device
+## 3. Connecting cashier devices & client stations
 
+### 3.1 Mobile devices and quick browser access
 1. On the server PC, open FlowPOS and click "📱 ربط الجوال (QR)" in the sidebar.
-2. On the cashier device (phone, tablet, another PC), open its camera or a QR
-   scanner app and scan the code — it opens the FlowPOS web address directly in
-   the device's browser. No app install needed on that device.
+2. On the cashier device (phone, tablet, secondary PC), scan the QR code or navigate to `http://<server-ip>:3001`.
 3. If the recommended address doesn't work (e.g. the device is on a different
    network segment), the modal offers a "جرّب عنواناً آخر" picker with every real LAN
    address the server detected.
-4. For a cashier station that needs receipts to print silently (no OS dialog) on a
-   thermal printer, run it through the FlowPOS Electron app rather than a bare
-   browser — silent printing only works there (see `سجل-التغييرات.md` V1.4.4).
+
+### 3.2 Secondary Cashier PCs (Browser / Kiosk mode)
+1. On secondary cashier PCs, open Chrome or Edge and navigate to `http://<host-ip>:3001`.
+2. Create a desktop shortcut to `http://<host-ip>:3001` for quick access.
+3. For silent thermal printing without print dialogs on non-Electron browser clients, configure the browser shortcut target with flags: `--kiosk --enable-print-preview --printing-ris-silent`.
+4. Alternatively, install the FlowPOS Electron desktop app on the cashier PC and select **"جهاز كاشير (اتصال بخادم موجود)"** on first run to get native silent thermal printing via `flowpos:print`.
 
 ## 4. Backups & restore
 

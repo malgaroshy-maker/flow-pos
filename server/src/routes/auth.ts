@@ -367,11 +367,13 @@ export async function authenticateRequest(req: FastifyRequest, reply: FastifyRep
     .run();
 }
 
+import { hasPermission } from '../lib/permissions.js';
+
 // Authentication + manager-role hook for manager-only routes
 export async function requireManager(req: FastifyRequest, reply: FastifyReply) {
   await authenticateRequest(req, reply);
   if (reply.sent) return reply;
-  if (req.user!.role !== 'manager') {
+  if (!hasPermission(req.user?.role, 'MANAGE_SETTINGS')) {
     return reply.code(403).send({ error: 'forbidden', message: 'هذا الإجراء متاح للمدراء فقط' });
   }
 }

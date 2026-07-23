@@ -72,6 +72,29 @@ describe('offline hardware licensing system', () => {
     expect(res.payload?.machineCode).toBe(machineCode);
   });
 
+  it('parses and preserves optional maxDevices field in license payload', () => {
+    const machineCode = getMachineCode();
+    const licenseKey = signLicense(
+      {
+        machineCode,
+        customerName: 'شبكة محلات السلام',
+        issuedAt: new Date().toISOString(),
+        expiresAt: null,
+        licenseType: 'commercial',
+        maxDevices: 5,
+      },
+      testPrivateKeyPem
+    );
+
+    const res = verifyLicenseString(licenseKey, machineCode, testPublicKeyPem);
+    expect(res.valid).toBe(true);
+    expect(res.payload?.maxDevices).toBe(5);
+
+    const actRes = activateLicense(licenseKey, testPublicKeyPem);
+    expect(actRes.success).toBe(true);
+    expect(actRes.info?.maxDevices).toBe(5);
+  });
+
   it('rejects a license key issued for a different machine code', () => {
     const licenseKey = signLicense(
       {

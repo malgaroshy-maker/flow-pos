@@ -422,6 +422,240 @@ scoped here happened alongside it):
 
 ---
 
+## Milestone K — V1.6.0: Flow Dev brand restyle (2026-07-23)
+
+> Shipped outside this plan's numbered milestones — a visual/UX pass plus one security
+> decision. Logged here so future audits don't rediscover it as drift.
+
+### K1. Flow Dev color identity, micro-animations, nav/header rework — ✅ DONE (V1.6.0, 2026-07-23)
+
+`tokens.css` repointed `--jade`/`--copper` (names kept for compatibility with existing
+component classes) from green/copper to two blues drawn from the Flow Dev logo; a faint
+centered logo watermark added behind all content (`body::before` in `app.css`);
+app-wide hover/press micro-animations added to every button/icon/link (spring-pop scale,
+colored glow, lift-on-hover, press-scale) — this is a deliberate departure from
+design.md §10's prior "the stamp press is the only orchestrated animation" rule, and the
+doc has been updated to describe it as the new baseline rather than a violation. Sidebar
+nav reordered by daily-use frequency; the user/PIN-switch card moved from top to bottom
+of the sidebar; quick-action buttons (QR connect, theme toggle, settings, logout) moved
+from the sidebar footer into the header. `docs/design.md` §1/§3/§6/§10 and the
+`CLAUDE.md`/`AGENTS.md` status lines updated to match (2026-07-23 doc-sync pass).
+
+### K2. PIN/login lockout disabled — ⚠️ OWNER DECISION, NOT A BUG (V1.6.0, 2026-07-23)
+
+Same commit disabled `isLockedOut`/`recordAuthFailure` in `server/src/lib/pin.ts`
+entirely (both are now no-ops; `pin-switch` returns `401` forever instead of `429` after
+10 failures) and updated `hardening.test.ts` accordingly. This reverses part of J1's
+hardening (V1.5.9's PIN-check rate limiting). When asked to review this doc, the owner
+confirmed **leave the code as-is, docs-only for now** — recorded in `CLAUDE.md`/
+`AGENTS.md`'s status line. If the decision changes, restoring the previous
+`isLockedOut`/`recordAuthFailure` bodies (10 failures → 15-minute lockout) and the
+original `hardening.test.ts` assertion (`429` on the 11th attempt) is a self-contained
+revert — see git history for `server/src/lib/pin.ts` before the `1.6.0` commit.
+
+---
+
+## Milestone L — Multi-PC: host + client stations — ✅ DONE (V1.6.1, 2026-07-23)
+
+> The shop wants more than one PC on the same data: one host (the current desktop app,
+> which *is* the server per H3) plus client PCs at other counters / the back office /
+> the warehouse. The architecture is already ~90% there — the server binds `0.0.0.0`,
+> the phone-QR feature proves any browser is a full client, and the host serves the SPA
+> from `web/dist`. This milestone productizes the client experience. **Decisions below
+> were confirmed with the owner on 2026-07-23 — don't re-litigate them, but L2/L3 details
+> marked "verify" still need checking against the code before building.**
+>
+> **Confirmed decisions:**
+> - **Licensing is per shop, host-only.** Clients (PCs and phones) never see an
+>   activation screen and are unlimited. Add an optional `maxDevices` field to the
+>   license file format now — default/absent = unlimited, **unenforced** — so seat
+>   enforcement later is a small feature, not a license-format migration (same pattern
+>   as the dormant Installments schema). Bigger shops are priced commercially via the
+>   license price, not technically.
+> - **Clients never bundle the web app.** A client loads the UI from the host, so
+>   upgrading the shop = upgrading the host only; client shells should rarely need
+>   reinstalling. The client owns only: the window, the `flowpos:print` bridge with its
+>   own per-machine printer config, and the "which server?" setting.
+> - **Discovery is layered:** manual server-address entry at first run (address shown in
+>   the host's existing ربط الجوال modal); a **static IP / DHCP reservation for the host
+>   becomes a required install step** (promote from recommendation in ops-guide §1 and
+>   add to the release checklist's install section); automatic LAN re-scan is used only
+>   for *recovery*, not first-run.
+> - **Shared-drawer model only.** Multi-PC ships on the existing "one shared drawer
+>   shift" domain rule (already correct: every action is attributed per employee).
+>   **Drawer-per-counter (concurrent shifts, variance per drawer) is parked** as its own
+>   future milestone needing its own owner brainstorm — it touches the shift schema,
+>   variance reports, and POS flow. Do not build it as part of L.
+> - **Connected-devices view for the manager: later** (nice-to-have; the persistent
+>   `sessions` table already holds most of the data when wanted).
+
+### L1. Document the browser client path (zero code)
+
+- New ops-guide section: connecting a client PC via browser — desktop shortcut to
+  `http://<host-ip>:3001`, login with the employee's own PIN, and the kiosk-mode
+  browser flag for silent thermal printing on non-Electron clients (the technique the
+  ops guide already documents for cashier devices).
+- Promote the host static-IP step to **required** in ops-guide §1 and add it to
+  `docs/release-checklist.md`'s install-verification section.
+- This makes multi-PC officially supported immediately; L2 makes it polished.
+
+### L2. Electron client mode
+
+- First-run choice in the desktop app: **خادم رئيسي (هذا الجهاز يحمل البيانات)** vs
+  **جهاز كاشير (اتصال بخادم موجود)**. Client mode: no DB, no migrations, no license
+  screen, no in-process Fastify — the window loads the saved host URL directly.
+- Keep silent thermal printing: the `flowpos:print` IPC bridge and per-machine
+  `print-config.json` must work identically when the window shows a remote origin —
+  **verify** the preload script attaches to the remote URL and that nothing in the
+  bridge assumes `localhost` (see the V1.4.x printing lessons at the bottom of this
+  file before touching any of it).
+- Client stores the server URL in its own config (in `userData`, not `DATA_DIR` —
+  there is no `DATA_DIR` concept on a client). Mode choice is changeable from a
+  settings/escape hatch without reinstalling.
+- License `maxDevices` field added to the license format (dormant, see decisions).
+- **Verify before building:** session/localStorage behavior against the remote origin,
+  and that the QR/network modal on the host shows the address a client PC should type.
+
+### L3. Connection resilience
+
+- Replace Chromium's error page in client mode with an Arabic screen:
+  «انقطع الاتصال بالخادم — جارٍ إعادة المحاولة» — auto-retry every few seconds, plus a
+  button to edit the saved server address (covers "router replaced / IP changed"
+  without reinstalling; phones self-heal by re-scanning the QR).
+- Auto-rediscovery on failure only: scan the local /24 for a FlowPOS host (the health
+  endpoint identifies it) and offer «تم العثور على الخادم على عنوان جديد — إعادة
+  الاتصال؟» — one tap, no typing. Never used at first-run; never trusted silently
+  (always confirm before switching the saved address).
+- Host-side banner when the host boots with a different LAN address than its last boot:
+  «تغيّر عنوان الخادم — حدّث أجهزة الكاشير». Cheap early warning before the first
+  confused cashier.
+- **Explicitly rejected:** mDNS/`flowpos.local` hostnames — unreliable on Windows LANs
+  without extra services; a support trap for a one-person support operation.
+
+### L4. Parked follow-ups (each needs its own owner decision before build)
+
+- **Drawer-per-counter shifts** — the real Phase-4-sized feature for two-full-register
+  shops; brainstorm the shift model first.
+- **Connected-devices list** in Settings (active sessions: device, user, last activity).
+- **`maxDevices` enforcement** — only if a many-register customer actually appears.
+
+---
+
+## Milestone M — V1.6.2: post-V1.6.1 review fixes (audited 2026-07-23)
+
+> Result of a full review of the V1.6.0 → V1.6.1 diff (Milestone L implementation) plus a
+> verification pass against the running code. 89/89 tests green — none of these break the
+> release, but M1 is a real user-facing bug in the new client mode and M2/M3 close gaps
+> the changelog already claims are done. Ordered by severity. Same definition of done as
+> every milestone: typecheck + tests + build green, server behavior covered by
+> `app.inject` tests where applicable, Arabic changelog section, local commit, never push.
+
+### M1. Client "save new address" button silently does nothing — HIGH (bug)
+
+`electron/assets/disconnected.html` line ~150 calls `window.flowposClient.setServerUrl(newUrl)`,
+but the preload (`electron/src/preload.ts`) exposes **`flowposConfig`** (`get`/`save`) — there is
+no `flowposClient`. So «حفظ وتوصيل» always falls into the `window.location.href = newUrl`
+fallback: it navigates for the current session but **never persists** the corrected address to
+`app-config.json`. The `localStorage` write is useless too — it lands on the `file://` origin of
+disconnected.html, which the app never reads. Net effect: after a router/IP change the cashier
+"fixes" the address, it works until the next app restart, then reconnects to the dead address —
+exactly the support call L3 was built to prevent.
+
+- Fix: call `window.flowposConfig.save({ mode: 'client', serverUrl: newUrl })` (the bridge that
+  actually exists) and let the existing `flowpos:save-app-config` handler do the `loadURL`.
+  Remove the dead `flowposClient` branch and the `localStorage` reads/writes.
+- Same page's auto-retry success path (`checkHealth`) navigates without persisting either — if
+  the user edited the input and auto-retry succeeds on the new address, persist it through the
+  same bridge before navigating.
+- Test manually per the packaged-app checklist (this is Electron-shell code; Vitest can't reach
+  it): kill host → edit address on disconnected screen → save → restart client → must reconnect
+  to the *new* address.
+
+### M2. Harden the `flowpos:save-app-config` IPC surface — HIGH (security)
+
+In client mode the main window loads a remote LAN origin **with the preload attached**, so any
+page served from that address (or anything that answers on the saved IP after a DHCP reshuffle)
+can call `window.flowposConfig.save({ mode: 'client', serverUrl: '<anything>' })`. The handler
+in `electron/src/main.ts` passes `serverUrl` straight to `mainWindow.loadURL()` and persists it
+with **no validation** — the only URL check is client-side in `mode-select.html`. Low practical
+risk on a trusted shop LAN, cheap to close:
+
+- Validate in the **main process** (never trust renderer input): `new URL(serverUrl)` must parse
+  with protocol `http:` or `https:`; reject everything else (`file:`, `javascript:`, …) before
+  saving or loading.
+- Restrict the sender: in the `flowpos:save-app-config` handler, check
+  `event.senderFrame.url` starts with `file://` (mode-select / disconnected pages) and ignore
+  calls from remote origins. `flowpos:get-app-config` can stay open (it leaks nothing beyond the
+  URL the page is already served from). The print bridge (`flowpos:print`, printer config)
+  **must remain callable from the remote origin** — that is how client-mode silent printing
+  works; do not restrict it.
+
+### M3. Adopt the permissions table — or it stays dead code — MEDIUM (decision + refactor)
+
+V1.6.1 built the central `ROLE_PERMISSIONS` table (`server/src/lib/permissions.ts`) that audit
+finding #15 / task I2 asked for, but **nothing adopted it**: of 14 actions, only
+`MANAGE_SETTINGS` is checked (inside `requireManager`), `checkPermissionOrThrow` has zero
+callers, and 34 inline `role !== 'manager'` checks remain across 12 route files. The V1.6.1
+changelog already describes the table as wired ("لربط الإجراءات بالأدوار المسندة") — right now
+it documents intent, not enforcement, and the Storekeeper-role promise ("adding a role is data,
+not code") is still false.
+
+- Migrate route-by-route: replace each inline `role !== 'manager'` check with
+  `checkPermissionOrThrow(req.user?.role, '<ACTION>')`, mapping each site to the closest
+  existing `PermissionAction` (add actions to the union where none fits — e.g. products.ts
+  needs `MANAGE_PRODUCTS`, reports need `VIEW_FINANCIAL_REPORTS`). Behavior must be
+  **identical** for manager/sales — this is a pure refactor; the test suite is the referee.
+- `checkPermissionOrThrow` throws a plain `Error` with `statusCode` — verify Fastify's error
+  handler actually returns 403 + the Arabic message in the same JSON shape
+  (`{ error, message }`) the web app's `apiCall()` expects, or keep reply-based handling.
+- Add a small unit test for the table itself (manager passes every action, sales fails
+  manager-only ones, unknown role fails everything).
+- Only after full adoption may a future milestone add Storekeeper as a data-only change.
+
+### M4. Host-mode switch fails silently — MEDIUM (bug)
+
+In the `flowpos:save-app-config` handler, switching back to host mode does
+`try { await startServer(); } catch {}` then `loadURL(SERVER_URL)`. If the server fails to
+start, the load fails and — because `did-fail-load` only acts in **client** mode — the user is
+left on a raw Chromium error page with no explanation. The app-startup path already shows a
+proper Arabic `dialog.showErrorBox` with the server log tail for exactly this failure; the
+mode-switch path must do the same instead of swallowing the error.
+
+### M5. Onboarding card: gate on load-complete and manager role — LOW (polish)
+
+The first-run card on `web/src/screens/Home.tsx` renders whenever `productsList.length === 0`,
+and `DataContext` initializes `productsList` to `[]` with **no loading flag** — so the card
+flashes on every login until the products fetch returns, and it also shows for the sales role
+whose step 1 ("ضبط بيانات المحل") leads to a manager-only Settings tab.
+
+- Add a `productsLoaded` (or general `initialDataLoaded`) boolean to `DataContext`, set after
+  the first successful products fetch; gate the card on `productsLoaded && productsList.length === 0`.
+- Gate on `currentUser.role === 'manager'` — a brand-new install is always set up by the owner.
+
+### M6. Changelog overclaims LAN auto-discovery — LOW (docs honesty)
+
+The V1.6.1 changelog section promises «خيار… البحث في الشبكة المحلية» and L3 planned
+auto-rediscovery (LAN /24 scan for the health endpoint) plus a host-side "IP changed since last
+boot" banner. **Neither was built** — `disconnected.html` only retries the currently entered
+URL every 4 s. Do not silently pick one:
+
+- Cheapest honest fix: amend the V1.6.1 changelog wording to what shipped (auto-retry + manual
+  address edit) and move LAN auto-scan + host IP-change banner explicitly into L4's parked
+  list. Building the scanner is **not** required for M — it stays parked until the owner asks.
+
+### M7. Minor cleanups (bundle with whichever task touches the file)
+
+- `PRINT_CONFIG_PATH` (`electron/src/main.ts`) is chosen at module load via
+  `existsSync(DATA_DIR)`, but `savePrintConfig` re-evaluates the directory at save time — on a
+  fresh host install it can `mkdir` `DATA_DIR` while writing the file into `userData`. Make it
+  one decision: a `getPrintConfigPath()` helper called at read/write time (host → `DATA_DIR`,
+  client → `userData`).
+- `SearchableCustomerSelect` has no keyboard navigation — add ArrowUp/ArrowDown/Enter/Escape
+  handling so barcode-scanner-and-keyboard cashiers aren't forced onto the mouse. (Scanner
+  input goes to the barcode field, not this combobox, so this is ergonomics, not a blocker.)
+
+---
+
 ## Backlog (do only when asked)
 
 - `bytenode` bytecode compilation (E2 phase 2).
@@ -469,5 +703,6 @@ load-bearing lessons:
 - **The server runs in-process in the Electron main process** (approach #4); child-process
   and `ELECTRON_RUN_AS_NODE` approaches all failed on `better-sqlite3`/asar resolution —
   do not retry them. electron-builder's smart-unpack handles the native `.node` binary.
+- **Native Module ABI Alignment (Node 24 vs Electron 36):** In an npm monorepo, running `npm test` compiles `better-sqlite3` for host Node 24 (`NODE_MODULE_VERSION 137`). Packaging with `electron-builder` without an explicit Electron target rebuild places ABI 137 into `app.asar.unpacked`, causing Electron 36 (`NODE_MODULE_VERSION 135`) to fail on launch. `build-installer.bat` automates the 5-step pipeline: 1. `npm run typecheck` -> 2. `npm test` (ABI 137) -> 3. `node-gyp rebuild` for Electron 36 (ABI 135) -> 4. `electron-builder` (`--config.npmRebuild=false --config.nodeGypRebuild=false`) -> 5. `npm rebuild better-sqlite3` (restores local Node 24 / ABI 137 for Vitest tests and dev).
 - **Licenses activated under V1.4.4 or earlier** were signed with a lost in-memory key
   and need one re-activation under V1.4.5+ (and will need another after F1 lands).

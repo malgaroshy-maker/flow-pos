@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
 import { formatLYD, parseLYDOrZero } from '../lib/money';
 import { Icons } from '../components/Icons';
+import { SearchableCustomerSelect } from '../components/SearchableCustomerSelect';
 
 interface PosProps {
   cart: CartItem[];
@@ -252,20 +253,11 @@ export const PosScreen: React.FC<PosProps> = ({
           <div className="flex flex-col gap-2 mb-3 bg-surface-2 p-3 rounded-control border border-border">
             <div>
               <label className="text-[11px] font-bold text-muted mb-1 block">العميل المستهدف</label>
-              <select
-                value={posCustomerId || ''}
-                onChange={(e) =>
-                  onCustomerChange(e.target.value ? Number(e.target.value) : null)
-                }
-                className="w-full h-9 rounded-control border border-line bg-surface px-2 text-xs focus-visible:outline-none"
-              >
-                <option value="">— زبون نقدي عام —</option>
-                {customersList.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name} {c.tier === 'wholesale' ? '(جملة)' : ''}
-                  </option>
-                ))}
-              </select>
+              <SearchableCustomerSelect
+                customers={customersList}
+                selectedCustomerId={posCustomerId}
+                onSelectCustomer={onCustomerChange}
+              />
             </div>
 
             {/* Held Deposit selector if available for customer */}

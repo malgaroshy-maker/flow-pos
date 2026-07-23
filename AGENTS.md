@@ -8,7 +8,7 @@ An **offline-first, Arabic (RTL) sales & inventory management system** ("منظ�
 
 ## Project Status
 
-**Phases 1, 2, and 3 are complete, plus Milestones D–J of the post-Phase-3 hardening plan (latest release V1.5.9, 2026-07-22).** Milestones through V1.4.6 were followed by Milestones F–J: F (real vendor-key licensing, removed Vendor-PIN activation, idle lock) V1.4.7–V1.4.9; G (partial customer sale returns, warranty notifications, automatic daily backups) V1.5.0–V1.5.2; H (Windows Firewall rule, persistent login sessions, ops guide + release checklist) V1.5.3–V1.5.5; version ergonomics V1.5.6–V1.5.8; J (cancel-after-partial-return ledger fix, bcrypt PIN hashing, DB indexing, modal consistency, empty states) V1.5.9. 88 Vitest unit tests (100% green) and 1 Playwright E2E test. See `docs/next-steps.md` and `docs/roadmap.md` for details.
+**Phases 1, 2, and 3 are complete, plus Milestones D–L of the post-Phase-3 plan (latest release V1.6.1, 2026-07-23).** Milestones through V1.4.6 were followed by Milestones F–L: F (real vendor-key licensing, removed Vendor-PIN activation, idle lock) V1.4.7–V1.4.9; G (partial customer sale returns, warranty notifications, automatic daily backups) V1.5.0–V1.5.2; H (Windows Firewall rule, persistent login sessions, ops guide + release checklist) V1.5.3–V1.5.5; version ergonomics V1.5.6–V1.5.8; J (cancel-after-partial-return ledger fix, bcrypt PIN hashing, DB indexing, modal consistency, empty states) V1.5.9; K (Flow Dev visual identity, micro-animations) V1.6.0; L (Multi-PC LAN client mode, dormant maxDevices license field, permissions table, searchable customer combobox, first-run onboarding banner, 5-step ABI 135 native build script) V1.6.1. 89 Vitest unit tests (100% green) and 1 Playwright E2E test. See `docs/next-steps.md` and `docs/roadmap.md` for details.
 
 ## Hard Rules (never violate)
 
@@ -25,6 +25,7 @@ An **offline-first, Arabic (RTL) sales & inventory management system** ("منظ�
 - **Server clock only** — clients never supply timestamps.
 - **UI is fully Arabic, RTL**, light + dark themes, responsive. Components consume design tokens (`web/src/styles/tokens.css`) — never raw hex. Fonts are bundled locally (Fontsource), never from a CDN. Wrap LTR fragments (phone numbers, codes, amounts) in the `mono` utility to avoid bidi reversal.
 - **Changelog rule**: every release (`Vx.y.z` commit) or meaningful batch of changes adds a summarized **Arabic** section at the top of the versions list in `سجل-التغييرات.md`, following the template at the top of that file. Do not close out work without updating it.
+- **Native Module ABI Rule (Electron vs Node 24)**: `better-sqlite3` must be compiled against **Electron 36 (ABI 135)** when packaging installer executables. Always run `build-installer.bat` for builds — it executes a 5-step automated pipeline: 1. Typecheck -> 2. Vitest Tests (ABI 137) -> 3. `node-gyp rebuild` for Electron 36 (ABI 135) -> 4. `electron-builder` (`--config.npmRebuild=false --config.nodeGypRebuild=false`) -> 5. Post-build `npm rebuild better-sqlite3` (restores local Node 24 / ABI 137 for Vitest tests and dev).
 - **Scope discipline**: do not pull later-phase features forward. Phase 4 items (cloud sync, multi-branch, installments…) each need explicit approval before any build.
 
 ## Source of Truth

@@ -14,7 +14,7 @@
     "dev:web": "npm run dev -w web",
     "build": "npm run build -w server && npm run build -w web",
     "build:electron": "npm run build && cd electron && npm run build",
-    "package": "npm run build:electron && cd electron && npm run dist",
+    "package": "npm run build:electron && npx node-gyp rebuild --directory=node_modules/better-sqlite3 --runtime=electron --target=36.0.0 --dist-url=https://electronjs.org/headers && cd electron && npx electron-builder --config.npmRebuild=false --config.nodeGypRebuild=false",
     "test": "npm run test -w server",
     "test:e2e": "playwright test",
     "typecheck": "npm run typecheck -w server && npm run typecheck -w web",

@@ -39,6 +39,7 @@ export interface LicensePayload {
   issuedAt: string;
   expiresAt: string | null; // null = perpetual / lifetime
   licenseType: 'commercial' | 'demo' | 'trial';
+  maxDevices?: number | null; // dormant: null / undefined = unlimited
 }
 
 export interface LicenseInfo {
@@ -48,6 +49,7 @@ export interface LicenseInfo {
   issuedAt?: string;
   expiresAt?: string | null;
   licenseType?: string;
+  maxDevices?: number | null;
   isExpired?: boolean;
   reason?: string;
 }
@@ -230,6 +232,7 @@ export function getLicenseInfo(publicKeyPem = VENDOR_PUBLIC_KEY_PEM): LicenseInf
       issuedAt: res.payload.issuedAt,
       expiresAt: res.payload.expiresAt,
       licenseType: res.payload.licenseType,
+      maxDevices: res.payload.maxDevices ?? null,
     };
   } catch (err) {
     return {
@@ -267,6 +270,7 @@ export function activateLicense(
       issuedAt: res.payload.issuedAt,
       expiresAt: res.payload.expiresAt,
       licenseType: res.payload.licenseType,
+      maxDevices: res.payload.maxDevices ?? null,
     },
   };
 }

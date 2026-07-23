@@ -5,7 +5,9 @@
 
 ## 1. Identity
 
-**Paper ledger.** The app feels like impeccably organized shop paperwork that happens to be digital: warm paper surfaces, jade ink, copper annotations, receipts and stamps. Calm, trustworthy, fast — never a flashy SaaS dashboard.
+**Paper ledger, Flow Dev blue.** The app feels like impeccably organized shop paperwork that happens to be digital: crisp slate surfaces, electric-blue ink, royal-blue annotations, receipts and stamps. Calm, trustworthy, fast — never a flashy SaaS dashboard.
+
+> **Naming note (since V1.6.0):** the `--jade` and `--copper` tokens keep their original names for backward compatibility, but no longer render jade-green or copper-orange — both are now blue hues drawn from the Flow Dev logo (`--jade` = electric cyan-blue primary, `--copper` = royal-blue secondary). Treat the names as historical labels for "primary accent" / "secondary accent," not literal colors, when reading this doc or the code.
 
 1. **Arabic-first, RTL always.** LTR appears only inside isolated data fragments (numbers, codes, barcodes).
 2. **Speed over spectacle.** A full cash sale in under 60 seconds; every interaction optimizes for the next tap.
@@ -45,25 +47,25 @@ Tokens are CSS custom properties on `:root`; dark values are redefined under `@m
 
 | Token          | Light     | Dark      | Role                                                    |
 | -------------- | --------- | --------- | ------------------------------------------------------- |
-| `--bg`         | `#F3F4EF` | `#15110D` | App background (olive-tinted paper / coffee-black)      |
-| `--surface`    | `#FFFFFF` | `#1E1911` | Cards, panels, tables                                   |
-| `--surface-2`  | `#EAEBE3` | `#241E15` | Nested fills: table headers, KPI tiles, input wells     |
-| `--paper`      | `#FFFEF8` | `#FFFEF8` | **Documents & receipt cart — identical in both themes** |
-| `--ink`        | `#1C1B16` | `#1C1B16` | Text on `--paper` — documents are ink on paper, always  |
-| `--text`       | `#181A15` | `#F2EFE6` | Primary text                                            |
-| `--text-muted` | `#5B5F53` | `#A79E8A` | Secondary text, labels, captions                        |
-| `--border`     | `#DBDCD1` | `#332B1F` | Hairlines, card borders, dividers                       |
-| `--jade`       | `#0E8F68` | `#2BC792` | Primary: confirm, money-in, success, active nav         |
-| `--jade-2`     | `#0B6E51` | `#3FE0AA` | Jade hover/pressed                                      |
-| `--copper`     | `#B5711E` | `#E0A44C` | Secondary: warnings, low stock, credit/debt, eyebrows   |
-| `--copper-2`   | `#8F5A16` | `#F0BE73` | Copper hover/pressed                                    |
-| `--alert`      | `#C1421A` | `#FF7A4D` | Destructive, stock-out, shortage, overdue               |
+| `--bg`         | `#F8FAFC` | `#0B0F19` | App background (slate paper / deep Flow midnight navy)  |
+| `--surface`    | `#FFFFFF` | `#111827` | Cards, panels, tables                                   |
+| `--surface-2`  | `#F1F5F9` | `#1F2937` | Nested fills: table headers, KPI tiles, input wells     |
+| `--paper`      | `#FFFFFF` | `#FFFFFF` | **Documents & receipt cart — identical in both themes** |
+| `--ink`        | `#0F172A` | `#0F172A` | Text on `--paper` — documents are ink on paper, always  |
+| `--text`       | `#0F172A` | `#F8FAFC` | Primary text                                            |
+| `--text-muted` | `#64748B` | `#94A3B8` | Secondary text, labels, captions                        |
+| `--border`     | `#E2E8F0` | `#1E293B` | Hairlines, card borders, dividers                       |
+| `--jade`       | `#0284C7` | `#38BDF8` | Primary accent (Flow electric cyan-blue): confirm, money-in, success, active nav |
+| `--jade-2`     | `#0369A1` | `#00B2FE` | Primary accent hover/pressed                             |
+| `--copper`     | `#2563EB` | `#60A5FA` | Secondary accent (Flow royal blue): warnings, low stock, credit/debt, eyebrows |
+| `--copper-2`   | `#1D4ED8` | `#93C5FD` | Secondary accent hover/pressed                           |
+| `--alert`      | `#EF4444` | `#F87171` | Destructive, stock-out, shortage, overdue               |
 
 ### Semantic mapping (do not invent new colors)
 
 - **Success / money-in / in-stock** → jade · **Warning / low stock / pending / credit** → copper · **Danger / stock-out / delete / overdue** → alert · **Neutral info** → muted on `--surface-2`.
 - Cash **variance**: surplus = copper (investigate), shortage = alert, balanced = jade.
-- Stamps on `--paper` use the _light-theme_ ink values (`#0E8F68` / `#B5711E` / `#C1421A`) in both themes — ink doesn't glow.
+- Stamps on `--paper` use the _light-theme_ ink values (`#0284C7` / `#2563EB` / `#EF4444`) in both themes — ink doesn't glow.
 
 ### Usage rules
 
@@ -122,8 +124,10 @@ Two density contexts, set once via `data-density` on the screen container — co
 | Table row padding | 14px                                           | 8px                                               |
 | Grid gap          | 16px                                           | 10px                                              |
 
-- **Desktop (≥900px):** fixed neutral sidebar 272px at the RTL start; content max `980px` for forms/reports; POS uses full width.
+- **Desktop (≥900px):** fixed neutral sidebar 272px at the RTL start; content max `980px` for forms/reports; POS uses full width. Sidebar nav order (since V1.6.0) follows daily-use frequency, not feature grouping: لوحة التحكم → نقطة البيع → المنتجات والمخزون → التوكة والخزينة → المشتريات والموردين → العملاء والذمم → التقارير المالية → عروض الأسعار → الجرد الذكي → الضمان والصيانة → الإعدادات العامة. The user/PIN-switch card moved from the top of the sidebar to the bottom (`mt-auto`), above the app-wide quick-action buttons which now live in the header instead (see below).
 - **Tablet/mobile (<900px):** fixed topbar (58px, blurred surface) + drawer nav; safe-area insets respected. On POS, the receipt cart becomes a bottom sheet with a persistent total bar (mono total + item count always visible).
+- **Header quick actions (since V1.6.0):** the sticky header's end side carries persistent icon/label buttons — ربط الجوال (QR), theme toggle (☀️/🌙), settings shortcut (manager only, highlights when active), and logout — replacing the sidebar's former bottom action stack.
+- **Background watermark:** a fixed, centered, grayscale Flow Dev logo sits behind all content (`body::before`, `min(500px,65vw)`, opacity `0.035` light / `0.045` inverted dark) — decorative only, `pointer-events:none`, must never reduce text contrast below §13's thresholds.
 - **POS anatomy:** scan/search field permanently focused at top (scanner-first; refocuses after every action); product grid `minmax(150px,1fr)` center; receipt cart at the RTL end. A cash sale completes without scrolling.
 - Wide tables live in `overflow-x:auto` wrappers, sticky first column on mobile; the page body never scrolls horizontally. KPI rows: `repeat(auto-fit, minmax(140px,1fr))`, max 4.
 
@@ -173,8 +177,8 @@ Words are design material. Written in Arabic, from the cashier's side of the cou
 ## 10. Motion
 
 - Durations: 150ms hover/press and receipt-line append · 250ms drawer/sheet/toast · 350ms theme cross-fade. Easing `ease-out`.
-- **The stamp press (§2.2) is the only orchestrated moment.** Everything else is quiet state communication; no scroll reveals, no ambient animation.
-- `prefers-reduced-motion: reduce` disables all transitions and animations globally.
+- **The stamp press (§2.2) is the only orchestrated moment** in the sense of a one-shot narrative animation tied to a business event. Since V1.6.0, every button, link, and icon additionally carries app-wide hover/press micro-feedback (icon spring-pop `scale(1.15–1.18)` + slight rotate/lift on hover, colored `drop-shadow` glow keyed to `--jade`/`--copper`/`--alert`, button `translateY(-1.5px)` on hover and `scale(0.97)` on press) — this is ambient, not orchestrated, and applies globally rather than to one signature element. Treat it as the current baseline interaction feel; don't add further ambient motion beyond this without updating this section.
+- `prefers-reduced-motion: reduce` disables all transitions and animations globally, including the micro-animations above.
 
 ## 11. Documents (print)
 

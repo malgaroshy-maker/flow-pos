@@ -1,25 +1,26 @@
 {
   "name": "flowpos-desktop",
-  "version": "1.5.6",
+  "version": "1.6.1",
   "description": "منظومة Flow — نافذة سطح المكتب",
   "author": "Flow Dev — Intelligent Software Solutions",
   "main": "dist/main.js",
   "private": true,
   "scripts": {
-    "build": "tsc && node copy-server.js",
+    "build": "tsc && node copy-server.js && npx @electron/rebuild -f -w better-sqlite3",
     "start": "electron .",
     "dist": "npm run build && electron-builder",
-    "dist:dir": "npm run build && electron-builder --dir"
+    "dist:dir": "npm run build && electron-builder --dir",
+    "postinstall": "electron-builder install-app-deps"
   },
   "dependencies": {
-    "better-sqlite3": "^12.11.1",
+    "better-sqlite3": "^12.2.0",
     "bindings": "^1.5.0",
     "file-uri-to-path": "^2.0.0"
   },
   "devDependencies": {
     "@electron/rebuild": "^3.7.1",
     "@types/node": "^24.0.0",
-    "electron": "^36.0.0",
+    "electron": "36.0.0",
     "electron-builder": "^25.0.0",
     "typescript": "^5.8.3"
   },
@@ -27,6 +28,9 @@
     "appId": "com.flowdev.flowpos",
     "productName": "FlowPOS",
     "copyright": "Copyright © 2026 Flow Dev Solutions",
+    "asarUnpack": [
+      "**/node_modules/better-sqlite3/**/*"
+    ],
     "files": [
       "dist/**/*",
       "assets/**/*"
@@ -35,6 +39,14 @@
       {
         "from": "assets/splash.html",
         "to": "resources/splash.html"
+      },
+      {
+        "from": "assets/mode-select.html",
+        "to": "resources/mode-select.html"
+      },
+      {
+        "from": "assets/disconnected.html",
+        "to": "resources/disconnected.html"
       },
       {
         "from": "assets/logo.png",
