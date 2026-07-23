@@ -2,11 +2,9 @@
 
 > Written 2026-07-21 for **any agent** (Antigravity, Cursor, Claude Code, …) to execute.
 >
-> **Context:** V1.4.6 is released; Phases 1–3, Milestones D and E, and five rounds of
-> desktop-app fixes (V1.4.1 → V1.4.6) are done. 72 Vitest unit tests + 1 Playwright E2E
-> test green. This plan is the result of a **full re-analysis of the project** (PRD, plan,
-> roadmap, design system, and code) that compared everything the docs promised against
-> what the code actually does. Findings are grouped into milestones F–I below, ordered by
+> **Context:** V1.6.2 is released; Phases 1–3, Milestones D through M (V1.4.1 → V1.6.2) are done.
+> 89 Vitest unit tests + 1 Playwright E2E test green. This plan is the result of a **full re-analysis of the project**
+> (PRD, plan, roadmap, design system, and code) that compared everything the docs promised against what the code actually does. Findings are grouped into milestones F–I below, ordered by
 > severity. The condensed lessons from the V1.4.x bug-fix rounds are archived at the
 > bottom — read them before touching Electron, printing, licensing, or `apiCall()`.
 >
@@ -541,7 +539,7 @@ revert — see git history for `server/src/lib/pin.ts` before the `1.6.0` commit
 
 ---
 
-## Milestone M — V1.6.2: post-V1.6.1 review fixes (audited 2026-07-23)
+## Milestone M — V1.6.2: post-V1.6.1 review fixes & sidebar UX — ✅ DONE (V1.6.2, 2026-07-23)
 
 > Result of a full review of the V1.6.0 → V1.6.1 diff (Milestone L implementation) plus a
 > verification pass against the running code. 89/89 tests green — none of these break the

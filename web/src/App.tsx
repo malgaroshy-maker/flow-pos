@@ -747,7 +747,6 @@ export function App() {
     { id: 'Quotations', label: 'عروض الأسعار', icon: Icons.Receipt, managerOnly: false },
     { id: 'Stocktaking', label: 'الجرد الذكي', icon: Icons.Reports, managerOnly: false },
     { id: 'Warranty', label: 'الضمان والصيانة', icon: Icons.Settings, managerOnly: false },
-    { id: 'Settings', label: 'الإعدادات العامة', icon: Icons.Settings, managerOnly: true },
   ].filter((item) => !item.managerOnly || currentUser.role === 'manager');
 
   // Shared sidebar/drawer content (desktop aside + mobile drawer)
@@ -758,14 +757,28 @@ export function App() {
     };
     return (
       <>
-        <nav className="flex flex-col gap-0.5 text-sm flex-1 justify-start overflow-y-auto">
+        {/* Logo Section Header */}
+        <div className="flex flex-col items-center justify-center gap-1.5 pb-2.5 border-b border-line text-center flex-shrink-0">
+          <img
+            src="/logo.png"
+            alt="Flow Dev Logo"
+            className="h-14 w-14 object-contain rounded-2xl drop-shadow-md transition-transform hover:scale-105"
+          />
+          <div className="font-display font-black text-xs text-text leading-tight truncate max-w-full px-1">
+            {settingsData?.businessName ?? 'منظومة مستلزمات المقاهي والمطاعم'}
+          </div>
+        </div>
+
+        <nav className="flex flex-col gap-0.5 text-xs flex-1 justify-start overflow-y-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
           <button
             onClick={() => go('Home')}
-            className={`flex items-center gap-3 min-h-9 rounded-xl px-3 py-1.5 transition-all cursor-pointer text-right mb-1 font-bold text-xs ${
-              activeTab === 'Home' ? 'bg-jade/10 text-jade border border-jade/30' : 'text-muted'
+            className={`flex items-center gap-2.5 min-h-[34px] rounded-lg px-2.5 py-1 transition-all cursor-pointer text-right font-bold text-xs ${
+              activeTab === 'Home'
+                ? 'bg-jade/10 text-jade border border-jade/30'
+                : 'text-muted hover:bg-surface-2/60 hover:text-text'
             }`}
           >
-            <Icons.Home />
+            <Icons.Home className="h-4 w-4 flex-shrink-0" />
             <span>القائمة الرئيسية</span>
           </button>
 
@@ -773,34 +786,40 @@ export function App() {
             <button
               key={item.id}
               onClick={() => go(item.id)}
-              className={`flex items-center gap-3 min-h-9 rounded-xl px-3 py-1.5 transition-all cursor-pointer text-right text-xs font-semibold ${
-                activeTab === item.id ? 'bg-surface-2 text-jade font-bold border border-line' : 'text-muted'
+              className={`flex items-center gap-2.5 min-h-[34px] rounded-lg px-2.5 py-1 transition-all cursor-pointer text-right text-xs font-semibold ${
+                activeTab === item.id
+                  ? 'bg-surface-2 text-jade font-bold border border-line shadow-xs'
+                  : 'text-muted hover:bg-surface-2/60 hover:text-text'
               }`}
             >
-              <item.icon />
+              <item.icon className="h-4 w-4 flex-shrink-0" />
               <span>{item.label}</span>
             </button>
           ))}
         </nav>
 
-        <div className="mt-auto pt-2.5 border-t border-line rounded-2xl p-3 bg-surface-2 flex-shrink-0">
-          <div className="flex items-center justify-between mb-1">
-            <span className="text-[11px] font-semibold text-muted">المستخدم الحالي</span>
-            <span
-              className={`rounded-full px-2 py-0.5 text-[10px] font-black ${
-                currentUser.role === 'manager' ? 'bg-jade/10 text-jade' : 'bg-copper/10 text-copper'
-              }`}
-            >
-              {currentUser.role === 'manager' ? '★ مدير' : 'كاشير'}
-            </span>
+        {/* Compact User Switcher Box */}
+        <div className="mt-auto pt-2 border-t border-line rounded-xl p-2 bg-surface-2/80 flex-shrink-0">
+          <div className="flex items-center justify-between gap-2 mb-1 px-1">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <span className="font-display text-xs font-black text-text truncate max-w-[110px]" title={currentUser.username}>
+                {currentUser.username}
+              </span>
+              <span
+                className={`rounded-full px-1.5 py-0.2 text-[9px] font-black flex-shrink-0 ${
+                  currentUser.role === 'manager' ? 'bg-jade/10 text-jade' : 'bg-copper/10 text-copper'
+                }`}
+              >
+                {currentUser.role === 'manager' ? '★ مدير' : 'كاشير'}
+              </span>
+            </div>
           </div>
-          <div className="font-display text-sm font-black mb-2">{currentUser.username}</div>
           <button
             onClick={() => {
               setShowUserPinModal(true);
               onNavigate?.();
             }}
-            className="w-full py-1.5 text-xs font-bold rounded-xl border border-line bg-surface hover:bg-surface-2 cursor-pointer flex items-center justify-center gap-1.5"
+            className="w-full py-1 px-2 text-[11px] font-bold rounded-lg border border-line bg-surface hover:bg-surface-2 cursor-pointer flex items-center justify-center gap-1 text-muted hover:text-text transition-colors"
           >
             <span>تبديل المستخدم (PIN) 🔄</span>
           </button>
@@ -827,7 +846,7 @@ export function App() {
     <div className="grid min-h-dvh grid-cols-[272px_1fr] max-[900px]:grid-cols-1" dir="rtl">
       {/* Sidebar Navigation (desktop ≥901px) */}
       <aside
-        className="sticky top-0 hidden h-dvh flex-col gap-5 border-e p-5 min-[901px]:flex overflow-y-auto"
+        className="sticky top-0 hidden h-dvh flex-col gap-2.5 border-e p-3.5 min-[901px]:flex overflow-y-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
         style={{ background: 'var(--gradient-sidebar)', borderColor: 'var(--border)' }}
       >
         {renderNavContent()}
