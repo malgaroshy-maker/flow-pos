@@ -5,7 +5,8 @@
   "description": "نظام المبيعات والمخزون — offline-first POS for café/restaurant supplies",
   "workspaces": [
     "server",
-    "web"
+    "web",
+    "electron"
   ],
   "scripts": {
     "dev": "npm-run-all --parallel dev:server dev:web",

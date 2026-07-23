@@ -10,37 +10,37 @@
 
 :root {
   /* ── Core Palette – Light ─────────────────────────────────────────── */
-  --bg:        #F5F2EC;   /* Warm parchment — slightly cream-tinted paper */
-  --surface:   #FDFCF8;   /* Off-white card surface, warm white */
-  --surface-2: #EDEBE3;   /* Aged paper tone for table headers, input wells */
-  --paper:     #FFFEF9;   /* Receipt / document — always warm white */
-  --ink:       #1A1710;   /* Deep ink for document text */
-  --text:      #1C1A14;   /* Primary body text — deep warm black */
-  --text-muted:#6B6657;   /* Muted umber-warm gray */
-  --border:    #D9D5C9;   /* Warm stone border */
+  --bg:        #F8FAFC;   /* Crisp modern light slate paper */
+  --surface:   #FFFFFF;   /* Pure white card surface */
+  --surface-2: #F1F5F9;   /* Cool slate well for inputs and headers */
+  --paper:     #FFFFFF;   /* Receipt / document — warm white */
+  --ink:       #0F172A;   /* Deep ink for document text */
+  --text:      #0F172A;   /* Primary body text — slate 900 */
+  --text-muted:#64748B;   /* Muted slate gray */
+  --border:    #E2E8F0;   /* Cool border */
 
-  /* ── Brand Colors ────────────────────────────────────────────────── */
-  --jade:      #0A7B5B;   /* Deep rich emerald green — primary brand */
-  --jade-2:    #086148;   /* Pressed / hover jade */
-  --jade-glow: rgba(10, 123, 91, 0.12);
+  /* ── Brand Colors (Flow Dev Logo Palette) ────────────────────────── */
+  --jade:      #0284C7;   /* Electric Flow Cyan Blue — primary brand */
+  --jade-2:    #0369A1;   /* Pressed / hover flow blue */
+  --jade-glow: rgba(2, 132, 199, 0.14);
 
-  --copper:    #B87333;   /* Burnished copper / warm gold — secondary brand */
-  --copper-2:  #8F5A26;   /* Pressed copper */
-  --copper-glow: rgba(184, 115, 51, 0.12);
+  --copper:    #2563EB;   /* Flow Royal Accent */
+  --copper-2:  #1D4ED8;   /* Pressed royal blue */
+  --copper-glow: rgba(37, 99, 235, 0.14);
 
-  --alert:     #B83232;   /* Deep crimson alert */
-  --alert-glow: rgba(184, 50, 50, 0.10);
+  --alert:     #EF4444;   /* Crimson alert */
+  --alert-glow: rgba(239, 68, 68, 0.12);
 
   /* ── Stamp Inks (for document status stamps) ─────────────────────── */
-  --stamp-paid:    #0A7B5B;
-  --stamp-pending: #B87333;
-  --stamp-void:    #B83232;
+  --stamp-paid:    #0284C7;
+  --stamp-pending: #2563EB;
+  --stamp-void:    #EF4444;
 
   /* ── Shadows & Elevation ─────────────────────────────────────────── */
-  --shadow-sm:   0 1px 4px rgba(26, 23, 16, 0.06), 0 1px 2px rgba(26, 23, 16, 0.04);
-  --shadow:      0 4px 20px -4px rgba(26, 23, 16, 0.10), 0 2px 8px rgba(26, 23, 16, 0.06);
-  --shadow-md:   0 8px 32px -6px rgba(26, 23, 16, 0.14), 0 3px 12px rgba(26, 23, 16, 0.08);
-  --shadow-jade: 0 4px 20px -4px rgba(10, 123, 91, 0.25);
+  --shadow-sm:   0 1px 4px rgba(15, 23, 42, 0.05), 0 1px 2px rgba(15, 23, 42, 0.03);
+  --shadow:      0 4px 20px -4px rgba(15, 23, 42, 0.08), 0 2px 8px rgba(15, 23, 42, 0.04);
+  --shadow-md:   0 8px 32px -6px rgba(15, 23, 42, 0.12), 0 3px 12px rgba(15, 23, 42, 0.06);
+  --shadow-jade: 0 4px 20px -4px rgba(2, 132, 199, 0.25);
 
   /* ── Shape ───────────────────────────────────────────────────────── */
   --radius-card:    16px;
@@ -54,85 +54,85 @@
   --row-pad:      14px;
   --grid-gap:     16px;
 
-  /* ── Gradients ───────────────────────────────────────────────────── */
-  --gradient-brand: linear-gradient(135deg, #0A7B5B 0%, #0E9E74 50%, #B87333 100%);
-  --gradient-jade:  linear-gradient(135deg, #0A7B5B 0%, #0E9E74 100%);
-  --gradient-warm:  linear-gradient(135deg, #1C1A14 0%, #2A2318 100%);
-  --gradient-sidebar: linear-gradient(180deg, #FDFCF8 0%, #F5F2EC 100%);
+  /* ── Gradients (Flow Dev Brand Gradients) ────────────────────────── */
+  --gradient-brand: linear-gradient(135deg, #00B2FE 0%, #0066FF 50%, #38BDF8 100%);
+  --gradient-jade:  linear-gradient(135deg, #0284C7 0%, #38BDF8 100%);
+  --gradient-warm:  linear-gradient(135deg, #0F172A 0%, #1E293B 100%);
+  --gradient-sidebar: linear-gradient(180deg, #FFFFFF 0%, #F8FAFC 100%);
 }
 
-/* ── Dark Theme ──────────────────────────────────────────────────────── */
+/* ── Dark Theme (Flow Dev Deep Space / Navy) ───────────────────────── */
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg:        #18140E;   /* Deep espresso / coffee-black */
-    --surface:   #221C14;   /* Dark leather surface */
-    --surface-2: #2C2418;   /* Nested dark mahogany */
-    --paper:     #FFFEF9;   /* Documents stay warm paper-white */
-    --ink:       #1A1710;
-    --text:      #F0EBE0;   /* Warm cream text */
-    --text-muted:#8C8070;   /* Muted warm stone */
-    --border:    #362E22;   /* Dark walnut border */
+    --bg:        #0B0F19;   /* Deep Flow Midnight Navy */
+    --surface:   #111827;   /* Rich Navy card surface */
+    --surface-2: #1F2937;   /* Cool Slate input wells */
+    --paper:     #FFFFFF;   /* Documents stay warm paper-white */
+    --ink:       #0F172A;
+    --text:      #F8FAFC;   /* Crisp Slate White text */
+    --text-muted:#94A3B8;   /* Muted Slate Gray */
+    --border:    #1E293B;   /* Dark Slate Border */
 
-    --jade:      #1DB885;   /* Bright emerald in dark */
-    --jade-2:    #26D49A;
-    --jade-glow: rgba(29, 184, 133, 0.15);
+    --jade:      #38BDF8;   /* Electric Flow Cyan Blue in dark */
+    --jade-2:    #00B2FE;   /* Vibrant cyan hover */
+    --jade-glow: rgba(56, 189, 248, 0.18);
 
-    --copper:    #D49440;   /* Bright burnished gold in dark */
-    --copper-2:  #E8AA55;
-    --copper-glow: rgba(212, 148, 64, 0.15);
+    --copper:    #60A5FA;   /* Vibrant Sky Blue Accent */
+    --copper-2:  #93C5FD;
+    --copper-glow: rgba(96, 165, 250, 0.18);
 
-    --alert:     #E85252;
-    --alert-glow: rgba(232, 82, 82, 0.12);
+    --alert:     #F87171;
+    --alert-glow: rgba(248, 113, 113, 0.15);
 
-    --shadow-sm:   0 1px 4px rgba(0,0,0, 0.30), 0 1px 2px rgba(0,0,0, 0.20);
-    --shadow:      0 4px 20px -4px rgba(0,0,0, 0.40), 0 2px 8px rgba(0,0,0, 0.25);
-    --shadow-md:   0 8px 32px -6px rgba(0,0,0, 0.55), 0 3px 12px rgba(0,0,0, 0.30);
-    --shadow-jade: 0 4px 20px -4px rgba(29, 184, 133, 0.30);
+    --shadow-sm:   0 1px 4px rgba(0,0,0, 0.40), 0 1px 2px rgba(0,0,0, 0.25);
+    --shadow:      0 4px 20px -4px rgba(0,0,0, 0.50), 0 2px 8px rgba(0,0,0, 0.30);
+    --shadow-md:   0 8px 32px -6px rgba(0,0,0, 0.65), 0 3px 12px rgba(0,0,0, 0.40);
+    --shadow-jade: 0 4px 20px -4px rgba(56, 189, 248, 0.30);
 
-    --gradient-sidebar: linear-gradient(180deg, #221C14 0%, #18140E 100%);
+    --gradient-sidebar: linear-gradient(180deg, #111827 0%, #0B0F19 100%);
   }
 }
 
 /* ── Explicit Light Override ─────────────────────────────────────────── */
 :root[data-theme='light'] {
-  --bg:        #F5F2EC;
-  --surface:   #FDFCF8;
-  --surface-2: #EDEBE3;
-  --text:      #1C1A14;
-  --text-muted:#6B6657;
-  --border:    #D9D5C9;
-  --jade:      #0A7B5B;
-  --jade-2:    #086148;
-  --jade-glow: rgba(10, 123, 91, 0.12);
-  --copper:    #B87333;
-  --copper-2:  #8F5A26;
-  --copper-glow: rgba(184, 115, 51, 0.12);
-  --alert:     #B83232;
-  --shadow-sm: 0 1px 4px rgba(26, 23, 16, 0.06), 0 1px 2px rgba(26, 23, 16, 0.04);
-  --shadow:    0 4px 20px -4px rgba(26, 23, 16, 0.10), 0 2px 8px rgba(26, 23, 16, 0.06);
-  --shadow-md: 0 8px 32px -6px rgba(26, 23, 16, 0.14), 0 3px 12px rgba(26, 23, 16, 0.08);
-  --gradient-sidebar: linear-gradient(180deg, #FDFCF8 0%, #F5F2EC 100%);
+  --bg:        #F8FAFC;
+  --surface:   #FFFFFF;
+  --surface-2: #F1F5F9;
+  --text:      #0F172A;
+  --text-muted:#64748B;
+  --border:    #E2E8F0;
+  --jade:      #0284C7;
+  --jade-2:    #0369A1;
+  --jade-glow: rgba(2, 132, 199, 0.14);
+  --copper:    #2563EB;
+  --copper-2:  #1D4ED8;
+  --copper-glow: rgba(37, 99, 235, 0.14);
+  --alert:     #EF4444;
+  --shadow-sm: 0 1px 4px rgba(15, 23, 42, 0.05), 0 1px 2px rgba(15, 23, 42, 0.03);
+  --shadow:    0 4px 20px -4px rgba(15, 23, 42, 0.08), 0 2px 8px rgba(15, 23, 42, 0.04);
+  --shadow-md: 0 8px 32px -6px rgba(15, 23, 42, 0.12), 0 3px 12px rgba(15, 23, 42, 0.06);
+  --gradient-sidebar: linear-gradient(180deg, #FFFFFF 0%, #F8FAFC 100%);
 }
 
 /* ── Explicit Dark Override ──────────────────────────────────────────── */
 :root[data-theme='dark'] {
-  --bg:        #18140E;
-  --surface:   #221C14;
-  --surface-2: #2C2418;
-  --text:      #F0EBE0;
-  --text-muted:#8C8070;
-  --border:    #362E22;
-  --jade:      #1DB885;
-  --jade-2:    #26D49A;
-  --jade-glow: rgba(29, 184, 133, 0.15);
-  --copper:    #D49440;
-  --copper-2:  #E8AA55;
-  --copper-glow: rgba(212, 148, 64, 0.15);
-  --alert:     #E85252;
-  --shadow-sm: 0 1px 4px rgba(0,0,0, 0.30), 0 1px 2px rgba(0,0,0, 0.20);
-  --shadow:    0 4px 20px -4px rgba(0,0,0, 0.40), 0 2px 8px rgba(0,0,0, 0.25);
-  --shadow-md: 0 8px 32px -6px rgba(0,0,0, 0.55), 0 3px 12px rgba(0,0,0, 0.30);
-  --gradient-sidebar: linear-gradient(180deg, #221C14 0%, #18140E 100%);
+  --bg:        #0B0F19;
+  --surface:   #111827;
+  --surface-2: #1F2937;
+  --text:      #F8FAFC;
+  --text-muted:#94A3B8;
+  --border:    #1E293B;
+  --jade:      #38BDF8;
+  --jade-2:    #00B2FE;
+  --jade-glow: rgba(56, 189, 248, 0.18);
+  --copper:    #60A5FA;
+  --copper-2:  #93C5FD;
+  --copper-glow: rgba(96, 165, 250, 0.18);
+  --alert:     #F87171;
+  --shadow-sm: 0 1px 4px rgba(0,0,0, 0.40), 0 1px 2px rgba(0,0,0, 0.25);
+  --shadow:    0 4px 20px -4px rgba(0,0,0, 0.50), 0 2px 8px rgba(0,0,0, 0.30);
+  --shadow-md: 0 8px 32px -6px rgba(0,0,0, 0.65), 0 3px 12px rgba(0,0,0, 0.40);
+  --gradient-sidebar: linear-gradient(180deg, #111827 0%, #0B0F19 100%);
 }
 
 /* ── Compact Density (back-office tables & reports) ────────────────── */

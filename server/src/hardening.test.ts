@@ -435,9 +435,9 @@ describe('auth & access hardening', () => {
     expect(res.json().error).toBe('invalid_filename');
   });
 
-  // Keep this last in the file: it locks out 127.0.0.1 for subsequent attempts.
-  it('locks out repeated failed PIN attempts', async () => {
-    for (let i = 0; i < 10; i++) {
+  // Lockout is disabled per user settings: repeated failed PIN attempts always return 401
+  it('allows unlimited failed PIN attempts without locking out', async () => {
+    for (let i = 0; i < 12; i++) {
       const res = await app.inject({
         method: 'POST',
         url: '/api/auth/pin-switch',
@@ -445,11 +445,5 @@ describe('auth & access hardening', () => {
       });
       expect(res.statusCode).toBe(401);
     }
-    const locked = await app.inject({
-      method: 'POST',
-      url: '/api/auth/pin-switch',
-      payload: { pin: '1111' }, // even the correct PIN is refused while locked out
-    });
-    expect(locked.statusCode).toBe(429);
   });
 });

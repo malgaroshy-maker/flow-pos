@@ -46,6 +46,31 @@
       color 0.35s ease;
   }
 
+  /* Faint monochrome watermark logo in the background */
+  body::before {
+    content: '';
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: min(500px, 65vw);
+    height: min(500px, 65vw);
+    background-image: url('/logo.png');
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: contain;
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.035;
+    filter: grayscale(100%);
+    transition: opacity 0.35s ease, filter 0.35s ease;
+  }
+
+  :root[data-theme='dark'] body::before {
+    opacity: 0.045;
+    filter: grayscale(100%) invert(100%);
+  }
+
   h1,
   h2,
   h3,
@@ -101,6 +126,63 @@
       animation: none !important;
     }
   }
+}
+
+/* ── Interactive Icon & Button Micro-Animations ────────────────────────── */
+
+svg {
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), color 0.2s ease, filter 0.2s ease, opacity 0.2s ease;
+  will-change: transform;
+}
+
+/* Icon pop & spring effect when hovering parent buttons, links, or controls */
+button:hover svg,
+a:hover svg,
+select:hover svg,
+[role='button']:hover svg,
+.icon-container:hover svg {
+  transform: scale(1.18) translateY(-1px);
+}
+
+/* Direct standalone icon hover */
+svg.cursor-pointer:hover,
+svg:hover {
+  transform: scale(1.15) rotate(4deg);
+}
+
+/* Soft glow drop-shadow on hover based on context */
+button:hover svg.text-alert,
+.text-alert:hover svg {
+  filter: drop-shadow(0 2px 6px color-mix(in srgb, var(--alert) 45%, transparent));
+}
+
+button:hover svg.text-jade,
+.text-jade:hover svg {
+  filter: drop-shadow(0 2px 6px color-mix(in srgb, var(--jade) 45%, transparent));
+}
+
+button:hover svg.text-copper,
+.text-copper:hover svg {
+  filter: drop-shadow(0 2px 6px color-mix(in srgb, var(--copper) 45%, transparent));
+}
+
+/* Tactile button hover elevation & click press feedback */
+button:not(:disabled),
+a,
+[role='button']:not(:disabled) {
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+button:not(:disabled):hover,
+a:hover,
+[role='button']:not(:disabled):hover {
+  transform: translateY(-1.5px);
+}
+
+button:not(:disabled):active,
+a:active,
+[role='button']:not(:disabled):active {
+  transform: translateY(0) scale(0.97);
 }
 
 /* ── Shared Utilities ─────────────────────────────────────────────────── */

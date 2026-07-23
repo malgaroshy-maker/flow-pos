@@ -740,13 +740,13 @@ export function App() {
     { id: 'Dashboard', label: 'لوحة التحكم', icon: Icons.Dashboard, managerOnly: true },
     { id: 'POS', label: 'نقطة البيع', icon: Icons.POS, managerOnly: false },
     { id: 'Products', label: 'المنتجات والمخزون', icon: Icons.Products, managerOnly: false },
-    { id: 'Stocktaking', label: 'الجرد الذكي', icon: Icons.Reports, managerOnly: false },
-    { id: 'Warranty', label: 'الضمان والصيانة', icon: Icons.Settings, managerOnly: false },
     { id: 'Shifts', label: 'التوكة والخزينة', icon: Icons.Shifts, managerOnly: false },
-    { id: 'Quotations', label: 'عروض الأسعار', icon: Icons.Receipt, managerOnly: false },
     { id: 'Purchases', label: 'المشتريات والموردين', icon: Icons.Truck, managerOnly: true },
     { id: 'Customers', label: 'العملاء والذمم', icon: Icons.Users, managerOnly: true },
     { id: 'Reports', label: 'التقارير المالية', icon: Icons.Reports, managerOnly: true },
+    { id: 'Quotations', label: 'عروض الأسعار', icon: Icons.Receipt, managerOnly: false },
+    { id: 'Stocktaking', label: 'الجرد الذكي', icon: Icons.Reports, managerOnly: false },
+    { id: 'Warranty', label: 'الضمان والصيانة', icon: Icons.Settings, managerOnly: false },
     { id: 'Settings', label: 'الإعدادات العامة', icon: Icons.Settings, managerOnly: true },
   ].filter((item) => !item.managerOnly || currentUser.role === 'manager');
 
@@ -758,50 +758,12 @@ export function App() {
     };
     return (
       <>
-        <div className="flex items-center gap-3.5 pt-1">
-          <img
-            src="/logo.png"
-            alt="Flow Dev"
-            className="h-16 w-16 object-contain rounded-2xl flex-shrink-0 drop-shadow-md"
-          />
-          <div className="min-w-0">
-            <div
-              className="font-display text-sm font-extrabold leading-tight line-clamp-2 break-words"
-              title={settingsData?.businessName ?? 'فلو ديف للمستلزمات'}
-            >
-              {settingsData?.businessName ?? 'فلو ديف للمستلزمات'}
-            </div>
-            <div className="mono text-[10px] text-muted">المستلزمات والمعدات</div>
-          </div>
-        </div>
-
-        <div className="rounded-2xl p-3.5 bg-surface-2 border border-line">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-[11px] font-semibold text-muted">المستخدم الحالي</span>
-            <span
-              className={`rounded-full px-2 py-0.5 text-[10px] font-black ${currentUser.role === 'manager' ? 'bg-jade/10 text-jade' : 'bg-copper/10 text-copper'
-                }`}
-            >
-              {currentUser.role === 'manager' ? '★ مدير' : 'كاشير'}
-            </span>
-          </div>
-          <div className="font-display text-base font-black mb-3">{currentUser.username}</div>
-          <button
-            onClick={() => {
-              setShowUserPinModal(true);
-              onNavigate?.();
-            }}
-            className="w-full py-2 text-xs font-bold rounded-xl border border-line bg-surface hover:bg-surface-2 cursor-pointer"
-          >
-            تبديل المستخدم (PIN) 🔄
-          </button>
-        </div>
-
-        <nav className="flex flex-col gap-1 text-sm flex-1">
+        <nav className="flex flex-col gap-0.5 text-sm flex-1 justify-start overflow-y-auto">
           <button
             onClick={() => go('Home')}
-            className={`flex items-center gap-3 min-h-10 rounded-xl px-3.5 py-2 transition-all cursor-pointer text-right mb-2 font-bold text-xs ${activeTab === 'Home' ? 'bg-jade/10 text-jade border border-jade/30' : 'text-muted'
-              }`}
+            className={`flex items-center gap-3 min-h-9 rounded-xl px-3 py-1.5 transition-all cursor-pointer text-right mb-1 font-bold text-xs ${
+              activeTab === 'Home' ? 'bg-jade/10 text-jade border border-jade/30' : 'text-muted'
+            }`}
           >
             <Icons.Home />
             <span>القائمة الرئيسية</span>
@@ -811,8 +773,9 @@ export function App() {
             <button
               key={item.id}
               onClick={() => go(item.id)}
-              className={`flex items-center gap-3 min-h-10 rounded-xl px-3.5 py-2 transition-all cursor-pointer text-right text-xs font-semibold ${activeTab === item.id ? 'bg-surface-2 text-jade font-bold border border-line' : 'text-muted'
-                }`}
+              className={`flex items-center gap-3 min-h-9 rounded-xl px-3 py-1.5 transition-all cursor-pointer text-right text-xs font-semibold ${
+                activeTab === item.id ? 'bg-surface-2 text-jade font-bold border border-line' : 'text-muted'
+              }`}
             >
               <item.icon />
               <span>{item.label}</span>
@@ -820,27 +783,26 @@ export function App() {
           ))}
         </nav>
 
-        <div className="flex flex-col gap-2 pt-2 border-t border-line">
+        <div className="mt-auto pt-2.5 border-t border-line rounded-2xl p-3 bg-surface-2 flex-shrink-0">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-[11px] font-semibold text-muted">المستخدم الحالي</span>
+            <span
+              className={`rounded-full px-2 py-0.5 text-[10px] font-black ${
+                currentUser.role === 'manager' ? 'bg-jade/10 text-jade' : 'bg-copper/10 text-copper'
+              }`}
+            >
+              {currentUser.role === 'manager' ? '★ مدير' : 'كاشير'}
+            </span>
+          </div>
+          <div className="font-display text-sm font-black mb-2">{currentUser.username}</div>
           <button
-            type="button"
-            onClick={() => setShowNetworkModal(true)}
-            className="flex min-h-9 items-center justify-center gap-2 rounded-xl text-xs font-bold border border-jade/30 bg-jade/10 text-jade cursor-pointer hover:bg-jade/20"
+            onClick={() => {
+              setShowUserPinModal(true);
+              onNavigate?.();
+            }}
+            className="w-full py-1.5 text-xs font-bold rounded-xl border border-line bg-surface hover:bg-surface-2 cursor-pointer flex items-center justify-center gap-1.5"
           >
-            <span>📱 ربط الجوال (QR)</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setThemeState(toggleTheme())}
-            className="flex min-h-9 items-center justify-center gap-2 rounded-xl text-xs font-bold border border-line bg-surface-2 text-muted cursor-pointer"
-          >
-            {theme === 'dark' ? '☀️ الوضع الفاتح' : '🌙 الوضع الليلي'}
-          </button>
-          <button
-            onClick={logout}
-            className="flex min-h-9 items-center justify-center gap-2 rounded-xl text-xs font-bold border border-red-500/20 bg-red-500/5 text-alert cursor-pointer"
-          >
-            <Icons.Power />
-            <span>تسجيل الخروج</span>
+            <span>تبديل المستخدم (PIN) 🔄</span>
           </button>
         </div>
       </>
@@ -897,13 +859,13 @@ export function App() {
       )}
 
       {/* Main Content Area */}
-      <main className="p-6 md:p-8 bg-bg min-h-dvh flex flex-col gap-6 overflow-y-auto">
-        <header className="sticky top-0 z-30 flex items-center justify-between border border-line bg-surface/95 backdrop-blur-md p-4 rounded-card shadow-sm">
-          <div className="flex items-center gap-3 min-w-0">
+      <main className="flex flex-col min-h-dvh bg-bg overflow-y-auto">
+        <header className="sticky top-0 z-30 flex items-center justify-between border-b border-line bg-surface/95 backdrop-blur-md px-6 md:px-8 py-3.5 shadow-sm">
+          <div className="flex items-center gap-4 min-w-0">
             {/* Mobile menu button (<901px) */}
             <button
               onClick={() => setShowMobileNav(true)}
-              className="flex h-9 w-9 items-center justify-center rounded-[8px] border border-line bg-surface-2 text-text cursor-pointer min-[901px]:hidden flex-shrink-0"
+              className="flex h-10 w-10 items-center justify-center rounded-xl border border-line bg-surface-2 text-text cursor-pointer min-[901px]:hidden flex-shrink-0"
               aria-label="فتح قائمة التنقل"
               title="القائمة"
             >
@@ -913,20 +875,20 @@ export function App() {
             </button>
             <img
               src="/logo.png"
-              alt="Flow Dev"
-              className="h-12 w-12 object-contain rounded-xl flex-shrink-0 drop-shadow-sm"
+              alt="Flow Dev Logo"
+              className="h-16 w-16 object-contain rounded-2xl flex-shrink-0 drop-shadow-md transition-transform hover:scale-105"
             />
             <div className="flex flex-col min-w-0">
               <span
-                className="font-display font-bold text-sm leading-tight truncate"
+                className="font-display font-extrabold text-base leading-tight truncate"
                 title={settingsData?.businessName ?? 'فلو ديف للمستلزمات'}
               >
                 {settingsData?.businessName ?? 'فلو ديف للمستلزمات'}
               </span>
-              <div className="flex items-center gap-1.5 text-[10px] text-muted leading-tight mt-0.5">
+              <div className="flex items-center gap-1.5 text-xs text-muted leading-tight mt-0.5 font-medium">
                 <span>الرئيسية</span>
                 <span>/</span>
-                <span className="text-copper font-bold">{activeTab}</span>
+                <span className="text-copper font-extrabold">{activeTab}</span>
               </div>
             </div>
           </div>
@@ -987,6 +949,54 @@ export function App() {
               )}
             </div>
 
+            {/* Mobile Connect Button */}
+            <button
+              type="button"
+              onClick={() => setShowNetworkModal(true)}
+              className="h-11 px-3 rounded-xl border border-jade/30 bg-jade/10 text-jade hover:bg-jade/20 cursor-pointer flex items-center gap-1.5 text-xs font-bold transition-all"
+              title="ربط الجوال (رمز QR والشبكة)"
+            >
+              <span className="text-base">📱</span>
+              <span className="hidden md:inline">ربط الجوال</span>
+            </button>
+
+            {/* Theme Toggle / Background Color Button */}
+            <button
+              type="button"
+              onClick={() => setThemeState(toggleTheme())}
+              className="h-11 w-11 rounded-xl border border-line bg-surface hover:bg-surface-2 text-muted hover:text-text cursor-pointer flex items-center justify-center text-base transition-all"
+              title={theme === 'dark' ? 'تغيير لون الخلفية للوضع الفاتح' : 'تغيير لون الخلفية للوضع الليلي'}
+            >
+              <span>{theme === 'dark' ? '☀️' : '🌙'}</span>
+            </button>
+
+            {/* Settings Button */}
+            {currentUser.role === 'manager' && (
+              <button
+                type="button"
+                onClick={() => setActiveTab('Settings')}
+                className={`h-11 w-11 rounded-xl border cursor-pointer flex items-center justify-center transition-all ${
+                  activeTab === 'Settings'
+                    ? 'border-jade/40 bg-jade/10 text-jade'
+                    : 'border-line bg-surface hover:bg-surface-2 text-muted hover:text-text'
+                }`}
+                title="الإعدادات العامة"
+              >
+                <Icons.Settings className="h-5 w-5" />
+              </button>
+            )}
+
+            {/* Logout Button */}
+            <button
+              type="button"
+              onClick={logout}
+              className="h-11 px-3 rounded-xl border border-red-500/30 bg-red-500/10 text-alert hover:bg-red-500/20 cursor-pointer flex items-center gap-1.5 text-xs font-bold transition-all"
+              title="تسجيل الخروج"
+            >
+              <Icons.Power className="h-4 w-4" />
+              <span className="hidden sm:inline">خروج</span>
+            </button>
+
             <div className="hidden sm:flex items-center gap-2">
               {activeShift ? (
                 <div className="flex items-center gap-2 rounded-full bg-jade/10 text-jade border border-jade/30 px-3.5 py-1 text-xs font-bold">
@@ -1004,149 +1014,151 @@ export function App() {
         </header>
 
         {/* Active Screen View */}
-        {activeTab === 'Home' && (
-          <Home
-            onSelectTab={setActiveTab}
-            onOpenShiftModal={() => setShowOpenShiftModal(true)}
-            onCloseShiftModal={() => setShowCloseShiftModal(true)}
-            onThemeToggle={() => setThemeState(toggleTheme())}
-          />
-        )}
-        {activeTab === 'Dashboard' && (
-          <Dashboard
-            onSelectTab={setActiveTab}
-            onOpenShiftModal={() => setShowOpenShiftModal(true)}
-            onCloseShiftModal={() => setShowCloseShiftModal(true)}
-            onOpenNewProductModal={() => setShowProductModal(true)}
-            onOpenExpenseModal={() => setShowExpenseModal(true)}
-            onTriggerBackup={triggerManualBackup}
-          />
-        )}
-        {activeTab === 'POS' && (
-          <PosScreen
-            cart={cart}
-            posSearch={posSearch}
-            posCategory={posCategory}
-            posDiscount={posDiscount}
-            posCustomerId={posCustomerId}
-            posPaymentType={posPaymentType}
-            posPaymentMethod={posPaymentMethod}
-            posQuotationId={posQuotationId}
-            posDepositId={posDepositId}
-            posSpecialPrices={posSpecialPrices}
-            onSearchChange={setPosSearch}
-            onCategoryChange={setPosCategory}
-            onDiscountChange={setPosDiscount}
-            onCustomerChange={setPosCustomerId}
-            onPaymentTypeChange={setPosPaymentType}
-            onPaymentMethodChange={setPosPaymentMethod}
-            onDepositChange={setPosDepositId}
-            onAddToCart={addToCart}
-            onUpdateCartQuantity={updateCartQuantity}
-            onChangeCartUnit={changeCartUnit}
-            onRemoveFromCart={removeFromCart}
-            onClearCart={() => setCart([])}
-            onSaveQuotation={handleSaveQuotation}
-            onCheckout={handleCheckout}
-          />
-        )}
-        {activeTab === 'Products' && (
-          <ProductsScreen
-            onOpenNewProductModal={() => setShowProductModal(true)}
-            onStartEditProduct={(p) => {
-              setEditingProduct(p);
-              setShowProductModal(true);
-            }}
-            onOpenAdjustModal={(p) => {
-              setAdjustingProduct(p);
-              setShowAdjustModal(true);
-            }}
-            onViewMovements={(p) => {
-              setMovementsProduct(p);
-              setShowMovementsModal(true);
-            }}
-          />
-        )}
-        {activeTab === 'Stocktaking' && (
-          <StocktakingScreen
-            onOpenPinOverride={(reason, callback) => triggerPinOverride(reason, callback)}
-          />
-        )}
-        {activeTab === 'Warranty' && <WarrantyScreen />}
-        {activeTab === 'Shifts' && (
-          <ShiftsScreen
-            onOpenShiftModal={() => setShowOpenShiftModal(true)}
-            onCloseShiftModal={() => setShowCloseShiftModal(true)}
-            onOpenExpenseModal={() => setShowExpenseModal(true)}
-          />
-        )}
-        {activeTab === 'Quotations' && (
-          <QuotationsScreen
-            onSelectTab={setActiveTab}
-            onOpenQuotationPrint={handleOpenQuotationPrint}
-            onLoadQuotationIntoPos={handleLoadQuotationIntoPos}
-            onCancelQuotation={handleCancelQuotation}
-          />
-        )}
-        {activeTab === 'Purchases' && (
-          <PurchasesScreen
-            onOpenSupplierModal={(s) => {
-              setEditingSupplier(s || null);
-              setShowSupplierModal(true);
-            }}
-            onOpenSupplierStatementModal={(s) => {
-              setStatementSupplier(s);
-              setShowSupplierStatementModal(true);
-            }}
-            onOpenPurchaseModal={() => setShowPurchaseModal(true)}
-            onOpenReturnModal={(pId) => {
-              setReturnPurchaseId(pId);
-              setShowReturnModal(true);
-            }}
-            onPrintPurchase={handleOpenPurchasePrint}
-          />
-        )}
-        {activeTab === 'Customers' && (
-          <CustomersScreen
-            onOpenCustomerModal={(c) => {
-              setEditingCustomer(c || null);
-              setShowCustomerModal(true);
-            }}
-            onOpenPaymentModal={(c) => {
-              setPayingCustomer(c);
-              setShowCustomerPaymentModal(true);
-            }}
-            onOpenStatementModal={(c) => {
-              setStatementCustomer(c);
-              setShowCustomerStatementModal(true);
-            }}
-            onOpenSpecialPricesModal={(c) => {
-              setSpecialPricesCustomer(c);
-              setShowSpecialPricesModal(true);
-            }}
-          />
-        )}
-        {activeTab === 'Reports' && (
-          <Reports
-            onOpenInvoicePrint={openInvoicePrint}
-            onCancelInvoice={handleCancelInvoice}
-            onReturnInvoice={handleReturnInvoice}
-            onExportCSV={handleExportCSV}
-          />
-        )}
-        {activeTab === 'Settings' && (
-          <SettingsScreen
-            onTriggerBackup={triggerManualBackup}
-            onRestoreDb={handleRestoreDb}
-            onRestoreDbFromFile={handleRestoreDbFromFile}
-            onOpenCreateUserModal={() => setShowCreateUserModal(true)}
-            onOpenEditUserModal={(u) => {
-              setEditingUser(u);
-              setShowEditUserModal(true);
-            }}
-            licenseInfo={licenseInfo}
-          />
-        )}
+        <div className="p-6 md:p-8 flex flex-col gap-6 flex-1">
+          {activeTab === 'Home' && (
+            <Home
+              onSelectTab={setActiveTab}
+              onOpenShiftModal={() => setShowOpenShiftModal(true)}
+              onCloseShiftModal={() => setShowCloseShiftModal(true)}
+              onThemeToggle={() => setThemeState(toggleTheme())}
+            />
+          )}
+          {activeTab === 'Dashboard' && (
+            <Dashboard
+              onSelectTab={setActiveTab}
+              onOpenShiftModal={() => setShowOpenShiftModal(true)}
+              onCloseShiftModal={() => setShowCloseShiftModal(true)}
+              onOpenNewProductModal={() => setShowProductModal(true)}
+              onOpenExpenseModal={() => setShowExpenseModal(true)}
+              onTriggerBackup={triggerManualBackup}
+            />
+          )}
+          {activeTab === 'POS' && (
+            <PosScreen
+              cart={cart}
+              posSearch={posSearch}
+              posCategory={posCategory}
+              posDiscount={posDiscount}
+              posCustomerId={posCustomerId}
+              posPaymentType={posPaymentType}
+              posPaymentMethod={posPaymentMethod}
+              posQuotationId={posQuotationId}
+              posDepositId={posDepositId}
+              posSpecialPrices={posSpecialPrices}
+              onSearchChange={setPosSearch}
+              onCategoryChange={setPosCategory}
+              onDiscountChange={setPosDiscount}
+              onCustomerChange={setPosCustomerId}
+              onPaymentTypeChange={setPosPaymentType}
+              onPaymentMethodChange={setPosPaymentMethod}
+              onDepositChange={setPosDepositId}
+              onAddToCart={addToCart}
+              onUpdateCartQuantity={updateCartQuantity}
+              onChangeCartUnit={changeCartUnit}
+              onRemoveFromCart={removeFromCart}
+              onClearCart={() => setCart([])}
+              onSaveQuotation={handleSaveQuotation}
+              onCheckout={handleCheckout}
+            />
+          )}
+          {activeTab === 'Products' && (
+            <ProductsScreen
+              onOpenNewProductModal={() => setShowProductModal(true)}
+              onStartEditProduct={(p: Product) => {
+                setEditingProduct(p);
+                setShowProductModal(true);
+              }}
+              onOpenAdjustModal={(p: Product) => {
+                setAdjustingProduct(p);
+                setShowAdjustModal(true);
+              }}
+              onViewMovements={(p: Product) => {
+                setMovementsProduct(p);
+                setShowMovementsModal(true);
+              }}
+            />
+          )}
+          {activeTab === 'Stocktaking' && (
+            <StocktakingScreen
+              onOpenPinOverride={(reason, callback) => triggerPinOverride(reason, callback)}
+            />
+          )}
+          {activeTab === 'Warranty' && <WarrantyScreen />}
+          {activeTab === 'Shifts' && (
+            <ShiftsScreen
+              onOpenShiftModal={() => setShowOpenShiftModal(true)}
+              onCloseShiftModal={() => setShowCloseShiftModal(true)}
+              onOpenExpenseModal={() => setShowExpenseModal(true)}
+            />
+          )}
+          {activeTab === 'Quotations' && (
+            <QuotationsScreen
+              onSelectTab={setActiveTab}
+              onOpenQuotationPrint={handleOpenQuotationPrint}
+              onLoadQuotationIntoPos={handleLoadQuotationIntoPos}
+              onCancelQuotation={handleCancelQuotation}
+            />
+          )}
+          {activeTab === 'Purchases' && (
+            <PurchasesScreen
+              onOpenSupplierModal={(s) => {
+                setEditingSupplier(s || null);
+                setShowSupplierModal(true);
+              }}
+              onOpenSupplierStatementModal={(s) => {
+                setStatementSupplier(s);
+                setShowSupplierStatementModal(true);
+              }}
+              onOpenPurchaseModal={() => setShowPurchaseModal(true)}
+              onOpenReturnModal={(pId) => {
+                setReturnPurchaseId(pId);
+                setShowReturnModal(true);
+              }}
+              onPrintPurchase={handleOpenPurchasePrint}
+            />
+          )}
+          {activeTab === 'Customers' && (
+            <CustomersScreen
+              onOpenCustomerModal={(c) => {
+                setEditingCustomer(c || null);
+                setShowCustomerModal(true);
+              }}
+              onOpenPaymentModal={(c) => {
+                setPayingCustomer(c);
+                setShowCustomerPaymentModal(true);
+              }}
+              onOpenStatementModal={(c) => {
+                setStatementCustomer(c);
+                setShowCustomerStatementModal(true);
+              }}
+              onOpenSpecialPricesModal={(c) => {
+                setSpecialPricesCustomer(c);
+                setShowSpecialPricesModal(true);
+              }}
+            />
+          )}
+          {activeTab === 'Reports' && (
+            <Reports
+              onOpenInvoicePrint={openInvoicePrint}
+              onCancelInvoice={handleCancelInvoice}
+              onReturnInvoice={handleReturnInvoice}
+              onExportCSV={handleExportCSV}
+            />
+          )}
+          {activeTab === 'Settings' && (
+            <SettingsScreen
+              onTriggerBackup={triggerManualBackup}
+              onRestoreDb={handleRestoreDb}
+              onRestoreDbFromFile={handleRestoreDbFromFile}
+              onOpenCreateUserModal={() => setShowCreateUserModal(true)}
+              onOpenEditUserModal={(u) => {
+                setEditingUser(u);
+                setShowEditUserModal(true);
+              }}
+              licenseInfo={licenseInfo}
+            />
+          )}
+        </div>
       </main>
 
       {/* Orchestrated App Modals */}

@@ -1,8 +1,5 @@
-import { copyFileSync, mkdirSync, cpSync, existsSync } from 'node:fs';
-import { join, dirname } from 'node:path';
-import { fileURLToPath } from 'node:url';
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
+const { copyFileSync, mkdirSync, cpSync, existsSync } = require('node:fs');
+const { join } = require('node:path');
 
 const srcServer = join(__dirname, '..', 'server', 'dist', 'server.js');
 const destServer = join(__dirname, 'dist', 'server.js');

@@ -8,21 +8,12 @@ const MAX_FAILURES = 10;
 const LOCKOUT_MS = 15 * 60 * 1000;
 const authFailures = new Map<string, { count: number; lockedUntil: number }>();
 
-export function isLockedOut(ip?: string): boolean {
-  if (!ip) return false;
-  const entry = authFailures.get(ip);
-  return !!entry && entry.lockedUntil > Date.now();
+export function isLockedOut(_ip?: string): boolean {
+  return false;
 }
 
-export function recordAuthFailure(ip?: string): void {
-  if (!ip) return;
-  const entry = authFailures.get(ip) ?? { count: 0, lockedUntil: 0 };
-  entry.count += 1;
-  if (entry.count >= MAX_FAILURES) {
-    entry.lockedUntil = Date.now() + LOCKOUT_MS;
-    entry.count = 0;
-  }
-  authFailures.set(ip, entry);
+export function recordAuthFailure(_ip?: string): void {
+  // Lockout completely disabled: unlimited login and PIN attempts allowed
 }
 
 export function clearAuthFailures(ip?: string): void {
